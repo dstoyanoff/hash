@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "import", "vitest"],
+  "categories": { "correctness": "error" },
+  "ignorePatterns": ["node_modules", "dist", "build", ".react-router"],
+  "overrides": [
+    {
+      "files": ["examples/**", "templates/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@hash/runtime", "@hash/runtime/*", "**/packages/**", "**/apps/**"],
+                "message": "Dashboards may only import react, @hash/ui and @hash/core."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

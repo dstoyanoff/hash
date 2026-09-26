@@ -1,0 +1,13 @@
+{
+  "name": "@hash/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Framework-agnostic integrations, entity types and wire protocol",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}
