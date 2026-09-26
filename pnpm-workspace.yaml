@@ -3,3 +3,5 @@ packages:
   - apps/*
   - examples/*
   - templates/*
+
+saveExact: true

@@ -1,1 +1,2 @@
-export const name = '@hash/ui';
+export * from './provider.tsx';
+export * from './hooks.ts';

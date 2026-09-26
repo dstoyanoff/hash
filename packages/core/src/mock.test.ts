@@ -60,6 +60,14 @@ describe('MockIntegration', () => {
     expect(ha.calls).toHaveLength(2);
   });
 
+  test('toggle flips light state', async () => {
+    const ha = make();
+    await ha.callService({ domain: 'light', service: 'toggle', entityIds: ['light.lamp'] });
+    expect(ha.getState('light.lamp')?.state).toBe('on');
+    await ha.callService({ domain: 'light', service: 'toggle', entityIds: ['light.lamp'] });
+    expect(ha.getState('light.lamp')?.state).toBe('off');
+  });
+
   test('status changes are reported', async () => {
     const ha = make();
     const statuses: string[] = [];
