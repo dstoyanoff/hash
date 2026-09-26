@@ -1,1 +1,1 @@
-export const name = '@hash/runtime';
+export { defineConfig, type HashConfig } from './config.ts';

@@ -9,7 +9,10 @@ export interface MockEntity {
 
 export type MockServiceHandler = (
   call: ServiceCall,
-  helpers: { update(entityId: string, patch: Partial<MockEntity>): void },
+  helpers: {
+    update(entityId: string, patch: Partial<MockEntity>): void;
+    get(entityId: string): EntityState | undefined;
+  },
 ) => void;
 
 export interface MockIntegrationOptions {
@@ -22,6 +25,10 @@ export interface MockIntegrationOptions {
 const defaultServices: Record<string, MockServiceHandler> = {
   'homeassistant.turn_on': (call, { update }) => setAll(call, update, { state: 'on' }),
   'homeassistant.turn_off': (call, { update }) => setAll(call, update, { state: 'off' }),
+  'light.toggle': (call, { update, get }) => {
+    for (const id of call.entityIds ?? [])
+      update(id, { state: get(id)?.state === 'on' ? 'off' : 'on' });
+  },
   'light.turn_on': (call, { update }) =>
     setAll(call, update, { state: 'on' }, pickAttrs(call.data, ['brightness', 'rgb_color'])),
   'light.turn_off': (call, { update }) => setAll(call, update, { state: 'off' }),
@@ -92,7 +99,10 @@ export class MockIntegration extends BaseIntegration {
   callService(call: ServiceCall): Promise<void> {
     this.calls.push(call);
     const handler = this.#services[`${call.domain}.${call.service}`];
-    handler?.(call, { update: (id, patch) => this.update(id, patch) });
+    handler?.(call, {
+      update: (id, patch) => this.update(id, patch),
+      get: (id) => this.getState(id),
+    });
     return Promise.resolve();
   }
 }

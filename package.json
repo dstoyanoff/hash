@@ -10,6 +10,8 @@
     }
   },
   "devDependencies": {
+    "@hash/core": "workspace:*",
+    "@hash/runtime": "workspace:*",
     "@types/node": "24.13.6",
     "oxlint": "1.85.0",
     "prettier": "3.9.9",
@@ -23,7 +25,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r --if-present typecheck",
-    "build": "pnpm -r --if-present build",
-    "test": "vitest run"
+    "build": "hash-dash build",
+    "test": "vitest run",
+    "dev": "hash-dash dev",
+    "start": "hash-dash start"
   }
 }

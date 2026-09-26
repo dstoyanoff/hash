@@ -6,7 +6,7 @@ pnpm monorepo of React dashboards for Home Assistant (and other integrations).
 
 - `packages/core` — `@hash/core`: framework-agnostic integrations, entity types, wire protocol (no React)
 - `packages/ui` — `@hash/ui`: design system components and hooks
-- `apps/runtime` — `@hash/runtime`: server + `hash` CLI that discovers and serves dashboards
+- `apps/runtime` — `@hash/runtime`: server + `hash-dash` CLI (`dev`/`build`/`start`) that discovers and serves dashboards. The bin is not called `hash` because that is a shell builtin.
 - `examples/*` — dashboards (one package each)
 - `templates/*` — copy-me templates
 

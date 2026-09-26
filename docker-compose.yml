@@ -1,0 +1,10 @@
+services:
+  hash:
+    build: .
+    ports:
+      - '3000:3000'
+    environment:
+      # Leave unset to use the mock backend from hash.config.ts.
+      HA_URL: ${HA_URL:-}
+      HA_TOKEN: ${HA_TOKEN:-}
+    restart: unless-stopped
