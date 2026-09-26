@@ -4,10 +4,14 @@
   "private": true,
   "description": "Framework-agnostic integrations, entity types and wire protocol",
   "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "states": "node scripts/print-states.ts"
+  },
+  "dependencies": {
+    "home-assistant-js-websocket": "^9.7.0"
+  },
   "exports": {
     ".": "./src/index.ts"
-  },
-  "scripts": {
-    "typecheck": "tsc --noEmit"
   }
 }
