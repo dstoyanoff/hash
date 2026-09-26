@@ -20,3 +20,4 @@ pnpm monorepo of React dashboards for Home Assistant (and other integrations).
 - Dashboards (`examples/*`, `templates/*`) may import only `react`, `@hash/ui` and `@hash/core`.
 - Do not edit `packages/*` or `apps/*` when creating a dashboard; propose a separate change instead.
 - Work on a feature branch and open a PR; milestones are tracked as GitHub issues.
+- Dependencies use exact versions (no `^`/`~`); `.npmrc` sets `save-exact=true`, so `pnpm add` pins automatically.
