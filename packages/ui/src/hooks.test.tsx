@@ -1,14 +1,19 @@
 import { RemoteClient, type EntityRef } from '@hash/core';
 import { renderToString } from 'react-dom/server';
 import { expect, test } from 'vitest';
-import { HashProvider, useEntity } from './index.ts';
+import { HashProvider, useConnectionStatus, useEntity } from './index.ts';
 
 function Probe() {
   const state = useEntity('ha:light.lamp' as EntityRef);
-  return <span>{state === undefined ? 'loading' : (state?.state ?? 'missing')}</span>;
+  const link = useConnectionStatus();
+  return (
+    <span>
+      {state === undefined ? 'loading' : (state?.state ?? 'missing')}/{link}
+    </span>
+  );
 }
 
-test('useEntity renders loading state on the server', () => {
+test('hooks render loading/closed on the server', () => {
   const client = new RemoteClient({ url: 'ws://x/ws' });
   expect(
     renderToString(
@@ -16,9 +21,9 @@ test('useEntity renders loading state on the server', () => {
         <Probe />
       </HashProvider>,
     ),
-  ).toContain('loading');
+  ).toMatch(/loading.*\/.*closed/);
 });
 
-test('useEntity throws outside provider', () => {
+test('hooks throw outside a provider', () => {
   expect(() => renderToString(<Probe />)).toThrow(/HashProvider/);
 });

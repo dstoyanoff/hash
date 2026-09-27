@@ -1,6 +1,6 @@
 import type { DashboardManifest } from '@hash/core';
 
-export function createHome(dashboards: DashboardManifest[]) {
+export function createHome(dashboards: DashboardManifest[], options: { gallery?: boolean } = {}) {
   return function Home() {
     return (
       <main style={{ padding: 24, fontFamily: 'system-ui, sans-serif' }}>
@@ -15,6 +15,13 @@ export function createHome(dashboards: DashboardManifest[]) {
             </li>
           ))}
         </ul>
+        {options.gallery ? (
+          <p>
+            <a href="/gallery" style={{ color: 'inherit' }}>
+              Component gallery (dev only)
+            </a>
+          </p>
+        ) : null}
       </main>
     );
   };

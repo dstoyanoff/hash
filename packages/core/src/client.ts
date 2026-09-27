@@ -13,14 +13,32 @@ export interface RemoteClientOptions {
   reconnectMaxMs?: number;
 }
 
-type StateListener = (state: EntityState | null | undefined) => void;
+export type StateListener = (state: EntityState | null | undefined) => void;
+
+/**
+ * What the UI layer needs from a backend connection. `RemoteClient` talks to the runtime over
+ * WebSocket; `LocalClient` wraps integrations in-process (gallery, tests, demos).
+ */
+export interface Client {
+  readonly link: LinkStatus;
+  connect(): void;
+  close(): void;
+  onLinkChange(listener: (status: LinkStatus) => void): Unsubscribe;
+  /** Status of a backend integration (`undefined` until known). */
+  getIntegrationStatus(integration: string): ConnectionStatus | undefined;
+  onIntegrationStatusChange(listener: () => void): Unsubscribe;
+  /** `undefined` while loading, `null` if the entity does not exist. */
+  getState(ref: EntityRef): EntityState | null | undefined;
+  subscribe(ref: EntityRef, listener: StateListener): Unsubscribe;
+  callService(integration: string, call: ServiceCall): Promise<void>;
+}
 
 /**
  * Browser-side (and React-free) client for the runtime proxy. Ref-counts
  * subscriptions, resubscribes and reconnects with backoff. Listeners receive
  * `undefined` until the server has answered, then a state or `null` (unknown entity).
  */
-export class RemoteClient {
+export class RemoteClient implements Client {
   #options: RemoteClientOptions;
   #socket: WebSocket | undefined;
   #link: LinkStatus = 'closed';
