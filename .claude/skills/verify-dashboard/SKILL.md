@@ -49,6 +49,8 @@ Check, at the dashboard's own declared viewport:
   (this specifically regressed once from a `NavTabs` relative-link bug — see `dashboard-rules`).
 - Nothing shows raw text like "unavailable" rendered incorrectly, unstyled, or a blank tile for a
   bad ref — bad refs should read "Not found", not error or vanish.
+- Check the browser console for errors (not just the visual result) — a page can look fine while
+  logging a real problem underneath (e.g. a WebSocket reconnect loop).
 
 ## 3. Production build (only if asked to ship / for a final check)
 

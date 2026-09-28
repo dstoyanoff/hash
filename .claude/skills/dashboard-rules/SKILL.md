@@ -17,6 +17,11 @@ instead of working around it — see "When a rule is in the way" at the end.
 - A dashboard's code may import only: `react`, `react-router`, `@hash/ui`, `@hash/core`. This is
   enforced by oxlint (`no-restricted-imports` in `.oxlintrc.json`) — a violation fails `pnpm lint`.
   No raw `fetch`/`WebSocket`, no relative imports into `packages/` or `apps/`.
+- `pnpm format` (write mode) reformats the _whole repo_, not just your dashboard — if another
+  file happened to already be out of sync with Prettier, running it can sweep in an unrelated
+  change. After running it, check `git status`/`git diff` and make sure everything outside
+  `examples/<id>/` (and the expected `hash.config.ts` mock-data addition) is unchanged before
+  committing.
 - Read `.claude/skills/ui-catalog/CATALOG.md` before writing dashboard code. It lists every
   component, its props and its doc comment, generated straight from `packages/ui/src` so it can't
   be stale. Don't invent a component that isn't there — use what's listed, or raise it as a

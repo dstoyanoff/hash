@@ -12,3 +12,7 @@ CI fails if it isn't.
 **Never hand-edit `CATALOG.md`.** If it's missing something or looks wrong, the fix is in
 `packages/ui/src` (see `add-ui-component`), then regenerate. If you just changed a component's doc
 comment or props, run `pnpm generate:catalog` before finishing.
+
+Icon props (`icon`) take an `mdiXxx` name from `@mdi/js`, re-exported from `@hash/ui`. There's no
+in-repo lookup for valid names — an unknown one simply fails to import, which `pnpm typecheck`
+catches immediately, so it's a cheap mistake to make and cheap to catch.

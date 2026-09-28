@@ -15,7 +15,9 @@ pages.
    (`kitchen`, `master-bedroom`) that becomes the folder name and the URL
    (`/dashboard/<id>`) — it must be filesystem- and URL-safe. Ask if the user hasn't said what
    screen this runs on (tablet, small square wall display, phone-shaped mount) — it decides the
-   viewport (see `dashboard-rules`'s "Required shape" section for typical sizes).
+   viewport (see `dashboard-rules`'s "Required shape" section for typical sizes). If you can't ask
+   (a non-interactive run) default to a 1024x768 tablet mount, matching `examples/home`, and say
+   clearly in your summary that this was an assumption, not a confirmed requirement.
 2. **Find the real entities** using `entity-discovery` — don't guess ids.
 3. **Scaffold from the template.** Copy every file in `templates/dashboard/` into
    `examples/<id>/`, stripping the `.template` suffix, and replace the placeholders
@@ -31,7 +33,12 @@ pages.
 5. **Register mock data for local testing**, if this repo's root `hash.config.ts` is the dev
    instance being used (it is, unless told otherwise): add the new entities to its `MockIntegration`
    config so `pnpm dev` renders the dashboard with realistic states, matching the style already
-   there for `examples/hello`/`examples/home`.
+   there for `examples/hello`/`examples/home`. **This is one shared JS object across every
+   dashboard** — a new entity key that happens to match an id already used by another dashboard
+   silently overrides that dashboard's entry, and nothing (not lint, not typecheck, not tests)
+   catches it. Check the existing keys first: if your new dashboard genuinely controls the same
+   physical device as an existing one (e.g. two dashboards both showing the kitchen ceiling
+   light), reuse that key instead of re-declaring it; otherwise pick ids that don't collide.
 6. **Verify** using `verify-dashboard` before considering the task done.
 
 ## Guardrails

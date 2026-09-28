@@ -9,6 +9,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import prettier from 'prettier';
 
 const UI_SRC = join(import.meta.dirname, '..', 'packages', 'ui', 'src');
 const OUT_FILE = join(import.meta.dirname, '..', '.claude', 'skills', 'ui-catalog', 'CATALOG.md');
@@ -90,9 +91,14 @@ function docCommentBefore(text: string, beforeIndex: number): string {
   return match?.[1] ?? '';
 }
 
-/** Splits an interface body into member texts on top-level `;` (ignoring `;` nested in `{}`/`<>`/`()`/`[]`,
+/** Splits an interface body into member texts on top-level `;` (ignoring `;` nested in `{}`/`()`/`[]`,
  * e.g. an inline `{ width: number; height: number }` prop type). Each slice keeps any doc comment
- * directly above its member. */
+ * directly above its member.
+ *
+ * Deliberately does NOT track `<`/`>` depth: a lone `>` also closes an arrow function type
+ * (`() => void`), which isn't a generic close, so treating it as one desyncs the depth count and
+ * corrupts every member after the first arrow-typed prop. None of this codebase's prop types have
+ * a `;` inside a generic's `<...>`, so `<`/`>` don't need tracking for this to be correct here. */
 function splitMembers(body: string): string[] {
   const members: string[] = [];
   let depth = 0;
@@ -108,8 +114,8 @@ function splitMembers(body: string): string[] {
       continue;
     }
     const ch = body[i];
-    if (ch === '{' || ch === '(' || ch === '<' || ch === '[') depth++;
-    else if (ch === '}' || ch === ')' || ch === '>' || ch === ']') depth--;
+    if (ch === '{' || ch === '(' || ch === '[') depth++;
+    else if (ch === '}' || ch === ')' || ch === ']') depth--;
     else if (ch === ';' && depth === 0) {
       members.push(body.slice(start, i));
       start = i + 1;
@@ -136,7 +142,12 @@ function parseInterfaces(text: string): InterfaceInfo[] {
         doc: propMatch[1] ?? '',
         name: propMatch[2]!,
         optional: propMatch[3] === '?',
-        type: propMatch[4]!.trim(),
+        // A prop's type can itself be a multi-line inline object (e.g. `ActionButtonProps.action`);
+        // strip its doc comments and collapse it to one line so it fits in a table cell.
+        type: propMatch[4]!
+          .replace(/\/\*\*[\s\S]*?\*\//g, '')
+          .replace(/\s+/g, ' ')
+          .trim(),
       });
     }
     interfaces.push({ name: match[1]!, props });
@@ -182,6 +193,10 @@ function parseFile(relativePath: string): FileCatalog {
   return { interfaces: parseInterfaces(text), functions: parseFunctions(text) };
 }
 
+/** Escapes `|` so a value (e.g. a union type like `'a' | 'b'`) can't be mistaken for a markdown
+ * table column separator. */
+const cell = (value: string) => value.replace(/\|/g, '\\|');
+
 function renderFile(catalog: FileCatalog): string {
   const parts: string[] = [];
   for (const fn of catalog.functions) {
@@ -192,7 +207,7 @@ function renderFile(catalog: FileCatalog): string {
       parts.push('| Prop | Type | Required | |', '|---|---|---|---|');
       for (const prop of props.props) {
         parts.push(
-          `| \`${prop.name}\` | \`${prop.type}\` | ${prop.optional ? 'no' : 'yes'} | ${prop.doc} |`,
+          `| \`${prop.name}\` | \`${cell(prop.type)}\` | ${prop.optional ? 'no' : 'yes'} | ${cell(prop.doc)} |`,
         );
       }
     } else {
@@ -220,11 +235,17 @@ for (const section of sections) {
   for (const file of section.files) lines.push(renderFile(parseFile(file)));
 }
 
-writeFileSync(
-  OUT_FILE,
+const raw =
   lines
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
-    .trimEnd() + '\n',
-);
+    .trimEnd() + '\n';
+
+// Format with this repo's own Prettier config so the output always matches `pnpm format:check`
+// (e.g. markdown table column padding) — generating already-formatted output, rather than hoping
+// a hand-rolled renderer happens to match, is what keeps this file from drifting.
+const config = await prettier.resolveConfig(OUT_FILE);
+const formatted = await prettier.format(raw, { ...config, filepath: OUT_FILE });
+
+writeFileSync(OUT_FILE, formatted);
 console.log(`Wrote ${OUT_FILE}`);
