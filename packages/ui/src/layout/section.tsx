@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { Icon } from '../Icon.tsx';
-import { Grid } from './Grid.tsx';
+import { Icon } from '../icon.tsx';
+import { Grid } from './grid.tsx';
 
 export interface SectionProps {
   title: string;

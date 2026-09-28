@@ -1,16 +1,16 @@
 import { useMemo, type ReactNode } from 'react';
-import { ActionButton } from '../entities/ActionButton.tsx';
-import { ClimateTile } from '../entities/ClimateTile.tsx';
-import { LightTile } from '../entities/LightTile.tsx';
-import { MediaPlayerBar } from '../entities/MediaPlayerBar.tsx';
-import { NavTabs } from '../entities/NavTabs.tsx';
-import { SceneButton } from '../entities/SceneButton.tsx';
-import { SensorReadout } from '../entities/SensorReadout.tsx';
+import { ActionButton } from '../entities/action-button.tsx';
+import { ClimateTile } from '../entities/climate-tile.tsx';
+import { LightTile } from '../entities/light-tile.tsx';
+import { MediaPlayerBar } from '../entities/media-player-bar.tsx';
+import { NavTabs } from '../entities/nav-tabs.tsx';
+import { SceneButton } from '../entities/scene-button.tsx';
+import { SensorReadout } from '../entities/sensor-readout.tsx';
 import { mdiBed, mdiShower, mdiSofa } from '../icons.ts';
-import { Dashboard } from '../layout/Dashboard.tsx';
-import { Grid } from '../layout/Grid.tsx';
-import { Screen } from '../layout/Screen.tsx';
-import { Section } from '../layout/Section.tsx';
+import { Dashboard } from '../layout/dashboard.tsx';
+import { Grid } from '../layout/grid.tsx';
+import { Screen } from '../layout/screen.tsx';
+import { Section } from '../layout/section.tsx';
 import { HashProvider } from '../provider.tsx';
 import { createGalleryClient } from './fixtures.ts';
 

@@ -1,7 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { expect, test } from 'vitest';
 import { renderWithMock } from '../test-utils.tsx';
-import { ClimateTile } from './ClimateTile.tsx';
+import { ClimateTile } from './climate-tile.tsx';
 
 const climate = (state = 'heat', temperature = 17) => ({
   'climate.heater': {

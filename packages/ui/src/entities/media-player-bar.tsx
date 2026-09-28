@@ -9,9 +9,9 @@ import {
   mdiVolumeOff,
 } from '@mdi/js';
 import { useState } from 'react';
-import { Icon } from '../Icon.tsx';
-import { usePlayer } from '../usePlayer.ts';
-import { IconButton } from '../layout/Tile.tsx';
+import { Icon } from '../icon.tsx';
+import { usePlayer } from '../use-player.ts';
+import { IconButton } from '../layout/tile.tsx';
 import { statusLabels } from '../status.ts';
 
 export interface MediaPlayerBarProps {

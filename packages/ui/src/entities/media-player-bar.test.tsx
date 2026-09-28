@@ -1,7 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { expect, test } from 'vitest';
 import { renderWithMock } from '../test-utils.tsx';
-import { MediaPlayerBar } from './MediaPlayerBar.tsx';
+import { MediaPlayerBar } from './media-player-bar.tsx';
 
 const player = (state = 'playing') => ({
   'media_player.room': {

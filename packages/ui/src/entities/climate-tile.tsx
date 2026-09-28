@@ -1,7 +1,7 @@
 import { parseEntityRef, type EntityRef } from '@hash/core';
 import { mdiFire, mdiMinus, mdiPlus, mdiPower, mdiThermostat } from '@mdi/js';
 import { useEntity, useService } from '../hooks.ts';
-import { IconButton, Tile } from '../layout/Tile.tsx';
+import { IconButton, Tile } from '../layout/tile.tsx';
 import { entityStatus, friendlyName, numberAttr, stringArrayAttr } from '../status.ts';
 
 export interface ClimateTileProps {

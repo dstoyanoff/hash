@@ -1,6 +1,6 @@
 import type { EntityRef } from '@hash/core';
 import { mdiGauge, mdiThermometer, mdiWaterPercent } from '@mdi/js';
-import { Icon } from '../Icon.tsx';
+import { Icon } from '../icon.tsx';
 import { useEntity } from '../hooks.ts';
 import { entityStatus, statusLabels, stringAttr } from '../status.ts';
 

@@ -1,7 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { expect, test } from 'vitest';
 import { renderWithMock } from '../test-utils.tsx';
-import { LightTile } from './LightTile.tsx';
+import { LightTile } from './light-tile.tsx';
 
 const lights = {
   'light.plain': {

@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import { expect, test } from 'vitest';
 import { renderWithMock } from '../test-utils.tsx';
-import { SensorReadout } from './SensorReadout.tsx';
+import { SensorReadout } from './sensor-readout.tsx';
 
 test('formats numeric values with unit', () => {
   renderWithMock(<SensorReadout entity="ha:sensor.t" />, {

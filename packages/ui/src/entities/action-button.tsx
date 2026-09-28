@@ -1,7 +1,7 @@
 import { parseEntityRef, type EntityRef } from '@hash/core';
 import { useEffect, useRef, useState } from 'react';
 import { useCallService } from '../hooks.ts';
-import { Tile } from '../layout/Tile.tsx';
+import { Tile } from '../layout/tile.tsx';
 
 export interface ActionButtonProps {
   label: string;

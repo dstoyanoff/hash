@@ -2,11 +2,11 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { expect, test } from 'vitest';
 import { mdiSofa } from '../icons.ts';
-import { NavTabs } from '../entities/NavTabs.tsx';
-import { Dashboard } from './Dashboard.tsx';
-import { Grid } from './Grid.tsx';
-import { Screen } from './Screen.tsx';
-import { Section } from './Section.tsx';
+import { NavTabs } from '../entities/nav-tabs.tsx';
+import { Dashboard } from './dashboard.tsx';
+import { Grid } from './grid.tsx';
+import { Screen } from './screen.tsx';
+import { Section } from './section.tsx';
 
 test('dashboard sets density', () => {
   const { container } = render(<Dashboard density="compact">x</Dashboard>);

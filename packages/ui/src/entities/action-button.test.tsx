@@ -1,8 +1,8 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { expect, test } from 'vitest';
 import { renderWithMock } from '../test-utils.tsx';
-import { ActionButton } from './ActionButton.tsx';
-import { SceneButton } from './SceneButton.tsx';
+import { ActionButton } from './action-button.tsx';
+import { SceneButton } from './scene-button.tsx';
 
 test('scene button activates the scene', () => {
   const { ha } = renderWithMock(<SceneButton entity="ha:scene.tv" />, {

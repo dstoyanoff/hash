@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router';
-import { Icon } from '../Icon.tsx';
+import { Icon } from '../icon.tsx';
 
 export interface NavTabItem {
   /** Route path relative to the dashboard, e.g. `''` (home) or `'bedroom'`. */

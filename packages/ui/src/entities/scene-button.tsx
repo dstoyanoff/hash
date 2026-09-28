@@ -2,7 +2,7 @@ import { parseEntityRef, type EntityRef } from '@hash/core';
 import { mdiPalette } from '@mdi/js';
 import { useEntity } from '../hooks.ts';
 import { friendlyName } from '../status.ts';
-import { ActionButton } from './ActionButton.tsx';
+import { ActionButton } from './action-button.tsx';
 
 export interface SceneButtonProps {
   /** A `scene.*` entity. */

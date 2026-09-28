@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { expect, test } from 'vitest';
-import { Gallery } from './Gallery.tsx';
+import { Gallery } from './gallery.tsx';
 
 test('gallery renders every component', () => {
   const { container } = render(

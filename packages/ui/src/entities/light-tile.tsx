@@ -2,7 +2,7 @@ import { parseEntityRef, type EntityRef } from '@hash/core';
 import { useState } from 'react';
 import { useEntity, useService } from '../hooks.ts';
 import { mdiLightbulb, mdiLightbulbOutline, mdiPalette } from '@mdi/js';
-import { IconButton, Tile } from '../layout/Tile.tsx';
+import { IconButton, Tile } from '../layout/tile.tsx';
 import { entityStatus, friendlyName, numberAttr, stringArrayAttr } from '../status.ts';
 
 export interface LightTileProps {

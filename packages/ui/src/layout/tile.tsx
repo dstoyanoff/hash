@@ -1,5 +1,5 @@
 import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
-import { Icon } from '../Icon.tsx';
+import { Icon } from '../icon.tsx';
 import { statusLabels, type EntityStatus } from '../status.ts';
 
 export interface TileProps {
