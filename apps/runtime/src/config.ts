@@ -7,9 +7,8 @@ export interface HashConfig {
   /** Folder (relative to the config file) containing one folder per dashboard. Default `dashboards`. */
   dashboardsDir?: string;
   /** Backends the runtime proxies to the browser. `@hash/runtime` ships no integrations of its
-   * own — install whichever you need (e.g. `@hash/integration-home-assistant`) and construct them
-   * here. Many integration packages export an `xFromEnv()` convenience helper for the common
-   * "read a URL and a token from the environment" case; see that package's docs. */
+   * own — install whichever you need (e.g. `@hash/integration.home-assistant`) and construct them
+   * here, typically reading connection details from your own environment variables. */
   integrations?: Integration[];
   port?: number;
   host?: string;

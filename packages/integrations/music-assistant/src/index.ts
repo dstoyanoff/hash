@@ -291,14 +291,3 @@ export class MusicAssistantIntegration extends BaseIntegration {
     }
   }
 }
-
-/** Convenience for `hash.config.ts`: builds a `MusicAssistantIntegration` from `MA_URL`/`MA_TOKEN`
- * if both are set, `undefined` otherwise. Not required — construct `MusicAssistantIntegration`
- * directly for anything more specific (a custom `id`, a non-env source for the token, ...). */
-export function musicAssistantFromEnv(
-  env: NodeJS.ProcessEnv = process.env,
-): MusicAssistantIntegration | undefined {
-  return env.MA_URL && env.MA_TOKEN
-    ? new MusicAssistantIntegration({ url: env.MA_URL, token: env.MA_TOKEN })
-    : undefined;
-}

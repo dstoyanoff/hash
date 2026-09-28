@@ -156,14 +156,3 @@ export class HomeAssistantIntegration extends BaseIntegration {
     this.replaceStates(next);
   }
 }
-
-/** Convenience for `hash.config.ts`: builds a `HomeAssistantIntegration` from `HA_URL`/`HA_TOKEN`
- * if both are set, `undefined` otherwise. Not required — construct `HomeAssistantIntegration`
- * directly for anything more specific (a custom `id`, a non-env source for the token, ...). */
-export function homeAssistantFromEnv(
-  env: NodeJS.ProcessEnv = process.env,
-): HomeAssistantIntegration | undefined {
-  return env.HA_URL && env.HA_TOKEN
-    ? new HomeAssistantIntegration({ url: env.HA_URL, token: env.HA_TOKEN })
-    : undefined;
-}
