@@ -1,0 +1,20 @@
+import { LocalClient, MockIntegration } from '@hash/core';
+import { HashProvider } from '@hash/ui';
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, expect, test } from 'vitest';
+import Home from './pages/home.tsx';
+
+afterEach(cleanup);
+
+// TODO: replace with entities matching the real page, and assert on real tile labels/states —
+// see examples/home/src/dashboard.test.tsx for a fuller example (render + a real toggle
+// round-trip through the mock, tab-bar current-page state for multi-page dashboards).
+test('renders', () => {
+  const client = new LocalClient([new MockIntegration({})]);
+  render(
+    <HashProvider client={client}>
+      <Home />
+    </HashProvider>,
+  );
+  expect(screen.getByText(/TODO/)).toBeTruthy();
+});

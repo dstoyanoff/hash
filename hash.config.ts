@@ -2,7 +2,13 @@ import { HomeAssistantIntegration, MockIntegration } from '@hash/core';
 import { defineConfig } from '@hash/runtime';
 
 // Dogfood instance: serves the dashboards in `examples/`. Set HA_URL/HA_TOKEN to use a real
-// Home Assistant, otherwise a mock backend covering both `examples/hello` and `examples/home`.
+// Home Assistant, otherwise a mock backend covering every dashboard in `examples/*`.
+//
+// This is one shared entity list for all of them: two dashboards can legitimately reference the
+// same real device (e.g. examples/home's kitchen section and examples/kitchen both use
+// `light.kitchen_ceiling`) — reuse the existing key rather than re-declaring it, and check for a
+// key collision before adding a new entity here, since a duplicate key silently overrides the
+// earlier one with no error from lint/typecheck/tests.
 const { HA_URL, HA_TOKEN } = process.env;
 
 export default defineConfig({
@@ -159,6 +165,21 @@ export default defineConfig({
                 },
               },
               'scene.focus_mode': { state: 'scening' },
+
+              // examples/kitchen — reuses `light.kitchen_ceiling`, `light.kitchen_led`,
+              // `sensor.kitchen_temperature` and `scene.cooking_time` already registered above
+              // for examples/home's kitchen section (same physical entities); only the
+              // additional devices this dedicated dashboard adds are listed here.
+              'light.kitchen_island': {
+                state: 'off',
+                attributes: { supported_color_modes: ['hs'], brightness: 255, hs_color: [40, 60] },
+              },
+              'sensor.kitchen_humidity': {
+                state: '48',
+                attributes: { device_class: 'humidity', unit_of_measurement: '%' },
+              },
+              'switch.kitchen_coffee_maker': { state: 'off' },
+              'fan.kitchen_exhaust': { state: 'off' },
             },
           }),
         ],
