@@ -7,3 +7,4 @@ export * from './protocol.ts';
 export * from './codegen.ts';
 export * from './dashboard.ts';
 export * from './client.ts';
+export * from './local-client.ts';

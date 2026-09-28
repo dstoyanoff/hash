@@ -26,14 +26,36 @@ const defaultServices: Record<string, MockServiceHandler> = {
   'homeassistant.turn_on': (call, { update }) => setAll(call, update, { state: 'on' }),
   'homeassistant.turn_off': (call, { update }) => setAll(call, update, { state: 'off' }),
   'light.toggle': (call, { update, get }) => {
-    for (const id of call.entityIds ?? [])
+    for (const id of call.entityIds ?? []) {
       update(id, { state: get(id)?.state === 'on' ? 'off' : 'on' });
+    }
   },
-  'light.turn_on': (call, { update }) =>
-    setAll(call, update, { state: 'on' }, pickAttrs(call.data, ['brightness', 'rgb_color'])),
+  'light.turn_on': (call, { update }) => {
+    const attributes = pickAttrs(call.data, ['brightness', 'rgb_color', 'hs_color']);
+    if (typeof call.data?.brightness_pct === 'number') {
+      attributes.brightness = Math.round(call.data.brightness_pct * 2.55);
+    }
+    setAll(call, update, { state: 'on' }, attributes);
+  },
   'light.turn_off': (call, { update }) => setAll(call, update, { state: 'off' }),
   'climate.set_temperature': (call, { update }) =>
     setAll(call, update, {}, pickAttrs(call.data, ['temperature'])),
+  'climate.set_hvac_mode': (call, { update }) => {
+    if (typeof call.data?.hvac_mode === 'string') {
+      setAll(call, update, { state: call.data.hvac_mode });
+    }
+  },
+  'media_player.media_play': (call, { update }) => setAll(call, update, { state: 'playing' }),
+  'media_player.media_pause': (call, { update }) => setAll(call, update, { state: 'paused' }),
+  'media_player.media_play_pause': (call, { update, get }) => {
+    for (const id of call.entityIds ?? []) {
+      update(id, { state: get(id)?.state === 'playing' ? 'paused' : 'playing' });
+    }
+  },
+  'media_player.volume_set': (call, { update }) =>
+    setAll(call, update, {}, pickAttrs(call.data, ['volume_level'])),
+  'media_player.volume_mute': (call, { update }) =>
+    setAll(call, update, {}, pickAttrs(call.data, ['is_volume_muted'])),
 };
 
 function pickAttrs(data: Record<string, unknown> | undefined, keys: string[]) {

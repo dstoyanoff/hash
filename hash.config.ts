@@ -10,5 +10,26 @@ export default defineConfig({
   integrations:
     HA_URL && HA_TOKEN
       ? [new HomeAssistantIntegration({ url: HA_URL, token: HA_TOKEN })]
-      : [new MockIntegration({ entities: { 'light.lamp': { state: 'off' } } })],
+      : [
+          new MockIntegration({
+            entities: {
+              'light.lamp': {
+                state: 'off',
+                attributes: { supported_color_modes: ['brightness'], brightness: 128 },
+              },
+              'climate.heater': {
+                state: 'heat',
+                attributes: {
+                  hvac_modes: ['off', 'heat'],
+                  temperature: 17,
+                  current_temperature: 16.4,
+                },
+              },
+              'sensor.temperature': {
+                state: '18.04',
+                attributes: { device_class: 'temperature', unit_of_measurement: '°C' },
+              },
+            },
+          }),
+        ],
 });

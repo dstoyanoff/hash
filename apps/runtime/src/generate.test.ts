@@ -27,3 +27,10 @@ test('generates one splat route per dashboard plus home', () => {
   );
   expect(readFileSync(join(hashDir, 'vite.config.ts'), 'utf8')).toContain('vite-config.ts');
 });
+
+test('gallery route is only generated when requested (dev)', () => {
+  const without = generateApp(root, []);
+  expect(readFileSync(join(without, 'app/routes.ts'), 'utf8')).not.toContain('gallery');
+  const withGallery = generateApp(root, [], { gallery: true });
+  expect(readFileSync(join(withGallery, 'app/routes.ts'), 'utf8')).toContain('gallery/*');
+});
