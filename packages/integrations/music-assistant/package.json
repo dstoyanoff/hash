@@ -1,5 +1,5 @@
 {
-  "name": "@hash/integration-music-assistant",
+  "name": "@hash/integration.music-assistant",
   "version": "0.0.0",
   "private": true,
   "description": "Music Assistant integration: direct WebSocket client, not via Home Assistant",

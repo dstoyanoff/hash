@@ -12,14 +12,14 @@ renders as "Not found" (which is correct behaviour, but not what the user wants)
 ## List real entities from a live Home Assistant
 
 ```bash
-HA_URL=http://homeassistant.local:8123 HA_TOKEN=<long-lived token> pnpm --filter @hash/integration-home-assistant states
+HA_URL=http://homeassistant.local:8123 HA_TOKEN=<long-lived token> pnpm --filter @hash/integration.home-assistant states
 ```
 
 Prints every entity as `<ref>\t<state>`, e.g. `ha:light.kitchen_lamp\ton`. Grep it for the room or
 device the user described:
 
 ```bash
-HA_URL=... HA_TOKEN=... pnpm --filter @hash/integration-home-assistant states | grep -i kitchen
+HA_URL=... HA_TOKEN=... pnpm --filter @hash/integration.home-assistant states | grep -i kitchen
 ```
 
 **Never ask the user for their long-lived token in chat, and never put a real token in a file that
@@ -31,7 +31,7 @@ plausible ids and flag clearly in your reply that they're placeholders the user 
 ## Generate typed entity refs (optional but recommended)
 
 ```bash
-HA_URL=... HA_TOKEN=... pnpm --filter @hash/integration-home-assistant states --types > packages/core/src/entities.d.ts
+HA_URL=... HA_TOKEN=... pnpm --filter @hash/integration.home-assistant states --types > packages/core/src/entities.d.ts
 ```
 
 This augments `KnownEntities` (see `packages/core/src/entity.ts`) so entity refs autocomplete and
@@ -45,7 +45,7 @@ For a `MediaPlayerBar`/`usePlayer` backed directly by Music Assistant (not via H
 see `packages/integrations/music-assistant`), not a `ha:` ref:
 
 ```bash
-MA_URL=http://mass.local:8095 MA_TOKEN=<token, from Settings → Profile> pnpm --filter @hash/integration-music-assistant players
+MA_URL=http://mass.local:8095 MA_TOKEN=<token, from Settings → Profile> pnpm --filter @hash/integration.music-assistant players
 ```
 
 Prints every player as `<ref>\t<state>\t<now-playing title>`, e.g.

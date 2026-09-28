@@ -1,6 +1,6 @@
 import { MockIntegration } from '@hash/core';
-import { homeAssistantFromEnv } from '@hash/integration-home-assistant';
-import { musicAssistantFromEnv } from '@hash/integration-music-assistant';
+import { homeAssistantFromEnv } from '@hash/integration.home-assistant';
+import { musicAssistantFromEnv } from '@hash/integration.music-assistant';
 import { defineConfig } from '@hash/runtime';
 
 // Dogfood instance: serves the dashboards in `examples/`. Set HA_URL/HA_TOKEN and/or

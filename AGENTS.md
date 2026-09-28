@@ -5,7 +5,7 @@ pnpm monorepo of React dashboards for Home Assistant (and other integrations).
 ## Layout
 
 - `packages/core` — `@hash/core`: the `Integration` interface, entity types, wire protocol (no React, no vendor-specific code)
-- `packages/integrations/home-assistant`, `packages/integrations/music-assistant` — `@hash/integration-home-assistant`, `@hash/integration-music-assistant`: installable integration packages, no special treatment from `@hash/core`/`@hash/runtime`. A third integration follows the same shape (extend `BaseIntegration`, pick a unique `id`). Only `hash.config.ts` knows which ones are in use.
+- `packages/integrations/home-assistant`, `packages/integrations/music-assistant` — `@hash/integration.home-assistant`, `@hash/integration.music-assistant`: installable integration packages, no special treatment from `@hash/core`/`@hash/runtime`. A third integration follows the same shape (extend `BaseIntegration`, pick a unique `id`). Only `hash.config.ts` knows which ones are in use.
 - `packages/ui` — `@hash/ui`: design system (tokens in `src/styles.css`), entity components, hooks. `pnpm dev` serves every component in every state at http://localhost:3000/gallery (dev only) — check it before building a dashboard. Icons: `import { mdiXxx } from '@hash/ui'`.
 - `apps/runtime` — `@hash/runtime`: server + `hash-dash` CLI (`dev`/`build`/`start`) that discovers and serves dashboards. The bin is not called `hash` because that is a shell builtin.
 - `examples/*` — dashboards (one package each)

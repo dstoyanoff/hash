@@ -169,10 +169,10 @@ importers:
       '@hash/core':
         specifier: workspace:*
         version: link:packages/core
-      '@hash/integration-home-assistant':
+      '@hash/integration.home-assistant':
         specifier: workspace:*
         version: link:packages/integrations/home-assistant
-      '@hash/integration-music-assistant':
+      '@hash/integration.music-assistant':
         specifier: workspace:*
         version: link:packages/integrations/music-assistant
       '@hash/runtime':

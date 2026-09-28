@@ -2,7 +2,7 @@
  * Connects to a real Music Assistant server and prints its players (talked to directly, not via
  * Home Assistant).
  *
- *   MA_URL=http://mass.local:8095 MA_TOKEN=... pnpm --filter @hash/integration-music-assistant players
+ *   MA_URL=http://mass.local:8095 MA_TOKEN=... pnpm --filter @hash/integration.music-assistant players
  */
 import { MusicAssistantIntegration } from '../src/index.ts';
 

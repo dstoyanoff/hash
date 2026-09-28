@@ -1,5 +1,5 @@
 {
-  "name": "@hash/integration-home-assistant",
+  "name": "@hash/integration.home-assistant",
   "version": "0.0.0",
   "private": true,
   "description": "Home Assistant integration: entities, services, area/entity registry",
