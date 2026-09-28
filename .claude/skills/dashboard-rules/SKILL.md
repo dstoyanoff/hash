@@ -53,11 +53,13 @@ examples/<id>/
 
 ## Entity refs and state
 
-- Refs are `<integration>:<id>` strings: `ha:<domain>.<name>` for Home Assistant (e.g.
-  `ha:light.kitchen_lamp`), or `ma:<player_id>` for a `media_player`/`MediaPlayerBar` talked to
-  directly via Music Assistant instead of through Home Assistant — the id is the player's own
-  `player_id` verbatim, not a `domain.name` pair. Use `entity-discovery` to find real ids instead
-  of guessing them.
+- Refs are `<integration>:<id>` strings, `<integration>` being whichever integration's `id` claims
+  that prefix (enforced unique at startup — see `entity-discovery`'s "A third integration"). The
+  local id's own shape is owned by that integration, not a fixed rule: `ha:<domain>.<name>` for
+  Home Assistant (e.g. `ha:light.kitchen_lamp`), `ma:<player_id>` for a `media_player`/
+  `MediaPlayerBar` talked to directly via Music Assistant instead of through Home Assistant — the
+  id is the player's own `player_id` verbatim, not a `domain.name` pair. Use `entity-discovery` to
+  find real ids instead of guessing them.
 - Every `@hash/ui` entity component already handles loading / not-found / unavailable / unknown
   states consistently (dims, disables, shows why). **Don't build your own state handling** —
   don't check `state === 'unavailable'` yourself or hide a tile when its entity is missing; pass

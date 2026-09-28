@@ -1,4 +1,4 @@
-import { HomeAssistantIntegration, MusicAssistantIntegration, type Integration } from '@hash/core';
+import type { Integration } from '@hash/core';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -6,9 +6,10 @@ import { pathToFileURL } from 'node:url';
 export interface HashConfig {
   /** Folder (relative to the config file) containing one folder per dashboard. Default `dashboards`. */
   dashboardsDir?: string;
-  /** Backends the runtime proxies to the browser. Default: Home Assistant from `HA_URL`/`HA_TOKEN`
-   * and, separately, Music Assistant (talked to directly, not via Home Assistant) from
-   * `MA_URL`/`MA_TOKEN`. Either, both, or neither may be set. */
+  /** Backends the runtime proxies to the browser. `@hash/runtime` ships no integrations of its
+   * own — install whichever you need (e.g. `@hash/integration-home-assistant`) and construct them
+   * here. Many integration packages export an `xFromEnv()` convenience helper for the common
+   * "read a URL and a token from the environment" case; see that package's docs. */
   integrations?: Integration[];
   port?: number;
   host?: string;
@@ -28,18 +29,26 @@ export function defineConfig(config: HashConfig): HashConfig {
 
 export const CONFIG_FILE = 'hash.config.ts';
 
-export function integrationsFromEnv(env: NodeJS.ProcessEnv = process.env): Integration[] {
-  const integrations: Integration[] = [];
-  if (env.HA_URL && env.HA_TOKEN) {
-    integrations.push(new HomeAssistantIntegration({ url: env.HA_URL, token: env.HA_TOKEN }));
+/** Throws if two integrations were configured with the same `id` — each id is a claimed entity-ref
+ * prefix, and a silent collision (whichever integration was constructed last would simply win in
+ * every `Map`-keyed lookup) is exactly the kind of bug that's worth catching at startup. */
+function assertUniqueIds(integrations: Integration[]): void {
+  const seen = new Map<string, number>();
+  for (const [index, integration] of integrations.entries()) {
+    const firstIndex = seen.get(integration.id);
+    if (firstIndex !== undefined) {
+      throw new Error(
+        `Duplicate integration id "${integration.id}" (integrations[${firstIndex}] and ` +
+          `integrations[${index}]). Each integration's id becomes its entity-ref prefix ` +
+          `(e.g. "${integration.id}:some.entity") and must be unique — pass a distinct \`id\` ` +
+          'to one of them.',
+      );
+    }
+    seen.set(integration.id, index);
   }
-  if (env.MA_URL && env.MA_TOKEN) {
-    integrations.push(new MusicAssistantIntegration({ url: env.MA_URL, token: env.MA_TOKEN }));
-  }
-  return integrations;
 }
 
-/** Loads `<root>/hash.config.ts` (if present) and applies defaults and env overrides. */
+/** Loads `<root>/hash.config.ts` (if present) and applies defaults. */
 export async function loadConfig(root: string): Promise<ResolvedConfig> {
   const file = join(root, CONFIG_FILE);
   let user: HashConfig = {};
@@ -47,10 +56,12 @@ export async function loadConfig(root: string): Promise<ResolvedConfig> {
     const mod = (await import(pathToFileURL(file).href)) as { default?: HashConfig };
     user = mod.default ?? {};
   }
+  const integrations = user.integrations ?? [];
+  assertUniqueIds(integrations);
   return {
     root,
     dashboardsDir: join(root, user.dashboardsDir ?? 'dashboards'),
-    integrations: user.integrations ?? integrationsFromEnv(),
+    integrations,
     port: Number(process.env.PORT ?? user.port ?? 3000),
     host: process.env.HOST ?? user.host ?? '0.0.0.0',
   };

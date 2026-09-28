@@ -1,7 +1,7 @@
+import type { EntityState } from '@hash/core';
 import type { HassEntities, HassEntity } from 'home-assistant-js-websocket';
 import { describe, expect, test, vi } from 'vitest';
-import type { EntityState } from './entity.ts';
-import { HomeAssistantIntegration, type HaClient } from './home-assistant.ts';
+import { homeAssistantFromEnv, HomeAssistantIntegration, type HaClient } from './index.ts';
 
 const entity = (id: string, state: string, attributes = {}): HassEntity =>
   ({
@@ -122,5 +122,19 @@ describe('HomeAssistantIntegration', () => {
       { brightness: 1 },
       { entity_id: ['light.lamp'] },
     );
+  });
+});
+
+describe('homeAssistantFromEnv', () => {
+  test('returns undefined unless both HA_URL and HA_TOKEN are set', () => {
+    expect(homeAssistantFromEnv({})).toBeUndefined();
+    expect(homeAssistantFromEnv({ HA_URL: 'http://ha' })).toBeUndefined();
+    expect(homeAssistantFromEnv({ HA_TOKEN: 'x' })).toBeUndefined();
+  });
+
+  test('returns a HomeAssistantIntegration when both are set', () => {
+    const ha = homeAssistantFromEnv({ HA_URL: 'http://ha', HA_TOKEN: 'x' });
+    expect(ha).toBeInstanceOf(HomeAssistantIntegration);
+    expect(ha?.id).toBe('ha');
   });
 });

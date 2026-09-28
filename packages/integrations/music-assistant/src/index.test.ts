@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { MusicAssistantIntegration } from './music-assistant.ts';
+import { musicAssistantFromEnv, MusicAssistantIntegration } from './index.ts';
 
 // Applies to every test in this file (vitest hooks aren't position-sensitive): fake timers so the
 // reconnect-backoff tests can fast-forward, and `flush()` below drives both real microtasks and
@@ -228,4 +228,12 @@ test('disconnect() stops pending reconnect attempts', async () => {
   ma.disconnect();
   await vi.advanceTimersByTimeAsync(10_000);
   expect(FakeSocket.instances).toHaveLength(1);
+});
+
+test('musicAssistantFromEnv returns undefined unless both MA_URL and MA_TOKEN are set, else an instance', () => {
+  expect(musicAssistantFromEnv({})).toBeUndefined();
+  expect(musicAssistantFromEnv({ MA_URL: 'http://mass' })).toBeUndefined();
+  const ma = musicAssistantFromEnv({ MA_URL: 'http://mass', MA_TOKEN: 'x' });
+  expect(ma).toBeInstanceOf(MusicAssistantIntegration);
+  expect(ma?.id).toBe('ma');
 });
