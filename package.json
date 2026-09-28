@@ -28,6 +28,8 @@
     "build": "hash-dash build",
     "test": "vitest run",
     "dev": "hash-dash dev",
-    "start": "hash-dash start"
+    "start": "hash-dash start",
+    "validate:dashboards": "node scripts/validate-dashboards.ts",
+    "generate:catalog": "node scripts/generate-ui-catalog.ts"
   }
 }
