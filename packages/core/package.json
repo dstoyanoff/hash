@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "states": "node scripts/print-states.ts"
+    "states": "node scripts/print-states.ts",
+    "players": "node scripts/print-players.ts"
   },
   "dependencies": {
     "home-assistant-js-websocket": "9.7.0"

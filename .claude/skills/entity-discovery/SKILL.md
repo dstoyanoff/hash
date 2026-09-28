@@ -1,12 +1,13 @@
 ---
 name: entity-discovery
-description: How to find real Home Assistant entity ids and areas instead of guessing them, and how to get typed autocomplete for them. Use before writing entity refs into a dashboard.
+description: How to find real Home Assistant entity ids and Music Assistant player ids instead of guessing them, and how to get typed autocomplete for HA entities. Use before writing entity refs into a dashboard.
 ---
 
 # Entity discovery
 
-Dashboards reference devices by entity ref (`ha:light.kitchen_lamp`). Never invent an id — a
-wrong guess renders as "Not found" (which is correct behaviour, but not what the user wants).
+Dashboards reference devices by entity ref (`ha:light.kitchen_lamp`, or `ma:<player_id>` for a
+Music Assistant player talked to directly — see below). Never invent an id — a wrong guess
+renders as "Not found" (which is correct behaviour, but not what the user wants).
 
 ## List real entities from a live Home Assistant
 
@@ -38,7 +39,20 @@ a typo fails typechecking. This does touch `packages/core`, but it's a generated
 file, not a behaviour change — still mention it explicitly to the user rather than doing it
 silently, since `dashboard-rules` otherwise forbids touching `packages/*`.
 
-## No live Home Assistant available
+## List real players from a live Music Assistant
+
+For a `MediaPlayerBar`/`usePlayer` backed directly by Music Assistant (not via Home Assistant —
+see `packages/core/src/music-assistant.ts`), not a `ha:` ref:
+
+```bash
+MA_URL=http://mass.local:8095 MA_TOKEN=<token, from Settings → Profile> pnpm --filter @hash/core players
+```
+
+Prints every player as `<ref>\t<state>\t<now-playing title>`, e.g.
+`ma:kitchen_speaker\tplaying\tBlank Space`. The ref's local id is the player's own `player_id`
+verbatim — copy it as-is, it isn't `domain.name` like a Home Assistant entity id.
+
+## No live Home Assistant / Music Assistant available
 
 Mock data works everywhere without credentials — used by `examples/home`, the `/gallery` route,
 and every `@hash/ui` test. See `MockIntegration` in `packages/core/src/mock.ts` and

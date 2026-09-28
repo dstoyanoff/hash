@@ -17,9 +17,14 @@ function DashboardEntry() {
 const wrapperRoutes: RouteObject[] = [{ path: 'dashboard/home/*', element: <DashboardEntry /> }];
 
 function renderDashboard(initialPath: string) {
+  // Two independent backends, exactly like the real hash.config.ts: HA-style entities, and a
+  // Music Assistant player talked to directly (see MediaPlayerBar's `ma:living_room` ref).
+  const ma = new MockIntegration({
+    id: 'ma',
+    entities: { living_room: { state: 'playing', attributes: { media_title: 'Blank Space' } } },
+  });
   const ha = new MockIntegration({
     entities: {
-      'media_player.living_room': { state: 'playing', attributes: { media_title: 'Blank Space' } },
       'light.living_room_lamp': { state: 'off', attributes: { supported_color_modes: ['onoff'] } },
       'light.living_room_wall': {
         state: 'off',
@@ -49,7 +54,7 @@ function renderDashboard(initialPath: string) {
       },
     },
   });
-  const client = new LocalClient([ha]);
+  const client = new LocalClient([ha, ma]);
   const router = createMemoryRouter(wrapperRoutes, { initialEntries: [initialPath] });
   return {
     ha,

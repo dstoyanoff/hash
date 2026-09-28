@@ -17,8 +17,10 @@ import {
 export default function Downstairs() {
   return (
     <>
+      {/* Talked to directly via Music Assistant, not through Home Assistant — same component,
+          same hooks, no special-casing needed; see @hash/core's MusicAssistantIntegration. */}
       <Section title="media" columns={0}>
-        <MediaPlayerBar entity="ha:media_player.living_room" />
+        <MediaPlayerBar entity="ma:living_room" />
       </Section>
 
       <Section
