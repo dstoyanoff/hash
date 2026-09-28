@@ -1,9 +1,13 @@
-import { HomeAssistantIntegration, MockIntegration, MusicAssistantIntegration } from '@hash/core';
+import { MockIntegration } from '@hash/core';
+import { HomeAssistantIntegration } from '@hash/integration.home-assistant';
+import { MusicAssistantIntegration } from '@hash/integration.music-assistant';
 import { defineConfig } from '@hash/runtime';
 
 // Dogfood instance: serves the dashboards in `examples/`. Set HA_URL/HA_TOKEN and/or
 // MA_URL/MA_TOKEN to use a real Home Assistant and/or Music Assistant — they're independent,
-// either/both/neither may be set; whichever is missing falls back to mock data.
+// either/both/neither may be set; whichever is missing falls back to mock data. Neither
+// integration package is special-cased by the runtime — this file is the only place that knows
+// about either of them; a third integration would be wired up exactly the same way.
 //
 // The `ha` mock is one shared entity list for every dashboard: two can legitimately reference the
 // same real device (e.g. examples/home's kitchen section and examples/kitchen both use
@@ -173,7 +177,7 @@ const ha =
         },
       });
 
-// Talked to directly, not through Home Assistant — see @hash/core's MusicAssistantIntegration.
+// Talked to directly, not through Home Assistant — see @hash/integration.music-assistant.
 // `usePlayer`/`MediaPlayerBar` need no changes to work against it: it populates the same
 // HA-shaped attribute names (media_title, volume_level as 0..1, ...) the mock below mirrors.
 const ma =

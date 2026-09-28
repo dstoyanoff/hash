@@ -1,6 +1,4 @@
-import { BaseIntegration } from './base-integration.ts';
-import { formatEntityRef, type EntityState } from './entity.ts';
-import type { ServiceCall } from './integration.ts';
+import { BaseIntegration, formatEntityRef, type EntityState, type ServiceCall } from '@hash/core';
 
 /**
  * Direct client for the Music Assistant WebSocket API (not via Home Assistant), reverse-engineered

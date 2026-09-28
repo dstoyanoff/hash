@@ -6,9 +6,13 @@ import {
   type HassEntities,
   type HassEntity,
 } from 'home-assistant-js-websocket';
-import { BaseIntegration } from './base-integration.ts';
-import { formatEntityRef, type EntityState } from './entity.ts';
-import type { ServiceCall, Unsubscribe } from './integration.ts';
+import {
+  BaseIntegration,
+  formatEntityRef,
+  type EntityState,
+  type ServiceCall,
+  type Unsubscribe,
+} from '@hash/core';
 
 export interface HaArea {
   area_id: string;

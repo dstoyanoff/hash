@@ -1,10 +1,11 @@
 /**
  * Connects to a real Home Assistant and prints entity states.
  *
- *   HA_URL=http://homeassistant.local:8123 HA_TOKEN=... pnpm --filter @hash/core states
- *   ... pnpm --filter @hash/core states --types   # emit entities.d.ts instead
+ *   HA_URL=http://homeassistant.local:8123 HA_TOKEN=... pnpm --filter @hash/integration.home-assistant states
+ *   ... pnpm --filter @hash/integration.home-assistant states --types   # emit entities.d.ts instead
  */
-import { generateEntityTypes, HomeAssistantIntegration } from '../src/index.ts';
+import { generateEntityTypes } from '@hash/core';
+import { HomeAssistantIntegration } from '../src/index.ts';
 
 const url = process.env.HA_URL;
 const token = process.env.HA_TOKEN;

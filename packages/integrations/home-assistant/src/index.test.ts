@@ -1,7 +1,7 @@
+import type { EntityState } from '@hash/core';
 import type { HassEntities, HassEntity } from 'home-assistant-js-websocket';
 import { describe, expect, test, vi } from 'vitest';
-import type { EntityState } from './entity.ts';
-import { HomeAssistantIntegration, type HaClient } from './home-assistant.ts';
+import { HomeAssistantIntegration, type HaClient } from './index.ts';
 
 const entity = (id: string, state: string, attributes = {}): HassEntity =>
   ({

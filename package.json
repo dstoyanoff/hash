@@ -11,6 +11,8 @@
   },
   "devDependencies": {
     "@hash/core": "workspace:*",
+    "@hash/integration.home-assistant": "workspace:*",
+    "@hash/integration.music-assistant": "workspace:*",
     "@hash/runtime": "workspace:*",
     "@types/node": "24.13.6",
     "oxlint": "1.85.0",

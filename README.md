@@ -17,8 +17,11 @@ ever touching the parts of the codebase it shouldn't.
 
 ```
 packages/
-  core/       @hash/core     — integrations (Home Assistant, ...), entity types, no React
-  ui/         @hash/ui       — the design system: tiles, layout, hooks. Framework for the eye.
+  core/                      @hash/core                        — the Integration interface, entity types, no React, no vendor code
+  integrations/
+    home-assistant/          @hash/integration.home-assistant  — installable, like any other integration
+    music-assistant/         @hash/integration.music-assistant — talked to directly, not via Home Assistant
+  ui/                        @hash/ui                          — the design system: tiles, layout, hooks. Framework for the eye.
 apps/
   runtime/    @hash/runtime  — the server + CLI that discovers and serves dashboards
 examples/

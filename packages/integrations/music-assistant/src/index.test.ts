@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { MusicAssistantIntegration } from './music-assistant.ts';
+import { MusicAssistantIntegration } from './index.ts';
 
 // Applies to every test in this file (vitest hooks aren't position-sensitive): fake timers so the
 // reconnect-backoff tests can fast-forward, and `flush()` below drives both real microtasks and

@@ -169,6 +169,12 @@ importers:
       '@hash/core':
         specifier: workspace:*
         version: link:packages/core
+      '@hash/integration.home-assistant':
+        specifier: workspace:*
+        version: link:packages/integrations/home-assistant
+      '@hash/integration.music-assistant':
+        specifier: workspace:*
+        version: link:packages/integrations/music-assistant
       '@hash/runtime':
         specifier: workspace:*
         version: link:apps/runtime
@@ -303,11 +309,22 @@ importers:
         specifier: 30.1.1
         version: 30.1.1
 
-  packages/core:
+  packages/core: {}
+
+  packages/integrations/home-assistant:
     dependencies:
+      '@hash/core':
+        specifier: workspace:*
+        version: link:../../core
       home-assistant-js-websocket:
         specifier: 9.7.0
         version: 9.7.0
+
+  packages/integrations/music-assistant:
+    dependencies:
+      '@hash/core':
+        specifier: workspace:*
+        version: link:../../core
 
   packages/ui:
     dependencies:

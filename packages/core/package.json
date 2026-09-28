@@ -2,15 +2,10 @@
   "name": "@hash/core",
   "version": "0.0.0",
   "private": true,
-  "description": "Framework-agnostic integrations, entity types and wire protocol",
+  "description": "Framework-agnostic integration interface, entity types and wire protocol (no vendor-specific code)",
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "states": "node scripts/print-states.ts",
-    "players": "node scripts/print-players.ts"
-  },
-  "dependencies": {
-    "home-assistant-js-websocket": "9.7.0"
+    "typecheck": "tsc --noEmit"
   },
   "exports": {
     ".": "./src/index.ts",
