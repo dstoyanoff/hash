@@ -51,13 +51,17 @@ Open **http://localhost:3000** — you'll see the example dashboards, running ag
 **http://localhost:3000/gallery** too: every component in every state (on, off, dimming,
 unavailable, ...), the same reference an agent uses when building a page.
 
-Want it talking to your real Home Assistant instead of mock data?
+Want it talking to your real Home Assistant and/or Music Assistant instead of mock data? They're
+independent — set either, both, or neither:
 
 ```bash
-HA_URL=http://homeassistant.local:8123 HA_TOKEN=<a long-lived access token> pnpm dev
+HA_URL=http://homeassistant.local:8123 HA_TOKEN=<a long-lived access token> \
+MA_URL=http://mass.local:8095 MA_TOKEN=<a token from Settings → Profile> \
+pnpm dev
 ```
 
-(Home Assistant → your profile → **Long-Lived Access Tokens** → _Create Token_.)
+(Home Assistant → your profile → **Long-Lived Access Tokens** → _Create Token_.) Music Assistant
+is talked to directly over its own WebSocket API, not through Home Assistant.
 
 ### For your agent
 
@@ -86,9 +90,10 @@ tests, and checking it all actually renders — see [Agent-first](#agent-first-h
 docker compose up --build
 ```
 
-Set `HA_URL`/`HA_TOKEN` in a `.env` file next to `docker-compose.yml` (or in your shell) to point
-it at a real Home Assistant; leave them unset to keep using mock data. Point a tablet's browser
-(or a kiosk app) at `http://<the machine running this>:3000/dashboard/<id>`.
+Set `HA_URL`/`HA_TOKEN` and/or `MA_URL`/`MA_TOKEN` in a `.env` file next to `docker-compose.yml`
+(or in your shell) to point at a real Home Assistant and/or Music Assistant; leave them unset to
+keep using mock data. Point a tablet's browser (or a kiosk app) at
+`http://<the machine running this>:3000/dashboard/<id>`.
 
 The container only serves static files plus one WebSocket connection — your Home Assistant token
 lives on the server, never on the tablet.

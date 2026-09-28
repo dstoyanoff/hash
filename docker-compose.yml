@@ -4,7 +4,10 @@ services:
     ports:
       - '3000:3000'
     environment:
-      # Leave unset to use the mock backend from hash.config.ts.
+      # Leave unset to use the mock backend from hash.config.ts. Home Assistant and Music
+      # Assistant are independent — set either, both, or neither.
       HA_URL: ${HA_URL:-}
       HA_TOKEN: ${HA_TOKEN:-}
+      MA_URL: ${MA_URL:-}
+      MA_TOKEN: ${MA_TOKEN:-}
     restart: unless-stopped
