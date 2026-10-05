@@ -2,62 +2,54 @@
 
 [![CI](https://github.com/dstoyanoff/hash/actions/workflows/ci.yml/badge.svg)](https://github.com/dstoyanoff/hash/actions/workflows/ci.yml)
 
-**Your own smart-home dashboards, built like software.** No drag-and-drop card editor — a real
-design system, real components, real tests, served from a small Docker container to whatever
-screen you point it at (a wall-mounted tablet, a Shelly display, a phone). Home Assistant is the
-default backend, but nothing here is tied to it.
+**Smart-home dashboards you build like software.** A real design system, real React components and
+a small server, in place of a drag-and-drop card editor. You write the dashboard for a wall tablet,
+a phone or a small kitchen display as ordinary code, and hash keeps it live, themed and easy to
+deploy.
 
-The twist: **this repo is built to be extended by an AI coding agent, not just by hand.** Every
-dashboard follows a small set of strict rules (see [Agent-first](#agent-first-how-dashboards-get-built)
-below), so an agent like Claude Code can be handed "build me a dashboard for the kitchen" and
-produce something that fits the design system and renders correctly — without ever touching the
-parts of the codebase it shouldn't.
+<table>
+  <tr>
+    <td width="50%"><img alt="Dashboard, dark" src="docs/screenshots/home-dark.png"></td>
+    <td width="50%"><img alt="Dashboard, light" src="docs/screenshots/home-light.png"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Dark</sub></td>
+    <td align="center"><sub>Light, or follow the system</sub></td>
+  </tr>
+</table>
 
-## What's actually in here
+## What you get
 
-```
-packages/                                           ─┐
-  core/                      @hash/core              │ the published framework: no knowledge of any
-  integrations/                                      │ specific home. In a real split, this is what
-    home-assistant/          @hash/integration.*      │ you'd `npm install`.
-    music-assistant/         @hash/integration.*      │
-  ui/                        @hash/ui                 │
-  runtime/                   @hash/runtime           ─┘ CLI (hash-dash dev/build/start) + reusable
-                                                          pieces (createLayout, ...)
-example/                     @hash/example           ─┐ the one real consumer project — everything
-  hash.config.ts              (your integrations)     │ here is YOUR project, not the framework.
-  shared/                      (conventions dashboards │ `templates/dashboard/` is what a new
-                                 reuse: top bar, list)  │ dashboards/<id>/ folder is scaffolded from.
-  app/                         (real React Router:    │
-                                 root.tsx, routes.ts —  │
-                                 every route in one     │
-                                 file)                  │
-  dashboards/                                         │
-    home/                      — reference dashboard  │
-    second-floor/               (downstairs/upstairs, │
-    kitchen/                    switchable from the   │
-    hello/                      top bar)              │
-templates/
-  dashboard/                 — scaffold for a new example/dashboards/<id>/ folder
-```
+- **Components that already know your devices.** Give a light tile an entity id and you get on/off,
+  dimming, colour and colour temperature, a hold-to-open drawer with history and power use, and
+  pending/error feedback. The same goes for climate, sensors, scenes, media players and more. See
+  every one in every state in the **[component gallery](https://dstoyanoff.github.io/hash/)**.
+- **A full media experience.** A compact player bar, an upright card, and a full-page player with
+  your library: playlists, albums, artists and search, with artwork, shuffle and seeking.
+- **Real history, not placeholders.** Sensor charts, energy use per day, week and month, and
+  battery levels come from your backend's own records when it keeps them.
+- **Light, dark or follow the system**, plus a compact density for small square displays. Change
+  any colour, radius or spacing with one overrides object.
+- **Your tokens stay on the server.** The browser talks to hash's server, which talks to your home.
+  Nothing secret reaches a tablet.
+- **Not tied to one backend.** Home Assistant and Music Assistant work today, side by side.
+  See [Works with any backend](#works-with-any-backend).
+- **Deploys anywhere**, and builds where you build it, never where it runs. See
+  [Deploying](#deploying).
+- **Built to be extended by an AI coding agent** as well as by hand. See
+  [Build a dashboard](#build-a-dashboard).
 
-`packages/*` is the framework: no knowledge of this specific home, nothing project-specific.
-Everything under `example/` is a real, ordinary consumer project using that framework — this
-repo just happens to host both side by side so `@hash/ui`'s/`@hash/runtime`'s own tests and the
-dogfood dashboards live in the same place.
+<table>
+  <tr>
+    <td width="50%"><img alt="The full-page media player, dark" src="docs/screenshots/player-dark.png"></td>
+    <td width="50%"><img alt="The full-page media player, light" src="docs/screenshots/player-light.png"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>The full-page media player, with the library docked below it</sub></td>
+  </tr>
+</table>
 
-A dashboard is a plain folder under `example/dashboards/<id>/`, but that alone doesn't make it
-reachable — it's wired up explicitly, at compile time, by a route in `example/app/routes.ts`, the
-one file that lists every route. A dashboard owns its whole layout: it includes the `@hash/ui` top bar and nav itself
-(or doesn't), typically through a small shared file such as `example/shared/top-bar.tsx` — a
-convention of the example project, not something `@hash` enforces. The `create-dashboard` skill
-does all of this for you. Nothing is
-auto-discovered — there's no `/` index of installed dashboards; each one lives at
-`/<id>`.
-
-## Quickstart
-
-### For a human
+## Try it in two minutes
 
 ```bash
 git clone https://github.com/dstoyanoff/hash.git
@@ -67,15 +59,15 @@ pnpm install
 pnpm dev
 ```
 
-Open **http://localhost:3000/home** — the example dashboard, running against fake
-("mock") data so there's something to click even without a real smart home connected (the other
-examples are at `/second-floor`, `/kitchen`, `/hello`). In a second
-terminal, `pnpm --filter @hash/ui docs` serves the component gallery on its own port: every
-component in every state (on, off, dimming, unavailable, ...), the same reference an agent uses
-when building a page.
+Open **http://localhost:3000/home**. It runs on mock data, so there is something to click without a
+smart home connected. The other examples are at `/second-floor`, `/kitchen` and `/hello`.
 
-Want it talking to your real Home Assistant and/or Music Assistant instead of mock data? They're
-independent — set either, both, or neither:
+For the component gallery on its own: `pnpm --filter @hash/ui docs`.
+
+### Connect your home
+
+Point it at a real Home Assistant and/or Music Assistant with environment variables. They are
+independent: set either, both or neither, and anything unset keeps using mock data.
 
 ```bash
 HA_URL=http://homeassistant.local:8123 HA_TOKEN=<a long-lived access token> \
@@ -83,49 +75,103 @@ MA_URL=http://mass.local:8095 MA_TOKEN=<a token from Settings → Profile> \
 pnpm dev
 ```
 
-(Home Assistant → your profile → **Long-Lived Access Tokens** → _Create Token_.) Music Assistant
-is talked to directly over its own WebSocket API, not through Home Assistant.
+In Home Assistant, create the token under your profile → **Long-lived access tokens**. For a token
+that belongs to the dashboard and not to you, create a separate non-admin user for it first.
+Music Assistant is talked to directly over its own API, not through Home Assistant.
 
-### For your agent
+## Build a dashboard
 
-If you're using Claude Code (or another coding agent) and just want this running as fast as
-possible, paste this in:
+A dashboard is a folder of React under your project's `dashboards/`, and a route in
+`app/routes.ts` makes it reachable at `/<id>`. You compose the page from `@hash/ui`:
 
-> Clone `https://github.com/dstoyanoff/hash.git`, enable corepack, run `pnpm install`, then run
-> `pnpm dev` in the background and open http://localhost:3000/home for me so I can see
-> it's working.
+```tsx
+import { ClimateTile, Grid, LightTile, RoomHeader, SensorReadout } from '@hash/ui';
 
-Once it's running, the fastest way to get your own dashboard is to just ask for it — the agent
-already has everything it needs from the skills in `.claude/skills/`:
+export const meta = () => [{ title: 'Living room' }];
 
-> Create a dashboard for my [kitchen / living room / bathroom / whatever]. It's a
-> [tablet mounted on the wall / small square Shelly-style display / ...]. Devices: [list your
-> lights, thermostats, sensors, scenes — or say you don't have a live Home Assistant yet and it'll
-> use realistic placeholder data].
-
-That one request runs the whole `create-dashboard` workflow: scaffolding the dashboard, looking up
-real entity ids (or using sensible mock ones), composing the page from the design system, wiring
-it into the app, and checking it all actually renders — see
-[Agent-first](#agent-first-how-dashboards-get-built).
-
-## Running it for real
-
-Build once on your own machine; nothing is compiled, and no source is copied, where it runs.
-
-```bash
-pnpm package helm --platform linux/amd64   # or: compose, plain, image
+export default function LivingRoom() {
+  return (
+    <>
+      <RoomHeader
+        title="Living room"
+        icon="lu:sofa"
+        readouts={<SensorReadout entity="ha:sensor.living_room_temperature" />}
+      />
+      <Grid columns={2}>
+        <LightTile entity="ha:light.living_room_lamp" name="Lamp" />
+        <ClimateTile entity="ha:climate.living_room" name="Heater" />
+      </Grid>
+    </>
+  );
+}
 ```
 
-`hash-dash package` builds your dashboards, bundles the server (your `hash.config.ts` and its
-integrations included) into one file, and writes what you need to deploy it into `./release`:
+```ts
+// app/routes.ts: every URL in one place
+route('living-room', '../dashboards/living-room/page.tsx'),
+```
 
-| Target    | What you get                                                | Needs                  |
-| --------- | ----------------------------------------------------------- | ---------------------- |
-| `plain`   | `server.mjs` + `client/`: run it with `node server.mjs`     | Node 24+ where it runs |
-| `compose` | a Docker Compose file and the container image (`image.tar`) | Docker where it runs   |
-| `helm`    | a Helm chart for k3s/Kubernetes and the image (`image.tar`) | k3s/Kubernetes + helm  |
+Devices are addressed as `<integration>:<id>`, such as `ha:light.kitchen` or `ma:kitchen`. A
+dashboard owns its whole layout: add the top bar, a left navigation rail or a bottom dock, or leave
+them out for a bare kiosk panel. Icons are plain strings (`'lu:lightbulb'`, `'tb:vacuum-cleaner'`).
 
-Pass one or more targets, or set a default in `hash.config.ts` so `pnpm package` takes no flags:
+### Or ask your agent
+
+If you use Claude Code or another coding agent, the repo ships the skills it needs. Once it is
+running, ask for what you want:
+
+> Create a dashboard for my kitchen. It's a tablet on the wall. Devices: the ceiling light, a LED
+> strip, the thermostat, and a "cooking time" scene.
+
+The agent scaffolds the dashboard, looks up your real entity ids (or uses placeholders until you
+connect a backend), composes the page from the design system, wires up the route and checks that
+it renders. The skills live in `.claude/skills/`, and they are also good reading for doing the
+same by hand.
+
+## Works with any backend
+
+The components never talk to a specific system. Each backend has an **integration** that turns it
+into a small, generic model (a light, a climate device, a media player, a sensor, ...) and turns
+the UI's commands back into that backend's own. Your project lists the ones it uses:
+
+```ts
+// hash.config.ts
+import { HomeAssistantIntegration } from '@hash/integration.home-assistant';
+import { MusicAssistantIntegration } from '@hash/integration.music-assistant';
+import { defineConfig } from '@hash/runtime';
+
+export default defineConfig({
+  integrations: [
+    new HomeAssistantIntegration({ url: process.env.HA_URL!, token: process.env.HA_TOKEN! }),
+    new MusicAssistantIntegration({ url: process.env.MA_URL!, token: process.env.MA_TOKEN! }),
+  ],
+});
+```
+
+This is why one dashboard can show a Home Assistant light next to a Music Assistant player, and
+why adding a new backend means writing one integration package and touching nothing else. Anything
+you build for the UI keeps working, whichever system sits behind it. The contract and how it fits
+together are in **[ARCHITECTURE.md](ARCHITECTURE.md)**.
+
+## Deploying
+
+Build once on your own machine. Nothing is compiled, and no source is copied, where it runs.
+
+```bash
+pnpm package helm --platform linux/amd64     # or: compose, plain, image
+```
+
+`hash-dash package` builds your dashboards, bundles the server with your config and integrations
+into one file, and writes what you need into `./release`:
+
+| Target    | What you get                                               | Needs                  |
+| --------- | ---------------------------------------------------------- | ---------------------- |
+| `plain`   | `server.mjs` and `client/`: run it with `node server.mjs`  | Node 24+ where it runs |
+| `compose` | a Docker Compose file and the container image              | Docker where it runs   |
+| `helm`    | a Helm chart for k3s/Kubernetes and the container image    | k3s/Kubernetes + helm  |
+| `image`   | only the container image, for manifests you write yourself | a container runtime    |
+
+Set a default in `hash.config.ts` so `pnpm package` takes no flags:
 
 ```ts
 export default defineConfig({
@@ -134,66 +180,46 @@ export default defineConfig({
 });
 ```
 
-Building the image needs Docker on **your** machine (`--platform` builds for a server of another
-kind, e.g. an x86 server from an Apple-silicon Mac); `plain` needs none. Each release has its own
-image tag, so a server always picks up an update. No registry is involved: copy `release/` to the
-server, load `image.tar` (`docker load`, or `k3s ctr images import`, which the chart's
-`import-image.sh` does) and start it.
+**Secrets are never in the image or the release files.** The server reads `HA_URL`, `HA_TOKEN` and
+the rest from its environment when it runs: an `.env` file for compose, a Kubernetes Secret for
+helm. No registry is involved: copy `release/`, load `image.tar` and start it. Point a tablet's
+browser or a kiosk app at `http://<the server>:3000/<id>`.
 
-**Secrets are never in the image or the release files.** The config reads `HA_URL`/`HA_TOKEN` and
-the like from the environment when it runs: an `.env` file for compose, a Kubernetes Secret for
-helm (the chart takes the Secret's name and never holds its values). Leave them unset and the
-mock data from `hash.config.ts` is used. Point a tablet's browser (or a kiosk app) at
-`http://<the server>:3000/<id>`. Your token lives on the server, never on the tablet.
+How the release is built, and how to load the image on k3s, is in
+[ARCHITECTURE.md](ARCHITECTURE.md#packaging-and-deployment).
 
-## Agent-first: how dashboards get built
+## Layout
 
-A dashboard's own files (`example/dashboards/<id>/**`) can only import `react`, `react-router`,
-`@hash/ui` and `@hash/core` — enforced by lint, not just convention. That constraint is what makes
-it safe to hand dashboard work to an agent: it physically cannot reach into the runtime or the
-design system while building one, so "create a dashboard" can never turn into "also refactored the
-runtime." If a dashboard genuinely needs something the design system doesn't have yet, that's a
-separate, explicit, reviewable change (see the `add-ui-component` skill).
+```
+packages/        the framework: core, ui, runtime, and one package per integration
+example/         a complete project you can run, and the template for your own
+templates/       scaffolds for new dashboards
+docs/            screenshots
+```
 
-Everything an agent needs to do this well lives in `.claude/skills/`:
-
-| Skill              | What it's for                                                                   |
-| ------------------ | ------------------------------------------------------------------------------- |
-| `create-dashboard` | The end-to-end process for a new dashboard                                      |
-| `dashboard-rules`  | The hard constraints, plus every sharp edge found building the real examples    |
-| `entity-discovery` | Finding real Home Assistant entity ids instead of guessing                      |
-| `ui-catalog`       | Every component, its props, generated straight from source so it can't go stale |
-| `verify-dashboard` | How to actually check the result works before calling it done                   |
-| `add-ui-component` | The stricter, separate workflow for extending the design system itself          |
-
-These were refined by actually using them — including a dry run where an agent was handed nothing
-but "create a kitchen dashboard" and the resulting friction was fed back into the skills. They're
-also just good docs for a human doing the same work by hand.
+Everything under `example/` is an ordinary project that uses the framework, the same as yours
+would. Where each piece lives, and why, is in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Development
-
-How the layers and the integration contract fit together: [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ```bash
 pnpm lint             # oxlint
 pnpm format:check     # oxfmt (pnpm format to fix)
 pnpm typecheck
 pnpm test             # vitest, every package
-pnpm generate:catalog      # regenerate the UI catalog after changing a component
+pnpm generate:catalog # regenerate the component catalog after changing a component
 ```
 
-Node is pinned (`devEngines.runtime` in `package.json`) and managed by pnpm — no nvm needed;
-`corepack enable` gets you the matching pnpm version automatically.
-
-More detail on the layout and rules lives in [`AGENTS.md`](AGENTS.md) (also read by Claude Code as
-`CLAUDE.md`).
+Node is pinned in `package.json` and managed by pnpm, so no nvm is needed; `corepack enable` gets
+the matching pnpm. More detail on the rules is in [`AGENTS.md`](AGENTS.md), which Claude Code also
+reads as `CLAUDE.md`.
 
 ## Status
 
-Actively under construction — milestones are tracked as
-[GitHub issues](https://github.com/dstoyanoff/hash/issues). Not yet published as installable
-packages; today, using this means cloning the repo and adding your own dashboards under
-`example/dashboards/`.
+Under active development; milestones are tracked as
+[GitHub issues](https://github.com/dstoyanoff/hash/issues). The packages are not on npm yet, so
+today you use hash by cloning the repository and adding your dashboards to a project like
+`example/`.
 
 ## License
 

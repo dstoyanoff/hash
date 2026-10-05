@@ -31,6 +31,7 @@
     "dev": "pnpm --filter @hash/example dev",
     "start": "pnpm --filter @hash/example start",
     "generate:catalog": "node scripts/generate-ui-catalog.ts",
-    "generate:icons": "node scripts/generate-icons.ts"
+    "generate:icons": "node scripts/generate-icons.ts",
+    "package": "pnpm --filter @hash/example package"
   }
 }
