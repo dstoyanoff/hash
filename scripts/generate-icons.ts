@@ -17,7 +17,7 @@
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { format, resolveConfig } from 'prettier';
+import { formatWithRepoConfig } from './format.ts';
 
 const OUT_FILE = join(import.meta.dirname, '..', 'packages', 'ui', 'src', 'icon-data.ts');
 
@@ -89,8 +89,7 @@ ${entries.map(([id, nodes]) => `  ${JSON.stringify(id)}: ${JSON.stringify(nodes)
 export type IconName = \`lu:${'$'}{string}\` | \`tb:${'$'}{string}\`;
 `;
 
-const config = await resolveConfig(OUT_FILE);
-const formatted = await format(raw, { ...config, filepath: OUT_FILE });
+const formatted = await formatWithRepoConfig(OUT_FILE, raw);
 
 writeFileSync(OUT_FILE, formatted);
 console.log(`Wrote ${OUT_FILE} (${entries.length} icons)`);

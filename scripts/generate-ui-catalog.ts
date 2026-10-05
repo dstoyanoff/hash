@@ -9,7 +9,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { format, resolveConfig } from 'prettier';
+import { formatWithRepoConfig } from './format.ts';
 
 const UI_SRC = join(import.meta.dirname, '..', 'packages', 'ui', 'src');
 const OUT_FILE = join(import.meta.dirname, '..', '.claude', 'skills', 'ui-catalog', 'CATALOG.md');
@@ -307,11 +307,10 @@ const raw =
     .replace(/\n{3,}/g, '\n\n')
     .trimEnd() + '\n';
 
-// Format with this repo's own Prettier config so the output always matches `pnpm format:check`
+// Format with this repo's own oxfmt config so the output always matches `pnpm format:check`
 // (e.g. markdown table column padding) — generating already-formatted output, rather than hoping
 // a hand-rolled renderer happens to match, is what keeps this file from drifting.
-const config = await resolveConfig(OUT_FILE);
-const formatted = await format(raw, { ...config, filepath: OUT_FILE });
+const formatted = await formatWithRepoConfig(OUT_FILE, raw);
 
 writeFileSync(OUT_FILE, formatted);
 console.log(`Wrote ${OUT_FILE}`);
@@ -324,7 +323,6 @@ const propsSource =
   JSON.stringify(componentProps, null, 2) +
   ';\n';
 
-const propsConfig = await resolveConfig(PROPS_FILE);
-writeFileSync(PROPS_FILE, await format(propsSource, { ...propsConfig, filepath: PROPS_FILE }));
+writeFileSync(PROPS_FILE, await formatWithRepoConfig(PROPS_FILE, propsSource));
 
 console.log(`Wrote ${PROPS_FILE}`);
