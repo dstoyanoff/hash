@@ -1,5 +1,5 @@
 /** @jsxImportSource @emotion/react */
-import type { EntityRef } from '@hash/core';
+import type { EntityRef } from '@hashsome/core';
 import { Flex } from 'e-prim';
 import { useEntityHandle } from '../hooks.ts';
 import { MediaBrowser } from './media-browser.tsx';

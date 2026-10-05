@@ -1,4 +1,4 @@
-import type { ClimateEntity, ClimateMode, EntityRef } from '@hash/core';
+import type { ClimateEntity, ClimateMode, EntityRef } from '@hashsome/core';
 import { Flex, Typography } from 'e-prim';
 import { useEffect, useRef, useState } from 'react';
 import type { IconName } from '../icon-data.ts';

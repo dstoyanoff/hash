@@ -5,11 +5,11 @@ import {
   mockSensor,
   mockWeather,
   MockIntegration,
-} from '@hash/core';
+} from '@hashsome/core';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, test } from 'vitest';
-import { HashProvider } from '../../provider.tsx';
+import { HashsomeProvider } from '../../provider.tsx';
 import { renderWithMock } from '../../test-utils.tsx';
 import { TopBar } from '../top-bar.tsx';
 
@@ -181,9 +181,9 @@ test('the status dot flags an integration that drops', () => {
   const flaky = new Flaky({ id: 'ha', entities: {} });
   const client = new LocalClient([flaky]);
   render(
-    <HashProvider client={client}>
+    <HashsomeProvider client={client}>
       <TopBar title="Downstairs" />
-    </HashProvider>,
+    </HashsomeProvider>,
   );
 
   expect(screen.getByRole('button', { name: 'All systems operational' })).toBeTruthy();

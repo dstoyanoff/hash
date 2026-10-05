@@ -1,6 +1,6 @@
 ---
 name: ui-catalog
-description: Reference for every @hash/ui component, hook and its props. Load before writing or reviewing dashboard code that uses @hash/ui, or when unsure what a component's props are.
+description: Reference for every @hashsome/ui component, hook and its props. Load before writing or reviewing dashboard code that uses @hashsome/ui, or when unsure what a component's props are.
 ---
 
 # UI catalog

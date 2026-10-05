@@ -6,7 +6,7 @@ import {
   RoomHeader,
   SceneButton,
   SensorReadout,
-} from '@hash/ui';
+} from '@hashsome/ui';
 import { HomeTopBar } from '../../../shared/top-bar.tsx';
 
 export const meta = () => [{ title: '2nd Floor' }];

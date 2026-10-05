@@ -9,7 +9,7 @@ import {
   mockSensor,
   MockIntegration,
   type EntityInput,
-} from '@hash/core';
+} from '@hashsome/core';
 
 /** Album art for the gallery's playing demo, served by the docs dev server from `docs/public/`. */
 // Under the base path the site is served from (`/hash/` on GitHub Pages), not the domain's root.

@@ -1,4 +1,4 @@
-import type { Integration } from '@hash/core';
+import type { Integration } from '@hashsome/core';
 import express, { type Express } from 'express';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
@@ -32,7 +32,7 @@ export function createApp(clientDir: string, integrations: Integration[] = []): 
   return app;
 }
 
-/** Where `hash build` puts the client, under a project. A packaged release keeps it elsewhere. */
+/** Where `hashsome build` puts the client, under a project. A packaged release keeps it elsewhere. */
 export const BUILT_CLIENT = join('build', 'client');
 
 export function startServer(config: ResolvedConfig, clientDir = join(config.root, BUILT_CLIENT)) {
@@ -41,7 +41,7 @@ export function startServer(config: ResolvedConfig, clientDir = join(config.root
   attachWebSocket(server, proxy);
   const stop = startIntegrations(config.integrations, { log: console.log });
   server.listen(config.port, config.host, () => {
-    console.log(`hash listening on http://${config.host}:${config.port}`);
+    console.log(`hashsome listening on http://${config.host}:${config.port}`);
   });
 
   const shutdown = () => {

@@ -4,11 +4,11 @@ import { packageRelease } from '../release/package.ts';
 import { TARGETS, type Target } from '../release/render.ts';
 import { build } from './build.ts';
 
-const USAGE = `Usage: hash-dash package [target...] [options]
+const USAGE = `Usage: hashsome package [target...] [options]
 
 Builds the project and writes what you need to deploy it, into ./release.
 
-Targets (one or more; with none, \`package.targets\` in hash.config.ts):
+Targets (one or more; with none, \`package.targets\` in hashsome.config.ts):
   plain     The server (one file) and the client. Runs with just Node 24+. No Docker needed.
   compose   A Docker Compose file and the container image (image.tar).
   helm      A Helm chart for k3s/Kubernetes and the container image (image.tar).
@@ -23,8 +23,8 @@ Options:
   --no-image       Skip building the image (no Docker needed; compose and helm need one later)
 
 Examples:
-  hash-dash package helm --platform linux/amd64
-  hash-dash package plain
+  hashsome package helm --platform linux/amd64
+  hashsome package plain
 `;
 
 const VALUE_FLAGS = ['platform', 'name', 'tag', 'out', 'port'];

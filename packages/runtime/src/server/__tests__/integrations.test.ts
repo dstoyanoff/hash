@@ -1,4 +1,4 @@
-import type { Integration } from '@hash/core';
+import type { Integration } from '@hashsome/core';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { startIntegrations } from '../integrations.ts';
 

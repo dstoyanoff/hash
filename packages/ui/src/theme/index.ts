@@ -1,7 +1,7 @@
 import type { ThemeConfig } from 'e-prim';
 import './tokens.ts';
 
-/** The Google Fonts family loaded and applied by default — see `HashProviderProps.font` . Any other Google Fonts family name works the same way. */
+/** The Google Fonts family loaded and applied by default — see `HashsomeProviderProps.font` . Any other Google Fonts family name works the same way. */
 export const DEFAULT_FONT = 'Inter';
 
 const FALLBACK_FONTS = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
@@ -12,7 +12,7 @@ export function fontStack(family: string): string {
   return `'${family}', ${FALLBACK_FONTS}`;
 }
 
-/** The Google Fonts CSS endpoint for a family name, covering the weights `@hash/ui` actually uses
+/** The Google Fonts CSS endpoint for a family name, covering the weights `@hashsome/ui` actually uses
  * (400/500/600/700). Spaces become `+` per Google Fonts' own URL convention. */
 export function googleFontHref(family: string): string {
   return `https://fonts.googleapis.com/css2?family=${family.trim().replace(/\s+/g, '+')}:wght@400;500;600;700&display=swap`;
@@ -20,7 +20,7 @@ export function googleFontHref(family: string): string {
 
 /** Returns `theme` with every `Typography` variant's font swapped to `family` (falling back to
  * the system stack) — every variant inherits `typography.default`, so this is the one place that
- * needs to change. Used by `HashProvider` to apply `HashProviderProps.font` at runtime, since the
+ * needs to change. Used by `HashsomeProvider` to apply `HashsomeProviderProps.font` at runtime, since the
  * `darkTheme`/`lightTheme` exports below are built once with the compile-time default. */
 export function withFontFamily(theme: ThemeConfig, family: string): ThemeConfig {
   return {
@@ -96,7 +96,7 @@ export const darkTheme: ThemeConfig = {
   },
 };
 
-/** Ember's light counterpart, selected via `<HashProvider theme="light">` (or `"system"`). */
+/** Ember's light counterpart, selected via `<HashsomeProvider theme="light">` (or `"system"`). */
 export const lightTheme: ThemeConfig = {
   ...shared,
   palette: {

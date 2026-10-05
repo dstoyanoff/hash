@@ -1,7 +1,7 @@
-import { LocalClient, MockIntegration } from '@hash/core';
+import { LocalClient, MockIntegration } from '@hashsome/core';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { HashProvider } from '../../provider.tsx';
+import { HashsomeProvider } from '../../provider.tsx';
 import { renderWithMock } from '../../test-utils.tsx';
 import { Tile } from '../tile.tsx';
 
@@ -90,9 +90,9 @@ test('after releasing a drag, the live value holds until `fill` catches up — n
   const onFillChange = vi.fn<(fill: number) => void>();
   const client = new LocalClient([new MockIntegration({})]);
   const { rerender } = render(
-    <HashProvider client={client}>
+    <HashsomeProvider client={client}>
       <Tile label="led" active fill={0.3} secondary="30%" onFillChange={onFillChange} />
-    </HashProvider>,
+    </HashsomeProvider>,
   );
 
   const tile = screen.getByRole('button', { name: 'led' });
@@ -106,9 +106,9 @@ test('after releasing a drag, the live value holds until `fill` catches up — n
 
   // Once the backend confirms and new props flow down, it hands off seamlessly — still 75%.
   rerender(
-    <HashProvider client={client}>
+    <HashsomeProvider client={client}>
       <Tile label="led" active fill={0.75} secondary="75%" onFillChange={onFillChange} />
-    </HashProvider>,
+    </HashsomeProvider>,
   );
 
   expect(tile.textContent).toContain('75%');
@@ -173,7 +173,7 @@ test('while an overlay is open the accent fill is hidden so the overlay reads on
 
   expect(container.querySelector('[data-fill-visible="true"]')).not.toBeNull();
   rerender(
-    <HashProvider client={new LocalClient([new MockIntegration()])}>
+    <HashsomeProvider client={new LocalClient([new MockIntegration()])}>
       <Tile
         label="lamp"
         active
@@ -181,7 +181,7 @@ test('while an overlay is open the accent fill is hidden so the overlay reads on
         onFillChange={() => {}}
         overlay={() => <span>swatches</span>}
       />
-    </HashProvider>,
+    </HashsomeProvider>,
   );
 
   expect(container.querySelector('[data-fill-visible="false"]')).not.toBeNull();
@@ -195,9 +195,9 @@ test('closing an overlay does not remount the fill bar, so it never replays its 
   const bar = container.querySelector('[data-active] > span');
   expect(bar).not.toBeNull();
   rerender(
-    <HashProvider client={new LocalClient([new MockIntegration()])}>
+    <HashsomeProvider client={new LocalClient([new MockIntegration()])}>
       <Tile label="lamp" active fill={0.6} onFillChange={() => {}} />
-    </HashProvider>,
+    </HashsomeProvider>,
   );
 
   expect(container.querySelector('[data-active] > span')).toBe(bar);

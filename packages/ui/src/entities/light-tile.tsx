@@ -1,5 +1,5 @@
 /** @jsxImportSource @emotion/react */
-import type { EntityRef, LightEntity } from '@hash/core';
+import type { EntityRef, LightEntity } from '@hashsome/core';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { fallbackName, type EntityHandle } from '../entity-handle.ts';
 import { useEntityHandle } from '../hooks.ts';

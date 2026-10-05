@@ -1,4 +1,4 @@
-import type { EntityInput, LightColor } from '@hash/core';
+import type { EntityInput, LightColor } from '@hashsome/core';
 import type { HassEntity } from 'home-assistant-js-websocket';
 import { baseOf, num, strings } from './common.ts';
 

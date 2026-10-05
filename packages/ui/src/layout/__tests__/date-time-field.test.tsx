@@ -1,8 +1,8 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { LocalClient } from '@hash/core';
+import { LocalClient } from '@hashsome/core';
 import { useState } from 'react';
 import { afterEach, expect, test } from 'vitest';
-import { HashProvider } from '../../provider.tsx';
+import { HashsomeProvider } from '../../provider.tsx';
 import { DateTimeField } from '../date-time-field.tsx';
 
 afterEach(cleanup);
@@ -12,7 +12,7 @@ const client = new LocalClient([]);
 function Harness({ initial, min, max }: { initial: string; min?: string; max?: string }) {
   const [value, setValue] = useState(initial);
   return (
-    <HashProvider client={client}>
+    <HashsomeProvider client={client}>
       <DateTimeField
         label="When"
         value={value}
@@ -21,7 +21,7 @@ function Harness({ initial, min, max }: { initial: string; min?: string; max?: s
         onChange={setValue}
       />
       <output data-testid="value">{value}</output>
-    </HashProvider>
+    </HashsomeProvider>
   );
 }
 

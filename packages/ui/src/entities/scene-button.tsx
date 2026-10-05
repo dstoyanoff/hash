@@ -1,4 +1,4 @@
-import type { EntityRef } from '@hash/core';
+import type { EntityRef } from '@hashsome/core';
 import type { EntityHandle } from '../entity-handle.ts';
 import type { IconName } from '../icon-data.ts';
 import { ActionButton } from './action-button.tsx';

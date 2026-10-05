@@ -1,4 +1,4 @@
-import type { ConnectionStatus, Entity, EntityKind, EntityRef, LinkStatus } from '@hash/core';
+import type { ConnectionStatus, Entity, EntityKind, EntityRef, LinkStatus } from '@hashsome/core';
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { toHandle, type CommandSender, type EntityHandle } from './entity-handle.ts';
 import { useClient } from './provider.tsx';

@@ -1,5 +1,5 @@
 import type { ServerResponse } from 'node:http';
-import type { Integration } from '@hash/core';
+import type { Integration } from '@hashsome/core';
 import { expect, test, vi } from 'vitest';
 import { serveAsset } from '../assets.ts';
 
@@ -30,7 +30,7 @@ test("serves an integration's image with a cache header", async () => {
   const { res, headers, asResponse } = fakeResponse();
   const served = await serveAsset(
     [integration(fetchAsset)],
-    { method: 'GET', url: `/_hash/asset/ha?path=${encodeURIComponent('/api/x?token=1')}` },
+    { method: 'GET', url: `/_hashsome/asset/ha?path=${encodeURIComponent('/api/x?token=1')}` },
     asResponse,
   );
 
@@ -50,7 +50,7 @@ test('refuses anything that is not an image, a failed fetch, an unknown integrat
         ),
       ],
       'GET',
-      '/_hash/asset/ha?path=%2Fa',
+      '/_hashsome/asset/ha?path=%2Fa',
     ],
     [
       [
@@ -59,7 +59,7 @@ test('refuses anything that is not an image, a failed fetch, an unknown integrat
         ),
       ],
       'GET',
-      '/_hash/asset/ha?path=%2Fa',
+      '/_hashsome/asset/ha?path=%2Fa',
     ],
     [
       [
@@ -68,12 +68,12 @@ test('refuses anything that is not an image, a failed fetch, an unknown integrat
         }),
       ],
       'GET',
-      '/_hash/asset/ha?path=%2Fa',
+      '/_hashsome/asset/ha?path=%2Fa',
     ],
-    [[integration(async () => image())], 'GET', '/_hash/asset/other?path=%2Fa'],
-    [[integration()], 'GET', '/_hash/asset/ha?path=%2Fa'],
-    [[integration(async () => image())], 'GET', '/_hash/asset/ha'],
-    [[integration(async () => image())], 'POST', '/_hash/asset/ha?path=%2Fa'],
+    [[integration(async () => image())], 'GET', '/_hashsome/asset/other?path=%2Fa'],
+    [[integration()], 'GET', '/_hashsome/asset/ha?path=%2Fa'],
+    [[integration(async () => image())], 'GET', '/_hashsome/asset/ha'],
+    [[integration(async () => image())], 'POST', '/_hashsome/asset/ha?path=%2Fa'],
   ];
 
   for (const [integrations, method, url] of cases) {

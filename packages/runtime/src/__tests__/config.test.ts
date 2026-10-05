@@ -12,21 +12,21 @@ beforeEach(() => {
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
 function writeConfig(source: string) {
-  writeFileSync(join(root, 'hash.config.ts'), source);
+  writeFileSync(join(root, 'hashsome.config.ts'), source);
 }
 
 // A dynamically `import()`ed fixture file is plain JS at runtime — Node's type stripping erases
-// types without checking them, so a minimal `{ id }` stand-in works without needing @hash/core
+// types without checking them, so a minimal `{ id }` stand-in works without needing @hashsome/core
 // resolvable from a scratch directory outside the workspace.
 const fakeIntegration = (id: string) => `{ id: ${JSON.stringify(id)} }`;
 
-test('no hash.config.ts yields defaults and no integrations', async () => {
+test('no hashsome.config.ts yields defaults and no integrations', async () => {
   const config = await loadConfig(root);
   expect(config.integrations).toEqual([]);
   expect(config.host).toBe('0.0.0.0');
 });
 
-test('integrations from hash.config.ts pass through unchanged', async () => {
+test('integrations from hashsome.config.ts pass through unchanged', async () => {
   writeConfig(
     `export default { integrations: [${fakeIntegration('ha')}, ${fakeIntegration('ma')}] };`,
   );

@@ -10,7 +10,7 @@ const COLLAPSED_WIDTH = 380;
 const EDGE_INSET = 20;
 
 /**
- * The single shared detail drawer, rendered once by `HashProvider`. Floats `EDGE_INSET`px in
+ * The single shared detail drawer, rendered once by `HashsomeProvider`. Floats `EDGE_INSET`px in
  * from the viewport edges (not the triggering tile — it's opened via `Tile`'s `detail` prop and
  * has to fit content far larger than a tile), and can expand to near-fullscreen.
  *

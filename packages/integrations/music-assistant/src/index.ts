@@ -5,7 +5,7 @@ import {
   type BrowseQuery,
   type BrowseResult,
   type EntityInput,
-} from '@hash/core';
+} from '@hashsome/core';
 import { parseUri, SHELVES, toBrowseItem, type MaItem } from './browse.ts';
 import { toMediaPlayer, type MaPlayer } from './mapper.ts';
 import { onPlayback, onQueue, positionOf, type Position } from './position.ts';
@@ -26,7 +26,7 @@ import { onPlayback, onQueue, positionOf, type Position } from './position.ts';
  * `domain.name` pair like Home Assistant's — Music Assistant's player ids are opaque strings that
  * may themselves contain dots, so splitting on one would be ambiguous.
  *
- * Every player is a native `mediaPlayer` entity (see `@hash/core`'s model): there is no Home
+ * Every player is a native `mediaPlayer` entity (see `@hashsome/core`'s model): there is no Home
  * Assistant vocabulary here, and `command()` maps the model's commands straight to `players/cmd/*`.
  */
 

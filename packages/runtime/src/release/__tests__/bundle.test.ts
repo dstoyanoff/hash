@@ -13,7 +13,7 @@ afterAll(() => rmSync(out, { recursive: true, force: true }));
 test('the server is one file that runs on its own, from a folder with no node_modules', async () => {
   await bundleServer({ root: fixture, outFile: join(out, 'server.mjs') });
   // Nothing is left behind in the project.
-  expect(existsSync(join(fixture, '.hash-server-entry.ts'))).toBe(false);
+  expect(existsSync(join(fixture, '.hashsome-server-entry.ts'))).toBe(false);
   // Nothing in it points at the source tree it was built from.
   expect(readFileSync(join(out, 'server.mjs'), 'utf8')).not.toContain(
     'packages/runtime/node_modules',

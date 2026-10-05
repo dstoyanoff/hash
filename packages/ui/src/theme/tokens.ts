@@ -4,7 +4,7 @@ import type { DensityTokens } from './density.ts';
 
 declare module '@emotion/react' {
   interface Theme {
-    /** Set by `HashProvider` from its `density` prop. */
+    /** Set by `HashsomeProvider` from its `density` prop. */
     density: DensityTokens;
   }
 }

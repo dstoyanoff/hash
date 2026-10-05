@@ -1,6 +1,6 @@
 # Architecture
 
-How `hash` is layered, and the contract an integration implements. Read this before adding a
+How Hashsome is layered, and the contract an integration implements. Read this before adding a
 component, a device kind, or an integration.
 
 > **Status.** This describes the **target** design. Parts of it are not built yet; each section
@@ -10,7 +10,7 @@ component, a device kind, or an integration.
 
 ## Principles
 
-1. **The UI knows nothing about integrations.** `@hash/ui` components care about state and
+1. **The UI knows nothing about integrations.** `@hashsome/ui` components care about state and
    interactions only. They never name Home Assistant, Music Assistant, a service, or an
    integration-specific attribute.
 2. **Integrations translate.** Each integration maps its backend's shape to a generic entity
@@ -19,32 +19,32 @@ component, a device kind, or an integration.
 3. **Using a component stays one prop.** Cards take an entity id; the generic object is resolved
    for them. The object form exists for custom sources, not as the default.
 4. **Integrations are ordinary npm packages.** Anyone can publish one by implementing the contract
-   in `@hash/core`. Nothing in `@hash/core`, `@hash/ui` or `@hash/runtime` special-cases an
+   in `@hashsome/core`. Nothing in `@hashsome/core`, `@hashsome/ui` or `@hashsome/runtime` special-cases an
    integration.
 5. **A project is an app, not a configuration.** Dashboards are ordinary React code that composes
-   `@hash/ui` components. The framework provides components, a hosting runtime and integrations.
+   `@hashsome/ui` components. The framework provides components, a hosting runtime and integrations.
 
 ## Layers
 
 ```
- backend            integration (npm package)        @hash/core                @hash/ui
+ backend            integration (npm package)        @hashsome/core                @hashsome/ui
  ───────            ─────────────────────────        ──────────                ────────
  Home Assistant ──► maps its entities to the   ──►  generic entity model ──►  hook(ref) → object → component
  Music Assistant    generic model; maps             named commands
  anything else      generic commands back           wire protocol
                     (server only)                   integration contract
                                     ▲                        ▲
-                                    └──── @hash/runtime ─────┘
+                                    └──── @hashsome/runtime ─────┘
                                      hosts integrations, proxies them to the browser
 ```
 
 | Package               | Owns                                                                                           | Must not                                                       |
 | --------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `@hash/core`          | Entity refs, the generic model, commands, the integration contract, the wire protocol, clients | Depend on React, or name any backend                           |
-| integration packages  | Connecting to one backend; translating state and commands                                      | Be imported by browser code; depend on `@hash/ui`              |
-| `@hash/runtime`       | The CLI, hosting integrations, the browser proxy, route helpers                                | Know about any specific integration or render any UI chrome    |
-| `@hash/ui`            | Design system, hooks, components                                                               | Name an integration, a backend service, or a backend attribute |
-| a project (`example`) | `hash.config.ts` (which integrations), its dashboards, its shared files                        | —                                                              |
+| `@hashsome/core`      | Entity refs, the generic model, commands, the integration contract, the wire protocol, clients | Depend on React, or name any backend                           |
+| integration packages  | Connecting to one backend; translating state and commands                                      | Be imported by browser code; depend on `@hashsome/ui`          |
+| `@hashsome/runtime`   | The CLI, hosting integrations, the browser proxy, route helpers                                | Know about any specific integration or render any UI chrome    |
+| `@hashsome/ui`        | Design system, hooks, components                                                               | Name an integration, a backend service, or a backend attribute |
+| a project (`example`) | `hashsome.config.ts` (which integrations), its dashboards, its shared files                    | —                                                              |
 
 ## Entity refs
 
@@ -87,7 +87,7 @@ for the first answer and `null` when the integration has no such entity.
 
 ### Kinds
 
-Each kind is one file in `@hash/core` holding its state, its **capabilities** and its **commands**.
+Each kind is one file in `@hashsome/core` holding its state, its **capabilities** and its **commands**.
 The first kind, in full:
 
 ```ts
@@ -151,22 +151,22 @@ Anything else is `kind: 'generic'` with a text `value`.
 - **Capabilities, not mode lists.** A component asks "can this light do color temperature?" by
   reading `capabilities`, never by interpreting a backend's mode strings.
 - **Closed vocabularies.** Enumerations (`playback`, climate modes) are fixed sets defined in
-  `@hash/core`. An integration maps its values onto them; a value with no equivalent maps to the
+  `@hashsome/core`. An integration maps its values onto them; a value with no equivalent maps to the
   nearest one, and the original stays in `raw`.
 - **Nothing backend-named.** No field or command name comes from a backend's API.
-- **`raw` is for projects, not for `@hash/ui`.** A dashboard may read `raw` for something the model
-  does not cover. A `@hash/ui` component must not. If a component needs a field, the field belongs
+- **`raw` is for projects, not for `@hashsome/ui`.** A dashboard may read `raw` for something the model
+  does not cover. A `@hashsome/ui` component must not. If a component needs a field, the field belongs
   in the model.
 - **`raw` reaches the browser.** It must never contain credentials or anything not meant for the
   person looking at the dashboard.
 - **Additive evolution.** New fields and capabilities are optional. Removing or changing one is a
-  breaking change to `@hash/core`.
+  breaking change to `@hashsome/core`.
 
 ### Custom kinds
 
 `kind` is an open string, so a third-party integration can ship its own kind together with the
-component that renders it, without changing `@hash/core`. Unprefixed kind names are reserved for
-`@hash/core`; a third-party kind uses a prefix (`acme.blind`).
+component that renders it, without changing `@hashsome/core`. Unprefixed kind names are reserved for
+`@hashsome/core`; a third-party kind uses a prefix (`acme.blind`).
 
 **Status:** built (`packages/core/src/model/`): `mediaPlayer`, `light`, `climate`, `sensor`, `switch`,
 `action`, `person` and `generic`.
@@ -210,7 +210,7 @@ interface Integration {
 ```
 
 **Integrations never see a ref.** Every `entityId` an integration receives is its own local id.
-`@hash/core` and the runtime do the addressing in one place: they parse `<integration>:<id>`, pick
+`@hashsome/core` and the runtime do the addressing in one place: they parse `<integration>:<id>`, pick
 the integration by its `id`, and pass on only the local id. In the other direction the integration
 hands over entities keyed by local id, and `BaseIntegration` stamps `ref` onto them. An integration
 neither strips nor builds prefixes.
@@ -321,12 +321,12 @@ Each of these should also be advertised per entity through a capability flag whe
 ### Escape hatch
 
 - **`callRaw(request)`** passes a backend-specific request through (a Home Assistant service call
-  that no command covers). It exists so a project is never blocked by the model. `@hash/ui` never
+  that no command covers). It exists so a project is never blocked by the model. `@hashsome/ui` never
   calls it. If something is needed often, it becomes a command.
 
 ### `BaseIntegration`
 
-`@hash/core` ships an abstract class that implements the bookkeeping, so an integration only writes
+`@hashsome/core` ships an abstract class that implements the bookkeeping, so an integration only writes
 the backend-specific parts.
 
 ```ts
@@ -365,16 +365,16 @@ updates to entities and call `setEntity` / `replaceEntities`; translate `command
 
 ### Packaging an integration
 
-- **A normal npm package**, ESM, with `@hash/core` as a `peerDependency`. Suggested name:
+- **A normal npm package**, ESM, with `@hashsome/core` as a `peerDependency`. Suggested name:
   `hash-integration-<backend>` (or scoped).
-- **Server only.** It is constructed in `hash.config.ts`, which the runtime loads in Node. It is
+- **Server only.** It is constructed in `hashsome.config.ts`, which the runtime loads in Node. It is
   never bundled for the browser, so it may use Node APIs and hold credentials. It must not import
-  `@hash/ui` or React.
+  `@hashsome/ui` or React.
 - **Exports** the integration class and its options type. Options include the connection details,
   an optional `id`, and a seam to replace the transport in tests (a `createClient` or
   `createSocket` function).
 - **A mock, at `./mock`.** The package's `exports` has a `./mock` entry whose `createMock(options?)`
-  returns a `MockIntegration` (from `@hash/core`) with the integration's own default `id` and a
+  returns a `MockIntegration` (from `@hashsome/core`) with the integration's own default `id` and a
   representative set of devices: every kind it can produce, and the states a dashboard has to
   handle, including an unavailable device. Build the fixtures from the backend's raw payloads and
   run them through the integration's real mapper, so the mock cannot drift from it. This lets a
@@ -382,9 +382,9 @@ updates to entities and call `setEntity` / `replaceEntities`; translate `command
 - **Registration** is the only wiring:
 
   ```ts
-  // hash.config.ts
-  import { defineConfig } from '@hash/runtime';
-  import { AcmeIntegration } from 'hash-integration-acme';
+  // hashsome.config.ts
+  import { defineConfig } from '@hashsome/runtime';
+  import { AcmeIntegration } from 'hashsome-integration-acme';
 
   export default defineConfig({
     integrations: [
@@ -418,7 +418,7 @@ A checklist for authors. Items 10 and 11 are enforced today (see below); the res
 10. The package exports a mock at `./mock` (`createMock`) that covers every kind it can produce.
 11. The package runs the shared conformance suite against that mock.
 
-**Enforced.** `@hash/core/conformance` exports `runIntegrationConformance({ name, defaultId, kinds,
+**Enforced.** `@hashsome/core/conformance` exports `runIntegrationConformance({ name, defaultId, kinds,
 createMock })`, which an integration calls from a test in `src/__tests__/`. It checks the mock's
 default id, that it connects and covers every declared kind, that every entity is valid and
 addressed by this integration, that there is an unavailable device, `subscribe` semantics, that
@@ -492,7 +492,7 @@ usePlayer(ref)            entity + its commands bound         Player (state + me
 
 - **Lifecycle is uniform.** Every component handles loading, not found, unavailable and unknown the
   same way. Dashboards never check availability themselves.
-- **Rules for `@hash/ui`:** no integration names, no backend service or attribute names, no reads
+- **Rules for `@hashsome/ui`:** no integration names, no backend service or attribute names, no reads
   of `raw`, no `callRaw`. A guard test will enforce the first three for migrated kinds.
 
 **Status:** built. `useEntity`, `useCommand` and `useEntityHandle` are in `packages/ui/src/hooks.ts`;
@@ -503,14 +503,14 @@ replaced by the handle.
 
 ```
 packages/
-  core/                      @hash/core             entity model, integration contract, wire protocol
+  core/                      @hashsome/core             entity model, integration contract, wire protocol
   integrations/
-    home-assistant/          @hash/integration.home-assistant
-    music-assistant/         @hash/integration.music-assistant
-  ui/                        @hash/ui               design system, hooks, entity components, the gallery
-  runtime/                   @hash/runtime          the hash-dash CLI and the server it hosts
-example/                     @hash/example          a complete project: the reference for your own
-  hash.config.ts               which integrations, and how they are configured
+    home-assistant/          @hashsome/integration.home-assistant
+    music-assistant/         @hashsome/integration.music-assistant
+  ui/                        @hashsome/ui               design system, hooks, entity components, the gallery
+  runtime/                   @hashsome/runtime          the hashsome CLI and the server it hosts
+example/                     @hashsome/example          a complete project: the reference for your own
+  hashsome.config.ts               which integrations, and how they are configured
   app/                         a React Router app: root.tsx, routes.ts (every route in one file)
   shared/                      conventions the dashboards reuse (top bar, the switcher's list)
   dashboards/<id>/             one folder per dashboard: layout.tsx, pages/*.tsx
@@ -534,9 +534,9 @@ project, not packages, and the repository's tests cover `packages/*` only.
 - **Conventions are the project's.** `shared/` holds what several dashboards reuse (one top bar,
   the dashboard switcher's list). `@hash` does not wire any of it; it is ordinary code.
 - **The dashboard code is ordinary app code**, not a sandbox: it can import any library, the
-  project's own files, or its own helpers. `@hash/ui` components are the building blocks, and
-  `@hash/ui` is styled only through e-prim props and theme tokens, never a `style` prop.
-- **Integrations are configured in one place.** `hash.config.ts` constructs them, usually from
+  project's own files, or its own helpers. `@hashsome/ui` components are the building blocks, and
+  `@hashsome/ui` is styled only through e-prim props and theme tokens, never a `style` prop.
+- **Integrations are configured in one place.** `hashsome.config.ts` constructs them, usually from
   environment variables. The server reads this file at startup only, so a change needs a restart.
 
 ## Agent workflow
@@ -553,23 +553,23 @@ The skills in `.claude/skills/` hold what an agent needs, and they read well for
 | `verify-dashboard` | How to check the result actually works before calling it done                    |
 | `add-ui-component` | The stricter, separate workflow for extending the design system itself           |
 
-The main rule is that creating a dashboard does not edit `packages/*`. A real gap in `@hash/ui` is
+The main rule is that creating a dashboard does not edit `packages/*`. A real gap in `@hashsome/ui` is
 a separate, explicit change (see `add-ui-component`), so "make me a dashboard" can never turn into
 "also changed the framework". `CATALOG.md` is generated (`pnpm generate:catalog`) and CI fails if
 it drifts from the source.
 
 ## Packaging and deployment
 
-`hash-dash package <target…>` turns a project into something deployable. It is built where you
+`hashsome package <target…>` turns a project into something deployable. It is built where you
 build it and never where it runs.
 
-1. **Build the client.** `hash-dash build` produces the static client in `build/client`. (The shared
+1. **Build the client.** `hashsome build` produces the static client in `build/client`. (The shared
    Vite config is a function so every load of it gets its own React Router plugin; the SPA build's
    preview step loads the config a second time in the same process.)
 2. **Bundle the server.** Vite's own server build bundles the runtime, the project's
-   `hash.config.ts` and every integration it imports, with their dependencies, into one
+   `hashsome.config.ts` and every integration it imports, with their dependencies, into one
    `server.mjs`. It runs with plain Node 24 and no `node_modules`. The server needs its own file
-   because it holds the tokens, proxies `/ws`, and serves backend artwork through `/_hash/asset/*`;
+   because it holds the tokens, proxies `/ws`, and serves backend artwork through `/_hashsome/asset/*`;
    the static client alone is not enough.
 3. **Write the targets.** Each target is written under `./release` from that bundle:
 
@@ -605,23 +605,23 @@ backend's URL is the Service's, not the container's.
 
 ## Adding things
 
-**A kind.** Add its model and command map to `@hash/core`; map it in every integration that has
+**A kind.** Add its model and command map to `@hashsome/core`; map it in every integration that has
 such devices; teach the mock integration its commands; add the kind hook and the component (id or
-object) to `@hash/ui`; add it to the gallery with its props documented; update the status table.
+object) to `@hashsome/ui`; add it to the gallery with its props documented; update the status table.
 
 **An integration.** Implement `Integration` (extend `BaseIntegration`); write one pure mapping
 module per kind it supports, with unit tests; translate commands; add a transport seam and test
-against a fake; export a `./mock` with `createMock()` and run `runIntegrationConformance` on it; register it in a project's `hash.config.ts`. No change to `@hash/core`,
-`@hash/runtime` or `@hash/ui` is needed.
+against a fake; export a `./mock` with `createMock()` and run `runIntegrationConformance` on it; register it in a project's `hashsome.config.ts`. No change to `@hashsome/core`,
+`@hashsome/runtime` or `@hashsome/ui` is needed.
 
 ## Migration status
 
 Every card kind is on the generic model. HA-shaped `EntityState` and `callService` are gone from
-`@hash/core` and `@hash/ui`; Home Assistant's own shape lives only in its integration package.
+`@hashsome/core` and `@hashsome/ui`; Home Assistant's own shape lives only in its integration package.
 
 | Piece                                                                                    | Status                      |
 | ---------------------------------------------------------------------------------------- | --------------------------- |
-| Generic model in `@hash/core`                                                            | done                        |
+| Generic model in `@hashsome/core`                                                        | done                        |
 | `command` / `raw` on the contract and the wire                                           | done                        |
 | Media player (Music Assistant native, Home Assistant mapped)                             | done                        |
 | Light, climate, sensor, switch, action / scene, person                                   | done                        |
@@ -633,9 +633,9 @@ Every card kind is on the generic model. HA-shaped `EntityState` and `callServic
 
 ## Decisions
 
-- **Versioning.** `@hash/core` follows semver, and its major version is the version of the model and
+- **Versioning.** `@hashsome/core` follows semver, and its major version is the version of the model and
   of the integration contract. An integration tracks it: an integration at `2.x.x` works with
-  `@hash/core` `2.x`. It declares `@hash/core` as a peer dependency on that major (`^2.0.0`), so a
+  `@hashsome/core` `2.x`. It declares `@hashsome/core` as a peer dependency on that major (`^2.0.0`), so a
   mismatch is reported at install time. Minor releases of core only add (optional fields, new
   kinds, new optional methods); anything that would break an integration is a major.
 - **Rooms and grouping stay in the dashboard.** The model has no areas or rooms, and nothing builds
@@ -643,7 +643,7 @@ Every card kind is on the generic model. HA-shaped `EntityState` and `callServic
   lists the entities it shows. Discovery tooling (the `entity-discovery` skill) may read a
   backend's own room assignment to _suggest_ a sensible layout, through integration-specific
   helpers that are not part of this contract.
-- **Conformance suite.** `@hash/core/conformance` is a shared test helper that an integration runs
+- **Conformance suite.** `@hashsome/core/conformance` is a shared test helper that an integration runs
   against its own mock. It covers the mock and the model-level checks; the connection-level items
   (reconnect, idempotent `connect`, timers) need a transport fake per integration and are not
   asserted yet.

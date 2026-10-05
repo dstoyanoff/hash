@@ -5,7 +5,7 @@ import {
   mockSensor,
   MockIntegration,
   type ServerMessage,
-} from '@hash/core';
+} from '@hashsome/core';
 import { describe, expect, test } from 'vitest';
 import { Proxy, type ProxySocket } from '../proxy.ts';
 

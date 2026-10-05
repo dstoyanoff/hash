@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import { Flex, Typography } from 'e-prim';
-import type { EntityRef } from '@hash/core';
+import type { EntityRef } from '@hashsome/core';
 import { useState } from 'react';
 import { useEntityHistory } from '../use-entity-history.ts';
 import { DateTimeField } from './date-time-field.tsx';

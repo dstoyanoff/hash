@@ -10,9 +10,9 @@ import { attachWebSocket } from './server/websocket.ts';
 const runtimeRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /** Dev only: `/healthz`, the `/ws` proxy and the asset route on Vite's own server. */
-function hashDevServer(proxy: Proxy, config: ResolvedConfig): Plugin {
+function hashsomeDevServer(proxy: Proxy, config: ResolvedConfig): Plugin {
   return {
-    name: 'hash:dev-server',
+    name: 'hashsome:dev-server',
     configureServer(server) {
       server.middlewares.use('/healthz', (_req, res) => {
         res.setHeader('content-type', 'application/json');
@@ -40,7 +40,7 @@ export function createViteConfig(config: ResolvedConfig, proxy?: Proxy): InlineC
     configFile: join(config.root, 'vite.config.ts'),
     ...(proxy
       ? {
-          plugins: [hashDevServer(proxy, config)],
+          plugins: [hashsomeDevServer(proxy, config)],
           server: {
             host: config.host,
             port: config.port,

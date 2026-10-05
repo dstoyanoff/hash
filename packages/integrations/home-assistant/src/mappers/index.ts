@@ -1,4 +1,4 @@
-import type { EntityInput } from '@hash/core';
+import type { EntityInput } from '@hashsome/core';
 import type { HassEntity } from 'home-assistant-js-websocket';
 import { domainOf } from './common.ts';
 import { mapClimate } from './climate.ts';

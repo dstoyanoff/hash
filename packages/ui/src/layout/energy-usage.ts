@@ -1,4 +1,4 @@
-import type { HistoryPoint } from '@hash/core';
+import type { HistoryPoint } from '@hashsome/core';
 import type { EnergyUsage } from './energy-chart.tsx';
 
 const DAY = 24 * 60 * 60_000;

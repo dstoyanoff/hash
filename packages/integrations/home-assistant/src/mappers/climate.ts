@@ -1,4 +1,4 @@
-import type { ClimateAction, ClimateMode, EntityInput } from '@hash/core';
+import type { ClimateAction, ClimateMode, EntityInput } from '@hashsome/core';
 import type { HassEntity } from 'home-assistant-js-websocket';
 import { baseOf, num, str, strings } from './common.ts';
 

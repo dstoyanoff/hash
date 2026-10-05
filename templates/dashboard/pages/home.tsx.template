@@ -1,10 +1,10 @@
-import { ClimateTile, Grid, LightTile, RoomHeader, SceneButton, SensorReadout } from '@hash/ui';
+import { ClimateTile, Grid, LightTile, RoomHeader, SceneButton, SensorReadout } from '@hashsome/ui';
 
 // A working starter: two rooms, each a header plus a grid of tiles. Swap the entity ids for your
 // own devices (find them with the entity-discovery skill), rename the rooms, and add or remove
 // tiles — every tile handles loading / unavailable / not-found states by itself, so a wrong id
 // shows "Not found" instead of breaking the page. See the component catalog
-// (.claude/skills/ui-catalog/CATALOG.md) or `pnpm --filter @hash/ui docs` for everything available.
+// (.claude/skills/ui-catalog/CATALOG.md) or `pnpm --filter @hashsome/ui docs` for everything available.
 //
 // The page renders into the app's root layout (app/root.tsx: padded, scrolling) and this
 // dashboard's layout.tsx (the top bar), so it only returns its rooms.

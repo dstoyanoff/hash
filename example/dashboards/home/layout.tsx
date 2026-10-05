@@ -1,4 +1,4 @@
-import { NavRail, type NavItem } from '@hash/ui';
+import { NavRail, type NavItem } from '@hashsome/ui';
 import { Outlet } from 'react-router';
 import { HomeTopBar } from '../../shared/top-bar.tsx';
 

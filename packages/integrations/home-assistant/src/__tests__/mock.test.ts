@@ -1,4 +1,4 @@
-import { runIntegrationConformance } from '@hash/core/conformance';
+import { runIntegrationConformance } from '@hashsome/core/conformance';
 import { describe, expect, test } from 'vitest';
 import { createMock } from '../mock.ts';
 

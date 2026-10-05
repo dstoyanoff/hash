@@ -27,7 +27,7 @@ export function safeName(raw: string): string {
     .replace(/[^a-z0-9-]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-  return name || 'hash';
+  return name || 'hashsome';
 }
 
 export function dockerfile({ port }: Pick<ReleaseInfo, 'port'>): string {
@@ -101,7 +101,7 @@ Update by loading the next release's image and changing the tag in \`compose.yam
 export function envExample(info: ReleaseInfo): string {
   return (
     info.envExample ??
-    '# The variables your hash.config.ts reads, for example:\n# HA_URL=\n# HA_TOKEN=\n'
+    '# The variables your hashsome.config.ts reads, for example:\n# HA_URL=\n# HA_TOKEN=\n'
   );
 }
 
@@ -110,7 +110,7 @@ export function envExample(info: ReleaseInfo): string {
 export function chartYaml(info: ReleaseInfo): string {
   return `apiVersion: v2
 name: ${info.name}
-description: ${info.name}, a hash dashboard server
+description: ${info.name}, a Hashsome dashboard server
 type: application
 version: 0.1.0
 appVersion: "${info.tag}"
@@ -300,7 +300,7 @@ export function chartNotes(): string {
   return `{{ .Release.Name }} is deployed.
 
 Your tokens and addresses come from the Secret "{{ .Values.existingSecret }}". Create it once, with the
-variables your hash.config.ts reads (it is not part of this chart, so it is not in git):
+variables your hashsome.config.ts reads (it is not part of this chart, so it is not in git):
 
   kubectl create secret generic {{ .Values.existingSecret }} -n {{ .Release.Namespace }} \\
     --from-literal=HA_URL=https://... --from-literal=HA_TOKEN=...

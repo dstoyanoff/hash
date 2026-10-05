@@ -36,12 +36,12 @@ plain folder inside it (`example/dashboards/<id>/`), not its own package.
      and chrome" section). The template's page already includes the project's shared `HomeTopBar`.
 5. **Build the page(s).** Read `.claude/skills/ui-catalog/CATALOG.md` for what's available, and
    `example/dashboards/kitchen` for the layout patterns in `dashboard-rules`. Compose
-   `@hash/ui` components; write no dashboard-specific CSS or state handling (`dashboard-rules`
+   `@hashsome/ui` components; write no dashboard-specific CSS or state handling (`dashboard-rules`
    explains why). The page renders into the app's root layout (`app/root.tsx`: padded, scrolling) and
    includes whatever chrome it wants (the shared top bar, a nav, or nothing for a kiosk panel). No tests to write here —
    `example` isn't covered by this repo's test suite (see `dashboard-rules`'s Scope section);
    verify it the way step 7 describes instead.
-6. **Register mock data for local testing**, if `example/hash.config.ts` is the dev instance
+6. **Register mock data for local testing**, if `example/hashsome.config.ts` is the dev instance
    being used (it is, unless told otherwise): add the new entities to its `MockIntegration` config
    so `pnpm dev` renders the dashboard with realistic states, matching the style already there for
    `dashboards/hello`/`dashboards/kitchen`. **This is one shared JS object across every
@@ -56,8 +56,8 @@ plain folder inside it (`example/dashboards/<id>/`), not its own package.
 
 - Everything you create or edit lives under `example/` — the new `dashboards/<id>/` folder
   (step 3), the project-root wiring in step 4 (`app/routes.ts`, `app/routes/dashboard.<id>.tsx`,
-  `shared/dashboards.ts` if it's listed in the switcher), and the one addition to `hash.config.ts`'s mock data in step 6. Nothing outside
+  `shared/dashboards.ts` if it's listed in the switcher), and the one addition to `hashsome.config.ts`'s mock data in step 6. Nothing outside
   `example/` changes — re-read `dashboard-rules`'s Scope section if a step seems to need more.
-- If the user's request implies a missing `@hash/ui` component (checked against the catalog), stop
+- If the user's request implies a missing `@hashsome/ui` component (checked against the catalog), stop
   and say so instead of building a one-off equivalent inline — see `add-ui-component`.
 - Work on a feature branch and open a PR when done, per this repo's `AGENTS.md`.

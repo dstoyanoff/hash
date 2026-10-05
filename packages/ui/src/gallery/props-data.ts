@@ -670,7 +670,7 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
       },
     ],
   },
-  HashProvider: {
+  HashsomeProvider: {
     doc: 'Connects the tree to the runtime proxy. Render only on the client.',
     props: [
       {

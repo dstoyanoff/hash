@@ -1,4 +1,4 @@
-import { DEFAULT_FONT, fontStack, googleFontHref } from '@hash/ui';
+import { DEFAULT_FONT, fontStack, googleFontHref } from '@hashsome/ui';
 import { Links, Meta, Scripts, ScrollRestoration } from 'react-router';
 
 type ThemeMode = 'light' | 'dark' | 'system';
@@ -12,7 +12,7 @@ const SHELL = {
  * needs to already roughly match the configured theme, or hydration visibly swaps the color out
  * from under the user. `'system'` can't know the OS preference at render time, so it ships both
  * colors and lets a plain CSS media query (not JS) pick the right one with no flash either way.
- * The Google Fonts `<link>` is rendered here too (not left to `HashProvider`'s own client-side
+ * The Google Fonts `<link>` is rendered here too (not left to `HashsomeProvider`'s own client-side
  * fallback) so the chosen font is already loading before hydration, not swapped in after. */
 export function createLayout(theme: ThemeMode = 'dark', font: string = DEFAULT_FONT) {
   const colorScheme = theme === 'system' ? 'light dark' : theme;
@@ -41,7 +41,7 @@ export function createLayout(theme: ThemeMode = 'dark', font: string = DEFAULT_F
           <meta name="color-scheme" content={colorScheme} />
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-          <link rel="stylesheet" href={googleFontHref(font)} data-hash-font="" />
+          <link rel="stylesheet" href={googleFontHref(font)} data-hashsome-font="" />
           <style dangerouslySetInnerHTML={{ __html: kioskCss }} />
           <Meta />
           <Links />

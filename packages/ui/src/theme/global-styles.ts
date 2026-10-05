@@ -9,7 +9,7 @@ function isDark(hex: string): boolean {
   return Number.isFinite(n) && ((n >> 16) & 255) + ((n >> 8) & 255) + (n & 255) < 384;
 }
 
-/** The app-wide styles `HashProvider` installs once: the page background/text/font, native
+/** The app-wide styles `HashsomeProvider` installs once: the page background/text/font, native
  * controls following the theme, border-box sizing, and a low-specificity `button`/`input` reset (so a component's
  * own class always wins over it). Global because the theme is an app property, not a per-page one. */
 export function globalStyles({ palette, typography }: Theme): Interpolation<Theme> {

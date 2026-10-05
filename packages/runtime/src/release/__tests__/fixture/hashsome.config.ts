@@ -1,4 +1,4 @@
-import { MockIntegration, mockLight } from '@hash/core';
+import { MockIntegration, mockLight } from '@hashsome/core';
 import { defineConfig } from '../../../index.ts';
 
 // A tiny project for the bundling test: one mock integration, and a port from the environment.

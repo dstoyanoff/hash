@@ -1,11 +1,11 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { ASSET_PATH, type Integration } from '@hash/core';
+import { ASSET_PATH, type Integration } from '@hashsome/core';
 
 /** How long a browser may reuse a file; artwork URLs change when the picture does. */
 const CACHE_CONTROL = 'private, max-age=3600';
 
 /**
- * Serves `GET /_hash/asset/<integration>?path=<backend path>`: a file one of an integration's
+ * Serves `GET /_hashsome/asset/<integration>?path=<backend path>`: a file one of an integration's
  * entities points at (artwork, a person's picture), fetched by the server with the integration's
  * credentials so the browser never needs to reach, trust or log in to the backend. Only image
  * responses are passed on. Returns `false` for a request that is not an asset request, so the

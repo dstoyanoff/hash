@@ -1,1 +1,1 @@
-export { default } from '@hash/runtime/entry-server';
+export { default } from '@hashsome/runtime/entry-server';

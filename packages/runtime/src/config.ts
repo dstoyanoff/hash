@@ -1,9 +1,9 @@
-import type { Integration } from '@hash/core';
+import type { Integration } from '@hashsome/core';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-/** How a project is packaged for deployment: what `hash-dash package` does without being told. */
+/** How a project is packaged for deployment: what `hashsome package` does without being told. */
 export interface PackageConfig {
   /** What to write: `plain` (the server bundle and client, runs with Node), `compose` (Docker Compose), `helm` (a Helm chart for k3s), `image` (just the container image, for your own manifests). Command-line targets win over this. */
   targets?: ('plain' | 'compose' | 'helm' | 'image')[];
@@ -18,15 +18,15 @@ export interface PackageConfig {
   port?: number;
 }
 
-export interface HashConfig {
-  /** Backends the runtime proxies to the browser. `@hash/runtime` ships no integrations of its
-   * own — install whichever you need (e.g. `@hash/integration.home-assistant`) and construct them
+export interface HashsomeConfig {
+  /** Backends the runtime proxies to the browser. `@hashsome/runtime` ships no integrations of its
+   * own — install whichever you need (e.g. `@hashsome/integration.home-assistant`) and construct them
    * here, typically reading connection details from your own environment variables. */
   integrations?: Integration[];
   port?: number;
   host?: string;
 
-  /** Defaults for `hash-dash package`, so deploying is `pnpm package` with no flags. */
+  /** Defaults for `hashsome package`, so deploying is `pnpm package` with no flags. */
   package?: PackageConfig;
 }
 
@@ -38,11 +38,11 @@ export interface ResolvedConfig {
   package: PackageConfig;
 }
 
-export function defineConfig(config: HashConfig): HashConfig {
+export function defineConfig(config: HashsomeConfig): HashsomeConfig {
   return config;
 }
 
-export const CONFIG_FILE = 'hash.config.ts';
+export const CONFIG_FILE = 'hashsome.config.ts';
 
 /** Throws if two integrations were configured with the same `id` — each id is a claimed entity-ref
  * prefix, and a silent collision (whichever integration was constructed last would simply win in
@@ -66,7 +66,7 @@ function assertUniqueIds(integrations: Integration[]): void {
 
 /** Applies defaults to a config (and checks it). `PORT` and `HOST` in the environment win over the
  * file, so a container can be told where to listen without rebuilding. */
-export function resolveConfig(root: string, user: HashConfig): ResolvedConfig {
+export function resolveConfig(root: string, user: HashsomeConfig): ResolvedConfig {
   const integrations = user.integrations ?? [];
   assertUniqueIds(integrations);
   return {
@@ -78,13 +78,13 @@ export function resolveConfig(root: string, user: HashConfig): ResolvedConfig {
   };
 }
 
-/** Loads `<root>/hash.config.ts` (if present) and applies defaults. */
+/** Loads `<root>/hashsome.config.ts` (if present) and applies defaults. */
 export async function loadConfig(root: string): Promise<ResolvedConfig> {
   const file = join(root, CONFIG_FILE);
-  let user: HashConfig = {};
+  let user: HashsomeConfig = {};
   if (existsSync(file)) {
     const mod = (await import(/* @vite-ignore */ pathToFileURL(file).href)) as {
-      default?: HashConfig;
+      default?: HashsomeConfig;
     };
 
     user = mod.default ?? {};

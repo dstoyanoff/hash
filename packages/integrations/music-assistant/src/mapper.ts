@@ -1,4 +1,4 @@
-import type { EntityInput } from '@hash/core';
+import type { EntityInput } from '@hashsome/core';
 
 export interface MaPlayerMedia {
   title?: string | null;

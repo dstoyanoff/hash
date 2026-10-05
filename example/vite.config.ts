@@ -1,1 +1,1 @@
-export { default } from '@hash/runtime/vite-config';
+export { default } from '@hashsome/runtime/vite-config';

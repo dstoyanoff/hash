@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { UnknownEntityError } from '@hash/core';
+import { UnknownEntityError } from '@hashsome/core';
 import { MusicAssistantIntegration } from '../index.ts';
 
 // Applies to every test in this file (vitest hooks aren't position-sensitive): fake timers so the

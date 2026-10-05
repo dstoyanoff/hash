@@ -1,5 +1,5 @@
 import { decodeItemId } from './browse.ts';
-import type { ClimateMode, Entity } from '@hash/core';
+import type { ClimateMode, Entity } from '@hashsome/core';
 import { domainOf } from './mappers/common.ts';
 import { MODE_TO_HVAC } from './mappers/climate.ts';
 

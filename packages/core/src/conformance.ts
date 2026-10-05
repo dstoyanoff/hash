@@ -25,7 +25,7 @@ const AVAILABILITY = ['ready', 'unavailable', 'unknown'];
  *
  *     runIntegrationConformance({ name, defaultId, kinds, createMock });
  *
- * Imports `vitest`, which is why it lives behind its own `@hash/core/conformance` entry point.
+ * Imports `vitest`, which is why it lives behind its own `@hashsome/core/conformance` entry point.
  */
 export function runIntegrationConformance(options: ConformanceOptions): void {
   const { name, defaultId, createMock, kinds } = options;

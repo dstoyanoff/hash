@@ -75,7 +75,7 @@ export interface Integration {
    */
   fetchAsset?(path: string): Promise<Response>;
 
-  /** Escape hatch: a backend-specific request no command covers. `@hash/ui` never calls it. */
+  /** Escape hatch: a backend-specific request no command covers. `@hashsome/ui` never calls it. */
   callRaw?(request: Record<string, unknown>): Promise<unknown>;
 }
 

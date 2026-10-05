@@ -1,4 +1,4 @@
-import { MockIntegration, mockLibrary, type EntityInput } from '@hash/core';
+import { MockIntegration, mockLibrary, type EntityInput } from '@hashsome/core';
 import type { HassEntity } from 'home-assistant-js-websocket';
 import { mapEntity } from './mappers/index.ts';
 

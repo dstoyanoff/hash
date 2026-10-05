@@ -1,6 +1,6 @@
 name: Docs site
 
-# The @hash/ui component gallery, built as a static site and served by GitHub Pages.
+# The @hashsome/ui component gallery, built as a static site and served by GitHub Pages.
 on:
   push:
     branches: [main]
@@ -20,15 +20,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @hash/ui docs:build
+      - run: pnpm --filter @hashsome/ui docs:build
         env:
           # Served from https://<owner>.github.io/<repo>/
           DOCS_BASE: /${{ github.event.repository.name }}/
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: packages/ui/docs/dist
 
@@ -40,4 +40,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

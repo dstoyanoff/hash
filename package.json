@@ -1,5 +1,5 @@
 {
-  "name": "hash",
+  "name": "hashsome",
   "private": true,
   "version": "0.0.0",
   "devEngines": {
@@ -26,12 +26,12 @@
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "typecheck": "pnpm -r --if-present typecheck",
-    "build": "pnpm --filter @hash/example build",
+    "build": "pnpm --filter @hashsome/example build",
     "test": "vitest run",
-    "dev": "pnpm --filter @hash/example dev",
-    "start": "pnpm --filter @hash/example start",
+    "dev": "pnpm --filter @hashsome/example dev",
+    "start": "pnpm --filter @hashsome/example start",
     "generate:catalog": "node scripts/generate-ui-catalog.ts",
     "generate:icons": "node scripts/generate-icons.ts",
-    "package": "pnpm --filter @hash/example package"
+    "package": "pnpm --filter @hashsome/example package"
   }
 }

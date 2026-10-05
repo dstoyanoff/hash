@@ -1,4 +1,4 @@
-import type { LightEntity } from '@hash/core';
+import type { LightEntity } from '@hashsome/core';
 
 export interface Rgb {
   r: number;

@@ -1,1 +1,1 @@
-import '@hash/runtime/entry-client';
+import '@hashsome/runtime/entry-client';

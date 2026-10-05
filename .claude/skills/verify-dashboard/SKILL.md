@@ -34,7 +34,7 @@ pnpm dev
 
 Then open `http://localhost:3000/<id>` (and any other page/route it has).
 
-`pnpm dev` at the repo root is a thin `pnpm --filter @hash/example dev` passthrough — Vite's
+`pnpm dev` at the repo root is a thin `pnpm --filter @hashsome/example dev` passthrough — Vite's
 dev server actually runs rooted at `example` and watches `dashboards/*` like any other source
 file in that project, no restart needed between edits, just the usual HMR refresh. Two cases are
 route-table changes, not plain content edits, and HMR doesn't always pick them up cleanly — do a

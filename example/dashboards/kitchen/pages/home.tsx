@@ -7,7 +7,7 @@ import {
   RoomHeader,
   SceneButton,
   SensorReadout,
-} from '@hash/ui';
+} from '@hashsome/ui';
 import { Flex } from 'e-prim';
 import { HomeTopBar } from '../../../shared/top-bar.tsx';
 

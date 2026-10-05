@@ -1,5 +1,5 @@
 /** @jsxImportSource @emotion/react */
-import type { EntityRef } from '@hash/core';
+import type { EntityRef } from '@hashsome/core';
 import { Flex, Typography } from 'e-prim';
 import { motion } from 'motion/react';
 import { useState, type ReactNode } from 'react';

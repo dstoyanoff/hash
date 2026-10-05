@@ -1,4 +1,4 @@
-import type { EntityInput, PlaybackState } from '@hash/core';
+import type { EntityInput, PlaybackState } from '@hashsome/core';
 import type { HassEntity } from 'home-assistant-js-websocket';
 import { baseOf, fileUrl, num, str } from './common.ts';
 

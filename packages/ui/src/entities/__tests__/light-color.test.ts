@@ -1,4 +1,4 @@
-import { mockLight, type LightEntity } from '@hash/core';
+import { mockLight, type LightEntity } from '@hashsome/core';
 import { expect, test } from 'vitest';
 import {
   applyPreset,

@@ -1,4 +1,4 @@
-import { mockLibrary, mockMediaPlayer } from '@hash/core';
+import { mockLibrary, mockMediaPlayer } from '@hashsome/core';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, test } from 'vitest';
 import { renderWithMock } from '../../test-utils.tsx';

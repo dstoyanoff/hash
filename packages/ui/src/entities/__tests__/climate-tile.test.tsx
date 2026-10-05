@@ -1,4 +1,4 @@
-import { mockClimate, type EntityInput } from '@hash/core';
+import { mockClimate, type EntityInput } from '@hashsome/core';
 import { act, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { renderWithMock } from '../../test-utils.tsx';

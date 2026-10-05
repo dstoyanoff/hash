@@ -26,7 +26,7 @@ describe('names', () => {
     ['home', 'home'],
     ['@me/My Home_2', 'my-home-2'],
     ['  --odd--  ', 'odd'],
-    ['', 'hash'],
+    ['', 'hashsome'],
   ])('%j becomes %j', (raw, expected) => {
     expect(safeName(raw)).toBe(expected);
   });
@@ -69,7 +69,7 @@ describe('compose', () => {
       'HA_URL=\nHA_TOKEN=\n',
     );
 
-    expect(envExample(info)).toContain('hash.config.ts');
+    expect(envExample(info)).toContain('hashsome.config.ts');
   });
 });
 

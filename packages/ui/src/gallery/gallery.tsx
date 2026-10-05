@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import { Flex, Typography } from 'e-prim';
-import { LocalClient } from '@hash/core';
+import { LocalClient } from '@hashsome/core';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ActionButton } from '../entities/action-button.tsx';
 import { ClimateTile } from '../entities/climate-tile.tsx';
@@ -27,7 +27,7 @@ import { HistorySection } from '../layout/history-section.tsx';
 import { RoomHeader } from '../layout/room-header.tsx';
 import { Tile } from '../layout/tile.tsx';
 import type { LogbookEntry } from '../layout/history-section.tsx';
-import { HashProvider } from '../provider.tsx';
+import { HashsomeProvider } from '../provider.tsx';
 import { createGalleryIntegration } from './fixtures.ts';
 import { COMPONENT_PROPS } from './props-data.ts';
 
@@ -48,7 +48,7 @@ const codeStyles = {
   overflowWrap: 'anywhere',
 } as const;
 
-/** A bounded "stage" card rendering real `@hash/ui` components on the app background, so the demos
+/** A bounded "stage" card rendering real `@hashsome/ui` components on the app background, so the demos
  * read as they would on a dashboard against the gallery's own page chrome. */
 function Stage({ children }: { children: ReactNode }) {
   return (
@@ -463,9 +463,9 @@ function useBrightnessLinkedEnergy(ha: ReturnType<typeof createGalleryIntegratio
 }
 
 /**
- * Documentation for every `@hash/ui` component: what it is and the states it supports, each a
+ * Documentation for every `@hashsome/ui` component: what it is and the states it supports, each a
  * live, interactive demo backed by an in-browser mock — not a dashboard itself (that's what
- * `example/dashboards/*` are for). Served standalone by `pnpm --filter @hash/ui docs`. Must
+ * `example/dashboards/*` are for). Served standalone by `pnpm --filter @hashsome/ui docs`. Must
  * be rendered inside a router (nav components use router links).
  */
 export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' | 'compact' }) {
@@ -493,7 +493,7 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
 
   const [mode, setMode] = useState<'dark' | 'light'>('dark');
   return (
-    <HashProvider client={client} theme={mode} density={density}>
+    <HashsomeProvider client={client} theme={mode} density={density}>
       <div
         css={({ palette }) => ({
           background: palette.surfaceRaised,
@@ -515,11 +515,11 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
           >
             <Flex direction="column" gap={1.5} maxWidth="60ch">
               <Typography as="h1" variant="stat">
-                @hash/ui component gallery
+                @hashsome/ui component gallery
               </Typography>
               <Typography as="p" variant="body" color="textMuted">
-                Every component `@hash/ui` ships, with the states it supports — a live, interactive
-                reference for building a dashboard, not a dashboard of its own.
+                Every component `@hashsome/ui` ships, with the states it supports — a live,
+                interactive reference for building a dashboard, not a dashboard of its own.
               </Typography>
             </Flex>
             <button
@@ -883,9 +883,9 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
             </Flex>
           </ComponentDoc>
           <ComponentDoc
-            title="Hash Provider"
+            title="Hashsome Provider"
             description="The app provider: connects to the runtime, installs the theme, font and density globally, and renders the shared detail drawer. Everything on this page runs inside one — use the toggle above to flip its theme."
-            components={['HashProvider']}
+            components={['HashsomeProvider']}
           >
             <Typography as="span" variant="body" color="textMuted">
               {`theme="${mode}" · density="${density}"`}
@@ -893,6 +893,6 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
           </ComponentDoc>
         </div>
       </div>
-    </HashProvider>
+    </HashsomeProvider>
   );
 }

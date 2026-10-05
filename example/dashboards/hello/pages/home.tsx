@@ -1,4 +1,4 @@
-import { ClimateTile, Grid, LightTile, RoomHeader, SensorReadout } from '@hash/ui';
+import { ClimateTile, Grid, LightTile, RoomHeader, SensorReadout } from '@hashsome/ui';
 
 // A small kiosk panel: deliberately no top bar and no navigation — just the room itself.
 // It is left out of the shared switcher list (see shared/dashboards.ts) but still reachable by URL.

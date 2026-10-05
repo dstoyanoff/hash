@@ -1,4 +1,4 @@
-import type { BrowseItem, BrowseKind } from '@hash/core';
+import type { BrowseItem, BrowseKind } from '@hashsome/core';
 
 /** The fields of a Music Assistant media item that a library list needs. Items come back as plain
  * JSON; anything missing is simply left out of the result. */
