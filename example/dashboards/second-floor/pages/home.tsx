@@ -26,8 +26,22 @@ export default function Home() {
         }
       />
       <Grid columns={2}>
-        <LightTile entity="ha:light.master_bedroom_lamp" name="Night Lamp" />
-        <ClimateTile entity="ha:climate.master_bedroom" name="Thermostat" />
+        <LightTile
+          entity="ha:light.master_bedroom_lamp"
+          name="Night Lamp"
+          energy={{
+            power: 'ha:sensor.master_bedroom_lamp_power',
+            energy: 'ha:sensor.master_bedroom_lamp_energy',
+          }}
+        />
+        <ClimateTile
+          entity="ha:climate.master_bedroom"
+          name="Thermostat"
+          energy={{
+            power: 'ha:sensor.master_bedroom_heater_power',
+            energy: 'ha:sensor.master_bedroom_heater_energy',
+          }}
+        />
       </Grid>
 
       <RoomHeader
@@ -41,7 +55,15 @@ export default function Home() {
         }
       />
       <Grid columns={3}>
-        <LightTile entity="ha:light.bathroom_led" name="LED" icon="lu:sparkles" />
+        <LightTile
+          entity="ha:light.bathroom_led"
+          name="LED"
+          icon="lu:sparkles"
+          energy={{
+            power: 'ha:sensor.bathroom_led_power',
+            energy: 'ha:sensor.bathroom_led_energy',
+          }}
+        />
         <ActionButton label="Shower" icon="tb:bath" entity="ha:script.shower" />
         <ActionButton
           label="Septic Additive"
@@ -61,7 +83,14 @@ export default function Home() {
         }
       />
       <Grid columns={2}>
-        <ClimateTile entity="ha:climate.office" name="Thermostat" />
+        <ClimateTile
+          entity="ha:climate.office"
+          name="Thermostat"
+          energy={{
+            power: 'ha:sensor.office_heater_power',
+            energy: 'ha:sensor.office_heater_energy',
+          }}
+        />
         <SceneButton entity="ha:scene.focus_mode" name="Focus Mode" />
       </Grid>
     </>

@@ -45,7 +45,7 @@ test('the lifetime counter is not shown collapsed', () => {
 test('the usage tiles and the chart come from the backend history when none is passed', async () => {
   const asked: unknown[] = [];
   class WithHistory extends MockIntegration {
-    history(entityId: string, query: HistoryQuery) {
+    override history(entityId: string, query: HistoryQuery) {
       asked.push([entityId, query]);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -76,7 +76,15 @@ test('the usage tiles and the chart come from the backend history when none is p
 });
 
 test('a backend that keeps no history just shows the live reading', async () => {
-  renderWithMock(<EnergyChart power="ha:lamp_power" energy="ha:lamp_energy" />, entities);
+  const ha = new MockIntegration({ entities });
+  // The mock invents a history; this is a backend without one.
+  (ha as unknown as { history?: undefined }).history = undefined;
+  render(
+    <HashsomeProvider client={new LocalClient([ha])}>
+      <EnergyChart power="ha:lamp_power" energy="ha:lamp_energy" />
+    </HashsomeProvider>,
+  );
+
   await act(async () => {});
   expect(screen.getByText('9 W')).toBeTruthy();
   expect(screen.queryByText('Today')).toBeNull();

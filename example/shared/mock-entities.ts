@@ -13,7 +13,39 @@ import {
 // re-declaring it, and check for a key collision before adding a new entity here, since a
 // duplicate key silently overrides the earlier one with no error from lint/typecheck/tests.
 // Kept in its own file so the live demo (`demo/`) can run the same devices in the browser.
+/** The power and energy sensors a smart plug or relay reports for a device (a Shelly, say): what it
+ * draws now, and its lifetime total. The mock backend invents their history. */
+function powerMonitor(id: string, name: string, watts: number, lifetimeKwh: number) {
+  return {
+    [`sensor.${id}_power`]: mockSensor({
+      name: `${name} power`,
+      value: String(watts),
+      unit: 'W',
+      measurement: 'power',
+    }),
+    [`sensor.${id}_energy`]: mockSensor({
+      name: `${name} energy`,
+      value: String(lifetimeKwh),
+      unit: 'kWh',
+      measurement: 'energy',
+    }),
+  };
+}
+
 export const mockEntities = {
+  ...powerMonitor('living_room_lamp', 'Living room lamp', 38, 84.2),
+  ...powerMonitor('living_room_wall', 'Living room wall', 55, 131.7),
+  ...powerMonitor('living_room_accent', 'Living room accent', 12, 22.5),
+  ...powerMonitor('living_room_heater', 'Living room heater', 900, 612.4),
+  ...powerMonitor('kitchen_ceiling', 'Kitchen ceiling', 42, 96.8),
+  ...powerMonitor('kitchen_led', 'Kitchen LED', 14, 31.1),
+  ...powerMonitor('kitchen_island', 'Kitchen island', 28, 40.3),
+  ...powerMonitor('porch_ambient', 'Porch ambient', 18, 47.9),
+  ...powerMonitor('master_bedroom_lamp', 'Master bedroom lamp', 9, 12.4),
+  ...powerMonitor('master_bedroom_heater', 'Master bedroom heater', 650, 388.2),
+  ...powerMonitor('bathroom_led', 'Bathroom LED', 10, 18.6),
+  ...powerMonitor('office_heater', 'Office heater', 700, 241.5),
+
   // dashboards/hello
   'light.lamp': mockLight({ name: 'Lamp', on: false, brightness: 0.5 }),
   'climate.heater': mockClimate({

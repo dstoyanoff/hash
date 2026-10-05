@@ -31,9 +31,30 @@ export default function Home() {
             }
           />
           <Grid columns={3}>
-            <LightTile entity="ha:light.kitchen_ceiling" name="Ceiling" />
-            <LightTile entity="ha:light.kitchen_led" name="Under-Cabinet" />
-            <LightTile entity="ha:light.kitchen_island" name="Island Pendant" />
+            <LightTile
+              entity="ha:light.kitchen_ceiling"
+              name="Ceiling"
+              energy={{
+                power: 'ha:sensor.kitchen_ceiling_power',
+                energy: 'ha:sensor.kitchen_ceiling_energy',
+              }}
+            />
+            <LightTile
+              entity="ha:light.kitchen_led"
+              name="Under-Cabinet"
+              energy={{
+                power: 'ha:sensor.kitchen_led_power',
+                energy: 'ha:sensor.kitchen_led_energy',
+              }}
+            />
+            <LightTile
+              entity="ha:light.kitchen_island"
+              name="Island Pendant"
+              energy={{
+                power: 'ha:sensor.kitchen_island_power',
+                energy: 'ha:sensor.kitchen_island_energy',
+              }}
+            />
           </Grid>
 
           <RoomHeader title="Appliances" />

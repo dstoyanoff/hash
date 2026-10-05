@@ -1,5 +1,6 @@
 import { BaseIntegration } from './base-integration.ts';
 import { UnknownEntityError } from './entity.ts';
+import { mockHistory } from './mock-history.ts';
 import {
   isCommandOf,
   type ActionEntity,
@@ -10,6 +11,8 @@ import {
   type Entity,
   type EntityInput,
   type GenericEntity,
+  type HistoryQuery,
+  type HistoryResult,
   type LightEntity,
   type MediaPlayerEntity,
   type PersonEntity,
@@ -477,6 +480,16 @@ export class MockIntegration extends BaseIntegration {
     }
 
     this.set(entityId, merged as unknown as EntityInput);
+  }
+
+  /** Made-up history for a numeric sensor (see `mockHistory`); empty for anything else. */
+  history(entityId: string, query: HistoryQuery): Promise<HistoryResult> {
+    const entity = this.getEntity(entityId);
+    if (!entity) {
+      return Promise.reject(new UnknownEntityError(this.id, entityId));
+    }
+
+    return Promise.resolve(mockHistory(entityId, entity, query));
   }
 
   browse(entityId: string, query: BrowseQuery): Promise<BrowseResult> {
