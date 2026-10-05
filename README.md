@@ -7,6 +7,9 @@ a small server, in place of a drag-and-drop card editor. You write the dashboard
 a phone or a small kitchen display as ordinary code, and hash keeps it live, themed and easy to
 deploy.
 
+> **Alpha.** hash is early software: not every device type is built yet, and what is built has
+> only been tried against one real home. See [Status](#status-alpha) for exactly what works.
+
 <table>
   <tr>
     <td width="50%"><img alt="Dashboard, dark" src="docs/screenshots/home-dark.png"></td>
@@ -214,12 +217,39 @@ Node is pinned in `package.json` and managed by pnpm, so no nvm is needed; `core
 the matching pnpm. More detail on the rules is in [`AGENTS.md`](AGENTS.md), which Claude Code also
 reads as `CLAUDE.md`.
 
-## Status
+## Status: alpha
 
-Under active development; milestones are tracked as
-[GitHub issues](https://github.com/dstoyanoff/hash/issues). The packages are not on npm yet, so
-today you use hash by cloning the repository and adding your dashboards to a project like
-`example/`.
+hash is **alpha**. It runs a real home today, but expect rough edges, and expect things to change.
+
+- **Not every device type is implemented.** The table below is the whole list. Anything else shows
+  up as a generic, read-only value, or not at all.
+- **Not fully tested.** The framework has an automated test suite (components, integrations, the
+  server and the packaging), and it is used daily against one real setup: Home Assistant and
+  Music Assistant. It has not been tried across many devices, brands or setups, so integrations will
+  meet states nobody has hit yet.
+- **Interfaces can change.** Component props, the integration contract and the packaging output
+  may change between versions, and the packages are not on npm yet. Today you use hash by cloning
+  the repository and adding dashboards to a project like `example/`.
+
+### What works today
+
+| Device type  | Component(s)                           | From Home Assistant                                   | What it does                                                                                                                           |
+| ------------ | -------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Light        | `LightTile`                            | `light`                                               | On/off, brightness, colour temperature, colour with presets; a drawer with power and energy charts when you point it at the sensors    |
+| Climate      | `ClimateTile`                          | `climate`                                             | Mode, target temperature stepper, presets, current temperature; a drawer with power and energy charts when you point it at the sensors |
+| Sensor       | `SensorReadout`                        | `sensor`, `binary_sensor`                             | Value and unit, safe-range warnings, a drawer with a history chart, min/max and the battery level                                      |
+| Switch, lock | `ActionButton`                         | `switch`, `fan`, `input_boolean`, `lock`              | Toggle only                                                                                                                            |
+| Action       | `SceneButton`, `ActionButton`, top bar | `scene`, `script`, `button`, `automation`, `vacuum`   | Trigger it, with pending, done and error feedback                                                                                      |
+| Media player | `MediaPlayerBar`, `Column`, `Page`     | `media_player` (and Music Assistant players directly) | Play/pause, previous/next, volume, mute, seek, shuffle; the library with browse and search; artwork                                    |
+| Person       | top bar                                | `person`                                              | Presence avatars: who is home, with their picture                                                                                      |
+| Weather      | top bar                                | `weather`                                             | The current condition and temperature (no forecast yet)                                                                                |
+
+Other kinds of device, such as blinds and covers, cameras, alarm panels, locks with their own
+controls, fans with speeds, `select` and `number` entities, and weather forecasts, are not built
+yet. They are modelled generically where the backend allows it, and have no dedicated component.
+New device types are welcome: see [ARCHITECTURE.md](ARCHITECTURE.md#adding-things).
+
+Milestones and open work are tracked as [GitHub issues](https://github.com/dstoyanoff/hash/issues).
 
 ## License
 
