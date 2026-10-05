@@ -8,6 +8,7 @@ import {
 } from '@hash/core';
 import { parseUri, SHELVES, toBrowseItem, type MaItem } from './browse.ts';
 import { toMediaPlayer, type MaPlayer } from './mapper.ts';
+import { onPlayback, onQueue, positionOf, type Position } from './position.ts';
 
 /**
  * Direct client for the Music Assistant WebSocket API (not via Home Assistant), reverse-engineered
@@ -141,46 +142,15 @@ function wsUrl(url: string): string {
 /** What a queue says that the player entity shows. */
 interface QueueState {
   shuffle?: boolean;
-
-  /** Seconds into the current item as the queue counts them, and the UTC epoch in seconds that was
-   * received at. Not Music Assistant's own stamp: that is on its clock, and a position is only
-   * advanced correctly against the clock of whoever reads it. */
-  elapsed?: number;
-  elapsedAt?: number;
-
-  /** What the queue was doing and which item it was on, to tell a pause from a new track. */
-  state?: string;
-  item?: string;
-
-  /** Where Music Assistant will pick the item up again, kept while it is stopped. */
-  resume?: number;
-
-  /** Where playback was when it was stopped: the last position plus the time since it was seen,
-   * since Music Assistant sends no updates while a track plays. Dropped once playing settles. */
-  held?: number;
-
-  /** When playing started again after a stop, to tell the stream starting over from a real seek. */
-  resumedAt?: number;
+  position: Position;
 }
 
-/**
- * Where the player entity says playback is. Playing, that is the queue's counter. Stopped, the
- * counter is back at the start, so it is where it was held: the later of that and the position
- * Music Assistant says it will resume from. Taking the later of the two means a stop (or a resume)
- * that reports its numbers in several steps never moves the position backwards.
- */
-function positionOf(queue: QueueState): number | undefined {
-  if (queue.state !== 'idle') {
-    return queue.elapsed;
-  }
-
-  const spots = [queue.held, queue.resume].filter((spot): spot is number => spot !== undefined);
-  return spots.length > 0 ? Math.max(...spots) : queue.elapsed;
-}
-
-/** How long after resuming a position far behind where it was is taken as the stream starting
- * over, to be seeked to the spot in a moment, and not as someone going back. */
-const RESUME_SETTLE_SECONDS = 4;
+const samePosition = (a: Position, b: Position) =>
+  a.item === b.item &&
+  a.elapsed === b.elapsed &&
+  a.resume === b.resume &&
+  a.held === b.held &&
+  a.resumedAt === b.resumedAt;
 
 /** Which item a queue is on, as something comparable: its id when it has one, else its place. */
 function itemOf(queue: Record<string, unknown>): string | undefined {
@@ -436,12 +406,12 @@ export class MusicAssistantIntegration extends BaseIntegration {
       return toMediaPlayer(player);
     }
 
-    const position = positionOf(queue);
+    const position = positionOf(queue.position, player.playback_state);
     return toMediaPlayer({
       ...player,
       ...(queue.shuffle !== undefined ? { shuffle_enabled: queue.shuffle } : {}),
       ...(position !== undefined
-        ? { elapsed_time: position, elapsed_time_last_updated: queue.elapsedAt }
+        ? { elapsed_time: position, elapsed_time_last_updated: queue.position.elapsedAt }
         : {}),
     });
   }
@@ -451,81 +421,49 @@ export class MusicAssistantIntegration extends BaseIntegration {
       return;
     }
 
-    const known = this.#queues.get(queue.queue_id) ?? {};
-    const state = typeof queue.state === 'string' ? queue.state : undefined;
-    const item = itemOf(queue);
-    // A different item has nothing to do with where the last one was.
-    const sameItem = item === undefined || known.item === undefined || item === known.item;
-    const base: QueueState = sameItem
-      ? known
-      : known.shuffle !== undefined
-        ? { shuffle: known.shuffle }
-        : {};
-
-    const next: QueueState = {
-      ...base,
-      ...(typeof queue.shuffle_enabled === 'boolean' ? { shuffle: queue.shuffle_enabled } : {}),
-      ...(state !== undefined ? { state } : {}),
-      ...(item !== undefined ? { item } : {}),
-      ...(typeof queue.resume_pos === 'number' ? { resume: queue.resume_pos } : {}),
+    const known = this.#queues.get(queue.queue_id) ?? { position: {} };
+    const player = this.#players.get(queue.queue_id);
+    const message = {
+      item: itemOf(queue),
+      elapsed: typeof queue.elapsed_time === 'number' ? queue.elapsed_time : undefined,
+      resume: typeof queue.resume_pos === 'number' ? queue.resume_pos : undefined,
     };
 
-    const now = Date.now() / 1000;
-    const stoppedBefore = known.state === 'idle';
-    if (state === 'idle' && !stoppedBefore && sameItem && known.elapsed !== undefined) {
-      // Just stopped: nothing was reported while it played, so work out how far it got.
-      const since =
-        known.state === 'playing' && known.elapsedAt !== undefined ? now - known.elapsedAt : 0;
+    // The player's state says whether it is stopped; the queue's own `state` is not kept in step.
+    const playback =
+      player?.playback_state ?? (typeof queue.state === 'string' ? queue.state : undefined);
 
-      next.held = known.elapsed + Math.max(0, since);
-    }
+    const next: QueueState = {
+      ...known,
+      ...(typeof queue.shuffle_enabled === 'boolean' ? { shuffle: queue.shuffle_enabled } : {}),
+      position: onQueue(known.position, message, playback, Date.now() / 1000),
+    };
 
-    if (typeof queue.elapsed_time === 'number') {
-      if (state !== 'idle') {
-        let elapsed = queue.elapsed_time;
-        if (stoppedBefore && base.held !== undefined) {
-          next.resumedAt = now;
-        }
+    this.#changeQueue(queue.queue_id, known, next);
+  }
 
-        const resumedAt = next.resumedAt ?? base.resumedAt;
-        const starting =
-          base.held !== undefined &&
-          resumedAt !== undefined &&
-          now - resumedAt < RESUME_SETTLE_SECONDS &&
-          elapsed < base.held - 1;
-
-        if (starting) {
-          // The stream starting over before it seeks to where it was: stay where it was.
-          elapsed = base.held ?? elapsed;
-        } else {
-          delete next.held;
-          delete next.resumedAt;
-        }
-
-        next.elapsed = elapsed;
-        next.elapsedAt = now;
-      } else if (base.held === undefined && next.held === undefined) {
-        // Stopped, and nothing was played before: the queue's own number is all there is.
-        next.elapsed = queue.elapsed_time;
-        next.elapsedAt = now;
-      }
-    }
-
-    if (
-      next.shuffle === known.shuffle &&
-      next.elapsed === known.elapsed &&
-      next.held === known.held &&
-      next.state === known.state &&
-      next.item === known.item &&
-      next.resume === known.resume
-    ) {
+  /** Keeps a queue's new state and, when something it shows changed, the player's entity. */
+  #changeQueue(id: string, known: QueueState, next: QueueState): void {
+    if (next.shuffle === known.shuffle && samePosition(next.position, known.position)) {
+      this.#queues.set(id, next);
       return;
     }
 
-    this.#queues.set(queue.queue_id, next);
-    const player = this.#players.get(queue.queue_id);
+    this.#queues.set(id, next);
+    const player = this.#players.get(id);
     if (player) {
       this.setEntity(player.player_id, this.#entityFor(player));
+    }
+  }
+
+  /** A player changed state: a stop remembers where it got to, a start from a stop begins there. */
+  #playerChanged(id: string, from: string | undefined, to: string | undefined): void {
+    const known = this.#queues.get(id);
+    if (known) {
+      this.#queues.set(id, {
+        ...known,
+        position: onPlayback(known.position, from, to, Date.now() / 1000),
+      });
     }
   }
 
@@ -587,6 +525,12 @@ export class MusicAssistantIntegration extends BaseIntegration {
       case 'player_added':
       case 'player_updated':
         if (isMaPlayer(data)) {
+          this.#playerChanged(
+            data.player_id,
+            this.#players.get(data.player_id)?.playback_state,
+            data.playback_state,
+          );
+
           this.#players.set(data.player_id, data);
           this.setEntity(data.player_id, this.#entityFor(data));
         }
