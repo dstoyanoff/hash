@@ -196,6 +196,7 @@ Now playing with previous / play-pause / next and a volume control, for a media 
 | Prop     | Type                                       | Required |                                                                                                                                                                                                                                                                                                                                                |
 | -------- | ------------------------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `entity` | `EntityRef \| EntityHandle<'mediaPlayer'>` | yes      | A media player, as a ref like `ha:media_player.living_room` or `ma:living_room`, or a handle (a custom source).                                                                                                                                                                                                                                |
+| `name`   | `string`                                   | no       | What to call the player: the drawer's title and the name shown when nothing is playing. Defaults to the player's own name.                                                                                                                                                                                                                     |
 | `browse` | `ReactNode \| false`                       | no       | Content for the media browser shown with the player in the drawer. Holding the card or pressing the artwork opens the drawer; the browse button opens it expanded. By default a `MediaBrowser` over the player's own library, shown only for a ref whose player has one; pass your own content to replace it, or `false` for no browse button. |
 
 ### `MediaPlayerColumn`
@@ -205,6 +206,7 @@ The player as an upright card for a narrow column beside a dashboard (a quarter 
 | Prop     | Type                                       | Required |                                                                                                                                                                                                                                         |
 | -------- | ------------------------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `entity` | `EntityRef \| EntityHandle<'mediaPlayer'>` | yes      | A media player, as a ref like `ma:kitchen` or `ha:media_player.kitchen`, or a handle (a custom source).                                                                                                                                 |
+| `name`   | `string`                                   | no       | What to call the player: the drawer's title and the name shown when nothing is playing. Defaults to the player's own name.                                                                                                              |
 | `browse` | `ReactNode \| false`                       | no       | Content for the media browser shown with the player in the drawer. By default a `MediaBrowser` over the player's own library, shown only for a ref whose player has one; pass your own content to replace it, or `false` for no drawer. |
 
 ### `MediaPlayerPage`
@@ -214,6 +216,7 @@ The player as a whole page: the player centered, and the player's library below 
 | Prop     | Type        | Required |                                                                                                                                |
 | -------- | ----------- | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `entity` | `EntityRef` | yes      | A media player, as a ref like `ma:living_room`. A ref, not a handle: the library below the player is read through the runtime. |
+| `name`   | `string`    | no       | What to call the player: the drawer's title and the name shown when nothing is playing. Defaults to the player's own name.     |
 
 ### `MediaBrowser`
 

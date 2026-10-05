@@ -431,6 +431,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: "EntityRef | EntityHandle<'mediaPlayer'>",
       },
       {
+        doc: "What to call the player: the drawer's title and the name shown when nothing is playing. Defaults to the player's own name.",
+        name: 'name',
+        optional: true,
+        type: 'string',
+      },
+      {
         doc: "Content for the media browser shown with the player in the drawer. Holding the card or pressing the artwork opens the drawer; the browse button opens it expanded. By default a `MediaBrowser` over the player's own library, shown only for a ref whose player has one; pass your own content to replace it, or `false` for no browse button.",
         name: 'browse',
         optional: true,
@@ -448,6 +454,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: "EntityRef | EntityHandle<'mediaPlayer'>",
       },
       {
+        doc: "What to call the player: the drawer's title and the name shown when nothing is playing. Defaults to the player's own name.",
+        name: 'name',
+        optional: true,
+        type: 'string',
+      },
+      {
         doc: "Content for the media browser shown with the player in the drawer. By default a `MediaBrowser` over the player's own library, shown only for a ref whose player has one; pass your own content to replace it, or `false` for no drawer.",
         name: 'browse',
         optional: true,
@@ -463,6 +475,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         name: 'entity',
         optional: false,
         type: 'EntityRef',
+      },
+      {
+        doc: "What to call the player: the drawer's title and the name shown when nothing is playing. Defaults to the player's own name.",
+        name: 'name',
+        optional: true,
+        type: 'string',
       },
     ],
   },

@@ -25,6 +25,9 @@ export interface MediaPlayerBarProps {
   /** A media player, as a ref like `ha:media_player.living_room` or `ma:living_room`, or a handle (a custom source). */
   entity: EntityRef | EntityHandle<'mediaPlayer'>;
 
+  /** What to call the player: the drawer's title and the name shown when nothing is playing. Defaults to the player's own name. */
+  name?: string;
+
   /** Content for the media browser shown with the player in the drawer. Holding the card or pressing the artwork opens the drawer; the browse button opens it expanded. By default a `MediaBrowser` over the player's own library, shown only for a ref whose player has one; pass your own content to replace it, or `false` for no browse button. */
   browse?: ReactNode | false;
 }
@@ -100,7 +103,7 @@ function HoldCard({
 }
 
 /** Now playing with previous / play-pause / next and a volume control, for a media player entity. */
-export function MediaPlayerBar({ entity, browse }: MediaPlayerBarProps) {
+export function MediaPlayerBar({ entity, name, browse }: MediaPlayerBarProps) {
   const handle = useEntityHandle('mediaPlayer', entity);
   const player = handle.entity;
   const status = handle.status;
@@ -317,9 +320,15 @@ export function MediaPlayerBar({ entity, browse }: MediaPlayerBarProps) {
   return ready ? (
     <DrawerTrigger
       icon="lu:music"
-      label={player?.name ?? fallbackName(entity)}
+      label={name ?? player?.name ?? fallbackName(entity)}
       kind="Media"
-      body={<MediaPlayerBody entity={entity} {...(browser !== undefined ? { browser } : {})} />}
+      body={
+        <MediaPlayerBody
+          entity={entity}
+          {...(name !== undefined ? { name } : {})}
+          {...(browser !== undefined ? { browser } : {})}
+        />
+      }
     >
       {(open, openExpanded) => bar(open, openExpanded)}
     </DrawerTrigger>

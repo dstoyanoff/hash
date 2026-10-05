@@ -18,6 +18,7 @@ import { ArtworkRing } from './artwork-ring.tsx';
 export function NowPlaying({
   handle,
   fallback,
+  name,
   extra,
   onOpenArtwork,
   size,
@@ -27,6 +28,9 @@ export function NowPlaying({
 
   /** What to call the player before it reports a name. */
   fallback: string;
+
+  /** Calls the player this instead of the name it reports. */
+  name?: string;
 
   /** One more button, to the right of the transport (the browse button). Shuffle takes the slot on the left, unless it sits by the title. */
   extra?: ReactNode;
@@ -115,7 +119,7 @@ export function NowPlaying({
             textOverflow="ellipsis"
             overflow="hidden"
           >
-            {player?.name ?? fallback}
+            {name ?? player?.name ?? fallback}
           </Typography>
         )}
       </Flex>

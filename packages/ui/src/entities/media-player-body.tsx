@@ -18,9 +18,13 @@ export function MediaPlayerBody({
   entity,
   browser,
   wide,
+  name,
 }: {
   entity: EntityRef | EntityHandle<'mediaPlayer'>;
   browser?: ReactNode;
+
+  /** Calls the player this instead of the name it reports. */
+  name?: string;
 
   /** Gives the library the whole width, for one laid out to use it (the theater layout). Defaults to whether the drawer is expanded. */
   wide?: boolean;
@@ -37,6 +41,7 @@ export function MediaPlayerBody({
           <NowPlaying
             handle={handle}
             fallback={fallbackName(entity)}
+            {...(name !== undefined ? { name } : {})}
             shuffle="title"
             {...(full ? { size: FULL_SIZE } : {})}
           />

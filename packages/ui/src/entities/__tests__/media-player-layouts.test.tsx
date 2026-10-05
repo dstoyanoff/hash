@@ -1,5 +1,5 @@
 import { mockLibrary, mockMediaPlayer } from '@hash/core';
-import { act, fireEvent, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { renderWithMock } from '../../test-utils.tsx';
 import { MediaPlayerBar } from '../media-player-bar.tsx';
@@ -277,6 +277,35 @@ test('in the drawer, shuffle sits by the title and the transport is only previou
   const transport = Array.from(pause.parentElement!.children);
   expect(transport.filter((child) => child.getAttribute('aria-label') === 'Shuffle')).toEqual([]);
   expect(transport[2]).toBe(pause);
+});
+
+describe('name', () => {
+  const idle = () => ({
+    room: mockMediaPlayer({ name: 'Room', playback: 'paused', capabilities: { browse: true } }),
+  });
+
+  test('the column calls the player what it is told, on the card and as the drawer title', () => {
+    renderWithMock(<MediaPlayerColumn entity="ha:room" name="Kitchen speaker" />, idle(), library);
+    expect(screen.getByText('Kitchen speaker')).toBeTruthy();
+    expect(screen.queryByText('Room')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Open media browser' }));
+    expect(screen.getAllByText('Kitchen speaker').length).toBeGreaterThan(1);
+  });
+
+  test('without one it uses the name the player reports', () => {
+    renderWithMock(<MediaPlayerColumn entity="ha:room" />, idle(), library);
+    expect(screen.getByText('Room')).toBeTruthy();
+  });
+
+  test('the bar names the drawer, and the page shows the name', () => {
+    renderWithMock(<MediaPlayerBar entity="ha:room" name="Kitchen speaker" />, idle(), library);
+    fireEvent.click(screen.getByRole('button', { name: 'Browse media' }));
+    expect(screen.getAllByText('Kitchen speaker').length).toBeGreaterThan(0);
+    cleanup();
+
+    renderWithMock(<MediaPlayerPage entity="ha:room" name="Kitchen speaker" />, idle(), library);
+    expect(screen.getByText('Kitchen speaker')).toBeTruthy();
+  });
 });
 
 test('play/pause stays in the middle with no shuffle and no browse button', () => {

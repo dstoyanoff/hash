@@ -16,6 +16,9 @@ export interface MediaPlayerColumnProps {
   /** A media player, as a ref like `ma:kitchen` or `ha:media_player.kitchen`, or a handle (a custom source). */
   entity: EntityRef | EntityHandle<'mediaPlayer'>;
 
+  /** What to call the player: the drawer's title and the name shown when nothing is playing. Defaults to the player's own name. */
+  name?: string;
+
   /** Content for the media browser shown with the player in the drawer. By default a `MediaBrowser` over the player's own library, shown only for a ref whose player has one; pass your own content to replace it, or `false` for no drawer. */
   browse?: ReactNode | false;
 }
@@ -25,7 +28,7 @@ export interface MediaPlayerColumnProps {
  * volume bar that is always visible. It is only as tall as it needs to be. Holding the card or
  * pressing the artwork opens the drawer with the player and its library; the browse button opens
  * that drawer expanded. */
-export function MediaPlayerColumn({ entity, browse }: MediaPlayerColumnProps) {
+export function MediaPlayerColumn({ entity, name, browse }: MediaPlayerColumnProps) {
   const handle = useEntityHandle('mediaPlayer', entity);
   const player = handle.entity;
   const ref = typeof entity === 'string' ? entity : undefined;
@@ -42,15 +45,22 @@ export function MediaPlayerColumn({ entity, browse }: MediaPlayerColumnProps) {
   return browser !== undefined && handle.status === 'ready' ? (
     <DrawerTrigger
       icon="lu:music"
-      label={player?.name ?? fallback}
+      label={name ?? player?.name ?? fallback}
       kind="Media"
-      body={<MediaPlayerBody entity={entity} browser={browser} />}
+      body={
+        <MediaPlayerBody
+          entity={entity}
+          browser={browser}
+          {...(name !== undefined ? { name } : {})}
+        />
+      }
     >
       {(open, openExpanded) => (
         <Card open={open}>
           <NowPlaying
             handle={handle}
             fallback={fallback}
+            {...(name !== undefined ? { name } : {})}
             onOpenArtwork={open}
             extra={
               <IconButton
@@ -66,7 +76,7 @@ export function MediaPlayerColumn({ entity, browse }: MediaPlayerColumnProps) {
     </DrawerTrigger>
   ) : (
     <Card>
-      <NowPlaying handle={handle} fallback={fallback} />
+      <NowPlaying handle={handle} fallback={fallback} {...(name !== undefined ? { name } : {})} />
     </Card>
   );
 }
