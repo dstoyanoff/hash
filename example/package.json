@@ -8,7 +8,8 @@
     "typecheck": "tsc --noEmit",
     "dev": "hash-dash dev",
     "build": "hash-dash build",
-    "start": "hash-dash start"
+    "start": "hash-dash start",
+    "package": "hash-dash package"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

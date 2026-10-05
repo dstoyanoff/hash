@@ -9,7 +9,8 @@
     "./app": "./app/index.ts",
     "./entry-client": "./app/entry.client.tsx",
     "./entry-server": "./app/entry.server.tsx",
-    "./vite-config": "./src/vite-config.ts"
+    "./vite-config": "./src/vite-config.ts",
+    "./serve": "./src/serve.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

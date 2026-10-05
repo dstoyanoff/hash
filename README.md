@@ -110,17 +110,41 @@ it into the app, and checking it all actually renders — see
 
 ## Running it for real
 
+Build once on your own machine; nothing is compiled, and no source is copied, where it runs.
+
 ```bash
-docker compose up --build
+pnpm package helm --platform linux/amd64   # or: compose, plain
 ```
 
-Set `HA_URL`/`HA_TOKEN` and/or `MA_URL`/`MA_TOKEN` in a `.env` file next to `docker-compose.yml`
-(or in your shell) to point at a real Home Assistant and/or Music Assistant; leave them unset to
-keep using mock data. Point a tablet's browser (or a kiosk app) at
-`http://<the machine running this>:3000/<id>`.
+`hash-dash package` builds your dashboards, bundles the server (your `hash.config.ts` and its
+integrations included) into one file, and writes what you need to deploy it into `./release`:
 
-The container only serves static files plus one WebSocket connection — your Home Assistant token
-lives on the server, never on the tablet.
+| Target    | What you get                                                | Needs                  |
+| --------- | ----------------------------------------------------------- | ---------------------- |
+| `plain`   | `server.mjs` + `client/`: run it with `node server.mjs`     | Node 24+ where it runs |
+| `compose` | a Docker Compose file and the container image (`image.tar`) | Docker where it runs   |
+| `helm`    | a Helm chart for k3s/Kubernetes and the image (`image.tar`) | k3s/Kubernetes + helm  |
+
+Pass one or more targets, or set a default in `hash.config.ts` so `pnpm package` takes no flags:
+
+```ts
+export default defineConfig({
+  integrations: [...],
+  package: { targets: ['helm'], platform: 'linux/amd64' },
+});
+```
+
+Building the image needs Docker on **your** machine (`--platform` builds for a server of another
+kind, e.g. an x86 server from an Apple-silicon Mac); `plain` needs none. Each release has its own
+image tag, so a server always picks up an update. No registry is involved: copy `release/` to the
+server, load `image.tar` (`docker load`, or `k3s ctr images import`, which the chart's
+`import-image.sh` does) and start it.
+
+**Secrets are never in the image or the release files.** The config reads `HA_URL`/`HA_TOKEN` and
+the like from the environment when it runs: an `.env` file for compose, a Kubernetes Secret for
+helm (the chart takes the Secret's name and never holds its values). Leave them unset and the
+mock data from `hash.config.ts` is used. Point a tablet's browser (or a kiosk app) at
+`http://<the server>:3000/<id>`. Your token lives on the server, never on the tablet.
 
 ## Agent-first: how dashboards get built
 

@@ -32,8 +32,10 @@ export function createApp(clientDir: string, integrations: Integration[] = []): 
   return app;
 }
 
-export function startServer(config: ResolvedConfig) {
-  const clientDir = join(config.root, 'build', 'client');
+/** Where `hash build` puts the client, under a project. A packaged release keeps it elsewhere. */
+export const BUILT_CLIENT = join('build', 'client');
+
+export function startServer(config: ResolvedConfig, clientDir = join(config.root, BUILT_CLIENT)) {
   const server = createServer(createApp(clientDir, config.integrations));
   const proxy = new Proxy(config.integrations, { log: console.log });
   attachWebSocket(server, proxy);
