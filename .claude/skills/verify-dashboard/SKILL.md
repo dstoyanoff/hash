@@ -32,7 +32,7 @@ The dev server is the only reliable way to catch a layout problem (e.g. a squeez
 pnpm dev
 ```
 
-Then open `http://localhost:3000/dashboard/<id>` (and any other page/route it has).
+Then open `http://localhost:3000/<id>` (and any other page/route it has).
 
 `pnpm dev` at the repo root is a thin `pnpm --filter @hash/example dev` passthrough — Vite's
 dev server actually runs rooted at `example` and watches `dashboards/*` like any other source

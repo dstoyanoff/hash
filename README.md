@@ -53,7 +53,7 @@ one file that lists every route. A dashboard owns its whole layout: it includes 
 convention of the example project, not something `@hash` enforces. The `create-dashboard` skill
 does all of this for you. Nothing is
 auto-discovered — there's no `/` index of installed dashboards; each one lives at
-`/dashboard/<id>`.
+`/<id>`.
 
 ## Quickstart
 
@@ -67,9 +67,9 @@ pnpm install
 pnpm dev
 ```
 
-Open **http://localhost:3000/dashboard/home** — the example dashboard, running against fake
+Open **http://localhost:3000/home** — the example dashboard, running against fake
 ("mock") data so there's something to click even without a real smart home connected (the other
-examples are at `/dashboard/second-floor`, `/dashboard/kitchen`, `/dashboard/hello`). In a second
+examples are at `/second-floor`, `/kitchen`, `/hello`). In a second
 terminal, `pnpm --filter @hash/ui docs` serves the component gallery on its own port: every
 component in every state (on, off, dimming, unavailable, ...), the same reference an agent uses
 when building a page.
@@ -92,7 +92,7 @@ If you're using Claude Code (or another coding agent) and just want this running
 possible, paste this in:
 
 > Clone `https://github.com/dstoyanoff/hash.git`, enable corepack, run `pnpm install`, then run
-> `pnpm dev` in the background and open http://localhost:3000/dashboard/home for me so I can see
+> `pnpm dev` in the background and open http://localhost:3000/home for me so I can see
 > it's working.
 
 Once it's running, the fastest way to get your own dashboard is to just ask for it — the agent
@@ -117,7 +117,7 @@ docker compose up --build
 Set `HA_URL`/`HA_TOKEN` and/or `MA_URL`/`MA_TOKEN` in a `.env` file next to `docker-compose.yml`
 (or in your shell) to point at a real Home Assistant and/or Music Assistant; leave them unset to
 keep using mock data. Point a tablet's browser (or a kiosk app) at
-`http://<the machine running this>:3000/dashboard/<id>`.
+`http://<the machine running this>:3000/<id>`.
 
 The container only serves static files plus one WebSocket connection — your Home Assistant token
 lives on the server, never on the tablet.

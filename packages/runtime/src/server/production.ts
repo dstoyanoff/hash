@@ -18,7 +18,7 @@ export function createApp(clientDir: string): Express {
   });
 
   app.use(express.static(clientDir, { index: false, maxAge: '1h' }));
-  // SPA fallback: client-side routing handles /dashboard/{id}/...
+  // SPA fallback: client-side routing handles /{id}/...
   app.use((_req, res) => {
     res.sendFile(join(clientDir, 'index.html'));
   });

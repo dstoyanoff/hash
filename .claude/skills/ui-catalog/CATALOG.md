@@ -231,7 +231,7 @@ Fixed left sidebar for switching between a dashboard's pages. Must be rendered i
 | Prop              | Type        | Required |                                                                                                                                                                |
 | ----------------- | ----------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `items`           | `NavItem[]` | yes      | The pages to link to; `to` is relative to `base`.                                                                                                              |
-| `base`            | `string`    | yes      | Base path items are resolved against, e.g. `/dashboard/home`.                                                                                                  |
+| `base`            | `string`    | yes      | Base path items are resolved against, e.g. `/home`.                                                                                                            |
 | `showThemeToggle` | `boolean`   | no       | Adds a light/dark toggle at the bottom of the rail. Off by default — meant for development or a project that deliberately exposes it, not every kiosk install. |
 
 ### `NavDock`
@@ -241,7 +241,7 @@ Floating bottom pill for switching between a dashboard's pages. Must be rendered
 | Prop              | Type        | Required |                                                                                                                                                             |
 | ----------------- | ----------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `items`           | `NavItem[]` | yes      | The pages to link to; `to` is relative to `base`.                                                                                                           |
-| `base`            | `string`    | yes      | Base path items are resolved against, e.g. `/dashboard/home`.                                                                                               |
+| `base`            | `string`    | yes      | Base path items are resolved against, e.g. `/home`.                                                                                                         |
 | `showThemeToggle` | `boolean`   | no       | Adds a light/dark toggle at the end of the dock. Off by default — meant for development or a project that deliberately exposes it, not every kiosk install. |
 
 ### `TopBar`

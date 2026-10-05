@@ -42,7 +42,7 @@ example/dashboards/<id>/
 └─ pages/*.tsx      route modules (default-export a component)
 ```
 
-- `<id>` is kebab-case (`^[a-z0-9][a-z0-9-]*$`) and matches its URL: `route('dashboard/<id>', …)` in
+- `<id>` is kebab-case (`^[a-z0-9][a-z0-9-]*$`) and matches its URL: `route('<id>', …)` in
   `example/app/routes.ts`, the one file that lists every route. There is no manifest: the tab
   title is the entry module's `meta` export, and the switcher's list lives in `shared/dashboards.ts`.
 - Use `create-dashboard` to scaffold this from `templates/dashboard/` — including the
@@ -64,8 +64,8 @@ A dashboard owns its whole layout. There is no runtime-rendered chrome: a page b
   `Page`, which pads so content never sits under them. A small kiosk panel is simply
   its content with no chrome (see `dashboards/hello`).
 - A **multi-page** dashboard puts the shared structure in a layout route: `routes.ts` nests the pages under
-  `route('dashboard/<id>', 'layout.tsx', [index(…), route('lights', …)])`, and `layout.tsx` renders a
-  `NavRail` (absolute `base`, e.g. `/dashboard/home`, items relative to it), the top bar and an
+  `route('<id>', 'layout.tsx', [index(…), route('lights', …)])`, and `layout.tsx` renders a
+  `NavRail` (absolute `base`, e.g. `/home`, items relative to it), the top bar and an
   `<Outlet />` (see `dashboards/home`).
 - To make several dashboards match, share the configuration in the project: `example/shared/`
   holds `HomeTopBar` (weather, presence, clock, the switcher) and `dashboards.ts` (which dashboards
@@ -125,10 +125,10 @@ every component live, documented with its supported states. Concretely:
 ## Multi-page dashboards
 
 Put the shared structure in a layout route (see "Layout and chrome"): `routes.ts` nests the pages under
-`route('dashboard/<id>', '../dashboards/<id>/layout.tsx', [index(…), route('lights', …)])` and `layout.tsx` renders a `NavRail`
+`route('<id>', '../dashboards/<id>/layout.tsx', [index(…), route('lights', …)])` and `layout.tsx` renders a `NavRail`
 or `NavDock`, the top bar, and an `<Outlet />`. `NavRail`/`NavDock` take an
-absolute `base` (e.g. `/dashboard/home`) and `items[].to` relative to it (`''` for the dashboard's
-home, `'lights'` for `/dashboard/<id>/lights`), and highlight the current page themselves. Read
+absolute `base` (e.g. `/home`) and `items[].to` relative to it (`''` for the dashboard's
+home, `'lights'` for `/<id>/lights`), and highlight the current page themselves. Read
 `dashboards/home/layout.tsx` and its block in `app/routes.ts` for the working example.
 
 ## Icons

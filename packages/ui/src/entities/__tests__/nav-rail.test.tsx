@@ -10,9 +10,9 @@ import { NavRail } from '../nav-rail.tsx';
 test('nav rail resolves items against base and marks the current page', () => {
   render(
     <ThemeProvider theme={darkTheme}>
-      <MemoryRouter initialEntries={['/dashboard/home/upstairs']}>
+      <MemoryRouter initialEntries={['/home/upstairs']}>
         <NavRail
-          base="/dashboard/home"
+          base="/home"
           items={[
             { to: '', label: 'Downstairs', icon: 'lu:house' },
             { to: 'upstairs', label: 'Upstairs', icon: 'tb:stairs-up' },
@@ -24,16 +24,14 @@ test('nav rail resolves items against base and marks the current page', () => {
 
   expect(screen.getByRole('link', { name: 'Upstairs' }).getAttribute('aria-current')).toBe('page');
   expect(screen.getByRole('link', { name: 'Downstairs' }).getAttribute('aria-current')).toBeNull();
-  expect(screen.getByRole('link', { name: 'Downstairs' }).getAttribute('href')).toBe(
-    '/dashboard/home',
-  );
+  expect(screen.getByRole('link', { name: 'Downstairs' }).getAttribute('href')).toBe('/home');
 });
 
 test('showThemeToggle is off by default, and toggles the theme when on', () => {
   const { rerender } = render(
     <HashProvider client={new LocalClient([new MockIntegration({})])}>
       <MemoryRouter>
-        <NavRail base="/dashboard/home" items={[{ to: '', label: 'Home', icon: 'lu:house' }]} />
+        <NavRail base="/home" items={[{ to: '', label: 'Home', icon: 'lu:house' }]} />
       </MemoryRouter>
     </HashProvider>,
   );
@@ -44,7 +42,7 @@ test('showThemeToggle is off by default, and toggles the theme when on', () => {
     <HashProvider client={new LocalClient([new MockIntegration({})])} theme="dark">
       <MemoryRouter>
         <NavRail
-          base="/dashboard/home"
+          base="/home"
           items={[{ to: '', label: 'Home', icon: 'lu:house' }]}
           showThemeToggle
         />

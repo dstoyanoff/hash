@@ -17,7 +17,7 @@ export const meta = () => [{ title: 'Home' }];
 export default function Layout() {
   return (
     <>
-      <NavRail items={items} base="/dashboard/home" showThemeToggle />
+      <NavRail items={items} base="/home" showThemeToggle />
       <HomeTopBar title="Home" scenes={['ha:scene.movie_night', 'ha:scene.cooking_time']} />
       <Outlet />
     </>

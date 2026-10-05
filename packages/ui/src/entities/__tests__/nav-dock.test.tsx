@@ -10,9 +10,9 @@ import { NavDock } from '../nav-dock.tsx';
 test('nav dock resolves items against base and marks the current page', () => {
   render(
     <ThemeProvider theme={darkTheme}>
-      <MemoryRouter initialEntries={['/dashboard/home']}>
+      <MemoryRouter initialEntries={['/home']}>
         <NavDock
-          base="/dashboard/home"
+          base="/home"
           items={[
             { to: '', label: 'Downstairs', icon: 'lu:house' },
             { to: 'upstairs', label: 'Upstairs', icon: 'tb:stairs-up' },
@@ -28,7 +28,7 @@ test('nav dock resolves items against base and marks the current page', () => {
 
   expect(screen.getByRole('link', { name: 'Upstairs' }).getAttribute('aria-current')).toBeNull();
   expect(screen.getByRole('link', { name: 'Upstairs' }).getAttribute('href')).toBe(
-    '/dashboard/home/upstairs',
+    '/home/upstairs',
   );
 });
 
@@ -36,7 +36,7 @@ test('showThemeToggle is off by default, and toggles the theme when on', () => {
   const { rerender } = render(
     <HashProvider client={new LocalClient([new MockIntegration({})])}>
       <MemoryRouter>
-        <NavDock base="/dashboard/home" items={[{ to: '', label: 'Home', icon: 'lu:house' }]} />
+        <NavDock base="/home" items={[{ to: '', label: 'Home', icon: 'lu:house' }]} />
       </MemoryRouter>
     </HashProvider>,
   );
@@ -47,7 +47,7 @@ test('showThemeToggle is off by default, and toggles the theme when on', () => {
     <HashProvider client={new LocalClient([new MockIntegration({})])} theme="dark">
       <MemoryRouter>
         <NavDock
-          base="/dashboard/home"
+          base="/home"
           items={[{ to: '', label: 'Home', icon: 'lu:house' }]}
           showThemeToggle
         />

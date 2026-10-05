@@ -493,7 +493,7 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'NavItem[]',
       },
       {
-        doc: 'Base path items are resolved against, e.g. `/dashboard/home`.',
+        doc: 'Base path items are resolved against, e.g. `/home`.',
         name: 'base',
         optional: false,
         type: 'string',
@@ -516,7 +516,7 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'NavItem[]',
       },
       {
-        doc: 'Base path items are resolved against, e.g. `/dashboard/home`.',
+        doc: 'Base path items are resolved against, e.g. `/home`.',
         name: 'base',
         optional: false,
         type: 'string',

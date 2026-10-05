@@ -13,7 +13,7 @@ import { SensorReadout } from './sensor-readout.tsx';
 
 /** One entry in the title's dashboard-switcher dropdown. */
 export interface DashboardOption {
-  /** Matches the dashboard route id — switching navigates to `/dashboard/{id}`, always its root. */
+  /** Matches the dashboard route id — switching navigates to `/{id}`, always its root. */
   id: string;
   title: string;
   icon?: IconName;
@@ -192,7 +192,7 @@ function DashboardSwitcher({
               <PlainButton
                 onClick={() => {
                   setOpen(false);
-                  navigate(`/dashboard/${d.id}`);
+                  navigate(`/${d.id}`);
                 }}
                 align="center"
                 gap={2}
