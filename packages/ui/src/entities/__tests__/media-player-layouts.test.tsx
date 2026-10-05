@@ -1,0 +1,534 @@
+import { mockLibrary, mockMediaPlayer } from '@hash/core';
+import { act, fireEvent, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { renderWithMock } from '../../test-utils.tsx';
+import { MediaPlayerBar } from '../media-player-bar.tsx';
+import { MediaPlayerColumn } from '../media-player-column.tsx';
+import { MediaPlayerPage } from '../media-player-page.tsx';
+
+const now = () => new Date().toISOString();
+const playing = (capabilities = {}) => ({
+  room: mockMediaPlayer({
+    name: 'Room',
+    playback: 'playing',
+    media: { title: 'Dreams', artist: 'Fleetwood Mac', album: 'Rumours' },
+    volume: 0.4,
+    position: 30,
+    duration: 120,
+    positionUpdatedAt: now(),
+    capabilities: { browse: true, search: true, seek: true, ...capabilities },
+  }),
+});
+
+const library = { library: mockLibrary() };
+
+test('the column shows what is playing, a seekable progress bar and an always-visible volume bar', () => {
+  const { ha } = renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing(), library);
+  expect(screen.getByRole('heading', { name: 'Dreams' })).toBeTruthy();
+  expect(screen.getByText('Fleetwood Mac · Rumours')).toBeTruthy();
+  const volume = screen.getByRole('slider', { name: 'Volume level' });
+  expect(volume.getAttribute('aria-valuenow')).toBe('40');
+  const position = screen.getByRole('slider', { name: 'Position' });
+  fireEvent.keyDown(position, { key: 'ArrowRight' });
+  expect(ha.calls.at(-1)).toMatchObject({
+    command: 'seek',
+    args: { position: expect.any(Number) },
+  });
+
+  fireEvent.keyDown(volume, { key: 'ArrowRight' });
+  expect(ha.calls.at(-1)).toMatchObject({ command: 'setVolume', args: { volume: 0.45 } });
+  fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
+  expect(ha.calls.at(-1)).toMatchObject({ command: 'togglePlay' });
+});
+
+test('a player that cannot seek shows its progress but is not a slider', () => {
+  const { ha } = renderWithMock(
+    <MediaPlayerColumn entity="ha:room" />,
+    playing({ seek: false }),
+    library,
+  );
+
+  expect(screen.queryByRole('slider', { name: 'Position' })).toBeNull();
+  expect(screen.getByText(/0:3\d \/ 2:00/)).toBeTruthy();
+  expect(ha.calls.filter((call) => call.command === 'seek')).toHaveLength(0);
+});
+
+test('the column’s browse button opens the player’s library, and false leaves it out', async () => {
+  const { unmount } = renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing(), library);
+  fireEvent.click(screen.getByRole('button', { name: 'Browse media' }));
+  expect(await screen.findByRole('tab', { name: 'Albums' })).toBeTruthy();
+  unmount();
+
+  renderWithMock(<MediaPlayerColumn entity="ha:room" browse={false} />, playing(), library);
+  expect(screen.queryByRole('button', { name: 'Browse media' })).toBeNull();
+});
+
+test('no browse button for a player without a library', () => {
+  renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing({ browse: false }), library);
+  expect(screen.queryByRole('button', { name: 'Browse media' })).toBeNull();
+});
+
+test('the page puts the library beside the player, and picks a song right there', async () => {
+  const { ha } = renderWithMock(<MediaPlayerPage entity="ha:room" />, playing(), library);
+  expect(screen.getByRole('heading', { name: 'Dreams' })).toBeTruthy();
+  // The library opens on its first shelf, so a song is one tap away.
+  fireEvent.click(await screen.findByRole('button', { name: 'Play Kids' }));
+  expect(ha.calls.at(-1)).toMatchObject({ command: 'playMedia', args: { item: 't-kids' } });
+});
+
+test('the page has no library column for a player without one', () => {
+  renderWithMock(<MediaPlayerPage entity="ha:room" />, playing({ browse: false }), library);
+  expect(screen.getByRole('heading', { name: 'Dreams' })).toBeTruthy();
+  expect(screen.queryByRole('searchbox')).toBeNull();
+  expect(screen.queryByRole('tab')).toBeNull();
+});
+
+test('the bar shows a progress line you can seek on, the time beside the artist, and the browser by default', () => {
+  const { ha } = renderWithMock(<MediaPlayerBar entity="ha:room" />, playing(), library);
+  const line = screen.getByRole('slider', { name: 'Position' });
+  expect(Number(line.getAttribute('aria-valuenow'))).toBeGreaterThanOrEqual(30);
+  expect(line.getAttribute('aria-valuemax')).toBe('120');
+  expect(screen.getByText(/0:3\d \/ 2:00/)).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Browse media' })).toBeTruthy();
+  fireEvent.keyDown(line, { key: 'ArrowRight' });
+  expect(ha.calls.at(-1)).toMatchObject({
+    command: 'seek',
+    args: { position: expect.any(Number) },
+  });
+});
+
+test('dragging the bar’s line moves the time with it, and lets go with a seek', () => {
+  const box = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    left: 0,
+    top: 0,
+    right: 200,
+    bottom: 16,
+    width: 200,
+    height: 16,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  });
+
+  const { ha } = renderWithMock(<MediaPlayerBar entity="ha:room" />, playing(), library);
+  const line = screen.getByRole('slider', { name: 'Position' });
+  fireEvent.pointerDown(line, { clientX: 100, pointerId: 1 });
+  expect(screen.getByText('1:00 / 2:00')).toBeTruthy();
+  fireEvent.pointerMove(line, { clientX: 150, pointerId: 1 });
+  expect(screen.getByText('1:30 / 2:00')).toBeTruthy();
+  expect(ha.calls.filter((call) => call.command === 'seek')).toHaveLength(0);
+  fireEvent.pointerUp(line, { clientX: 150, pointerId: 1 });
+  expect(ha.calls.at(-1)).toMatchObject({ command: 'seek', args: { position: 90 } });
+  box.mockRestore();
+});
+
+test('a bar whose player cannot seek shows the line but it is only a progress indicator', () => {
+  renderWithMock(<MediaPlayerBar entity="ha:room" />, playing({ seek: false }), library);
+  expect(screen.queryByRole('slider', { name: 'Position' })).toBeNull();
+  expect(screen.getByRole('progressbar', { name: 'Position' })).toBeTruthy();
+  expect(screen.getByText(/0:3\d \/ 2:00/)).toBeTruthy();
+});
+
+test('dragging around the ring moves the time under the title with it', () => {
+  const box = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    left: 0,
+    top: 0,
+    right: 168,
+    bottom: 168,
+    width: 168,
+    height: 168,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  });
+
+  const { ha } = renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing(), library);
+  const ring = screen.getByRole('slider', { name: 'Position' });
+  // 3 o'clock is a quarter of the way round: 30s of 120.
+  fireEvent.pointerDown(ring, { clientX: 160, clientY: 84, pointerId: 1 });
+  expect(screen.getByText('0:30 / 2:00')).toBeTruthy();
+  // 6 o'clock is half way.
+  fireEvent.pointerMove(ring, { clientX: 84, clientY: 160, pointerId: 1 });
+  expect(screen.getByText('1:00 / 2:00')).toBeTruthy();
+  fireEvent.pointerUp(ring, { clientX: 84, clientY: 160, pointerId: 1 });
+  expect(ha.calls.at(-1)).toMatchObject({ command: 'seek', args: { position: 60 } });
+  box.mockRestore();
+});
+
+test('the bar leaves the browse button out for browse={false} and for a player with no library', () => {
+  const { unmount } = renderWithMock(
+    <MediaPlayerBar entity="ha:room" browse={false} />,
+    playing(),
+    library,
+  );
+
+  expect(screen.queryByRole('button', { name: 'Browse media' })).toBeNull();
+  unmount();
+
+  renderWithMock(<MediaPlayerBar entity="ha:room" />, playing({ browse: false }), library);
+  expect(screen.queryByRole('button', { name: 'Browse media' })).toBeNull();
+  expect(screen.queryByRole('slider', { name: 'Position' })).not.toBeNull();
+});
+
+test('the artwork sits in a ring that shows how far along playback is, with the time under the title', () => {
+  renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing(), library);
+  const ring = screen.getByRole('slider', { name: 'Position' });
+  expect(ring.getAttribute('aria-valuemax')).toBe('120');
+  expect(Number(ring.getAttribute('aria-valuenow'))).toBeGreaterThanOrEqual(30);
+  expect(screen.getByText(/0:3\d \/ 2:00/)).toBeTruthy();
+});
+
+test('a player that reports no position shows the ring without progress or a time', () => {
+  renderWithMock(<MediaPlayerColumn entity="ha:room" />, {
+    room: mockMediaPlayer({ name: 'Room', playback: 'paused', media: { title: 'Dreams' } }),
+  });
+
+  expect(screen.queryByRole('slider', { name: 'Position' })).toBeNull();
+  expect(screen.queryByText(/\d:\d\d \/ /)).toBeNull();
+  // No artwork: the circle carries a music glyph instead.
+  expect(document.querySelector('img')).toBeNull();
+});
+
+test('artwork fills the circle when there is some', () => {
+  renderWithMock(<MediaPlayerColumn entity="ha:room" />, {
+    room: mockMediaPlayer({ name: 'Room', media: { title: 'Dreams', artworkUrl: '/cover.jpg' } }),
+  });
+
+  expect(document.querySelector('img')?.getAttribute('src')).toBe('/cover.jpg');
+});
+
+test('the mute button is a plain icon like the one in the bar, and mutes', () => {
+  const { ha } = renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing(), library);
+  const mute = screen.getByRole('button', { name: 'Mute' });
+  expect(getComputedStyle(mute).backgroundColor).not.toBe('rgb(239, 234, 225)');
+  expect(getComputedStyle(mute).borderRadius).not.toBe('50%');
+  fireEvent.click(mute);
+  expect(ha.calls.at(-1)).toMatchObject({ command: 'setMuted', args: { muted: true } });
+});
+
+test('the column is only as tall as its content, even in a parent that stretches it', () => {
+  const { container } = renderWithMock(
+    <div style={{ display: 'flex', height: 900 }}>
+      <MediaPlayerColumn entity="ha:room" />
+    </div>,
+    playing(),
+    library,
+  );
+
+  const card = container.querySelector('[data-status]')!.parentElement as HTMLElement;
+  expect(getComputedStyle(card).alignSelf).toBe('flex-start');
+});
+
+test('shuffle sits left of the transport and toggles, with play/pause kept in the middle', () => {
+  const { ha, container } = renderWithMock(
+    <MediaPlayerColumn entity="ha:room" />,
+    {
+      room: mockMediaPlayer({
+        name: 'Room',
+        playback: 'playing',
+        shuffle: false,
+        capabilities: { browse: true, shuffle: true },
+      }),
+    },
+    library,
+  );
+
+  const shuffle = screen.getByRole('button', { name: 'Shuffle' });
+  expect(shuffle.getAttribute('aria-pressed')).toBe('false');
+  fireEvent.click(shuffle);
+  expect(ha.calls.at(-1)).toMatchObject({ command: 'setShuffle', args: { shuffle: true } });
+  expect(screen.getByRole('button', { name: 'Shuffle' }).getAttribute('aria-pressed')).toBe('true');
+
+  const row = screen.getByRole('button', { name: 'Pause' }).parentElement as HTMLElement;
+  expect(row.children).toHaveLength(5);
+  expect(row.children[2]).toBe(screen.getByRole('button', { name: 'Pause' }));
+  expect(container).toBeTruthy();
+});
+
+test('play/pause stays in the middle with no shuffle and no browse button', () => {
+  renderWithMock(<MediaPlayerColumn entity="ha:room" />, {
+    room: mockMediaPlayer({ name: 'Room', playback: 'playing' }),
+  });
+
+  expect(screen.queryByRole('button', { name: 'Shuffle' })).toBeNull();
+  const row = screen.getByRole('button', { name: 'Pause' }).parentElement as HTMLElement;
+  expect(row.children).toHaveLength(5);
+  expect(row.children[2]).toBe(screen.getByRole('button', { name: 'Pause' }));
+});
+
+test('the bar has a shuffle toggle by the title when the player can shuffle, and none otherwise', () => {
+  const { ha, unmount } = renderWithMock(
+    <MediaPlayerBar entity="ha:room" />,
+    playing({ shuffle: true }),
+    library,
+  );
+
+  const shuffle = screen.getByRole('button', { name: 'Shuffle' });
+  expect(shuffle.getAttribute('aria-pressed')).toBe('false');
+  // Next to the song title, not among the transport buttons.
+  expect(shuffle.parentElement?.contains(screen.getByText('Dreams'))).toBe(true);
+  fireEvent.click(shuffle);
+  expect(ha.calls.at(-1)).toMatchObject({ command: 'setShuffle', args: { shuffle: true } });
+  unmount();
+
+  renderWithMock(<MediaPlayerBar entity="ha:room" />, playing({ shuffle: false }), library);
+  expect(screen.queryByRole('button', { name: 'Shuffle' })).toBeNull();
+});
+
+test('the bar’s time is its own element beside the track info, not a line inside it', () => {
+  renderWithMock(<MediaPlayerBar entity="ha:room" />, playing(), library);
+  const time = screen.getByText(/0:3\d \/ 2:00/);
+  const info = screen.getByText('Fleetwood Mac').parentElement as HTMLElement;
+  expect(info.contains(screen.getByText('Dreams'))).toBe(true);
+  // A sibling of the track info in the bar (which centers its items), so the time sits at the
+  // bar's vertical middle rather than in one of the info's lines.
+  expect(info.contains(time)).toBe(false);
+  expect(time.parentElement).toBe(info.parentElement);
+});
+
+describe('holding the horizontal bar', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  const bar = () => screen.getByText('Dreams').closest('[data-status]') as HTMLElement;
+  const press = (target: HTMLElement, x = 10, y = 10) =>
+    fireEvent.pointerDown(target, { clientX: x, clientY: y, pointerId: 1 });
+
+  test('a hold opens the drawer with the player and the library below it', () => {
+    renderWithMock(<MediaPlayerBar entity="ha:room" />, playing(), library);
+    expect(screen.queryByRole('slider', { name: 'Volume level' })).toBeNull();
+    press(bar());
+    act(() => vi.advanceTimersByTime(500));
+    // The vertical player: the volume bar is always there, and the library follows it.
+    expect(screen.getByRole('slider', { name: 'Volume level' })).toBeTruthy();
+    expect(screen.getAllByRole('heading', { name: 'Dreams' }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('searchbox', { name: 'Search the library' })).toBeTruthy();
+  });
+
+  test('a press that ends early, or moves away, opens nothing', () => {
+    renderWithMock(<MediaPlayerBar entity="ha:room" />, playing(), library);
+    press(bar());
+    act(() => vi.advanceTimersByTime(300));
+    fireEvent.pointerUp(bar(), { pointerId: 1 });
+    act(() => vi.advanceTimersByTime(500));
+    expect(screen.queryByRole('slider', { name: 'Volume level' })).toBeNull();
+
+    press(bar(), 10, 10);
+    fireEvent.pointerMove(bar(), { clientX: 60, clientY: 10, pointerId: 1 });
+    act(() => vi.advanceTimersByTime(600));
+    expect(screen.queryByRole('slider', { name: 'Volume level' })).toBeNull();
+  });
+
+  test('a press that starts on a button is that button’s, not a hold', () => {
+    renderWithMock(<MediaPlayerBar entity="ha:room" />, playing(), library);
+    press(screen.getByRole('button', { name: 'Next' }));
+    act(() => vi.advanceTimersByTime(600));
+    expect(screen.queryByRole('slider', { name: 'Volume level' })).toBeNull();
+  });
+
+  test('the click that ends a hold is cancelled, and an ordinary click is not', () => {
+    renderWithMock(<MediaPlayerBar entity="ha:room" />, playing(), library);
+    // Taken before the drawer opens: its player repeats the title.
+    const card = bar();
+    expect(fireEvent.click(card)).toBe(true);
+    press(card);
+    act(() => vi.advanceTimersByTime(500));
+    expect(fireEvent.click(card)).toBe(false);
+    // Only the one click after a hold is swallowed.
+    expect(fireEvent.click(card)).toBe(true);
+  });
+
+  test('a player that is not ready has no drawer to hold open', () => {
+    renderWithMock(<MediaPlayerBar entity="ha:room" />, {
+      room: mockMediaPlayer({ name: 'Room', availability: 'unavailable', playback: 'off' }),
+    });
+
+    press(screen.getByText('Unavailable').closest('[data-status]') as HTMLElement);
+    act(() => vi.advanceTimersByTime(600));
+    expect(screen.queryByRole('slider', { name: 'Volume level' })).toBeNull();
+  });
+});
+
+describe('the vertical card’s artwork', () => {
+  test('opens the library in the drawer, like the horizontal card, and so does the browse button', async () => {
+    renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing(), library);
+    expect(screen.queryByRole('searchbox')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Open media browser' }));
+    expect(await screen.findByRole('tab', { name: 'Albums' })).toBeTruthy();
+  });
+
+  test('is only artwork when there is nothing to open', () => {
+    const { unmount } = renderWithMock(
+      <MediaPlayerColumn entity="ha:room" />,
+      playing({ browse: false }),
+      library,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Open media browser' })).toBeNull();
+    unmount();
+    renderWithMock(<MediaPlayerColumn entity="ha:room" browse={false} />, playing(), library);
+    expect(screen.queryByRole('button', { name: 'Open media browser' })).toBeNull();
+  });
+
+  test('the page keeps its library beside the player, so its artwork opens nothing', () => {
+    renderWithMock(<MediaPlayerPage entity="ha:room" />, playing(), library);
+    expect(screen.queryByRole('button', { name: 'Open media browser' })).toBeNull();
+  });
+
+  test('pressing the artwork opens the drawer without also seeking, and the ring still seeks', () => {
+    const box = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      top: 0,
+      right: 168,
+      bottom: 168,
+      width: 168,
+      height: 168,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    const { ha } = renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing(), library);
+    const artwork = screen.getByRole('button', { name: 'Open media browser' });
+    fireEvent.pointerDown(artwork, { clientX: 84, clientY: 84, pointerId: 1 });
+    fireEvent.pointerUp(artwork, { clientX: 84, clientY: 84, pointerId: 1 });
+    expect(ha.calls.filter((call) => call.command === 'seek')).toHaveLength(0);
+
+    const ring = screen.getByRole('slider', { name: 'Position' });
+    fireEvent.pointerDown(ring, { clientX: 160, clientY: 84, pointerId: 1 });
+    fireEvent.pointerUp(ring, { clientX: 160, clientY: 84, pointerId: 1 });
+    expect(ha.calls.at(-1)).toMatchObject({ command: 'seek', args: { position: 30 } });
+    box.mockRestore();
+  });
+});
+
+describe('long press on the vertical card, and what each way of opening the drawer does', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  const hold = (target: HTMLElement) => {
+    fireEvent.pointerDown(target, { clientX: 10, clientY: 10, pointerId: 1 });
+    act(() => vi.advanceTimersByTime(500));
+  };
+
+  test('holding the column opens the drawer with the player and its library', () => {
+    renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing(), library);
+    expect(screen.getAllByRole('slider', { name: 'Volume level' })).toHaveLength(1);
+    hold(screen.getByRole('heading', { name: 'Dreams' }));
+    // The drawer repeats the player (a second volume bar) and adds the library.
+    expect(screen.getAllByRole('slider', { name: 'Volume level' })).toHaveLength(2);
+    expect(screen.getByRole('searchbox', { name: 'Search the library' })).toBeTruthy();
+    // The side panel, not expanded.
+    expect(screen.getByRole('button', { name: 'Expand' })).toBeTruthy();
+  });
+
+  test('a press on a control of the column is that control’s, and a column with no library has nothing to hold open', () => {
+    const { unmount } = renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing(), library);
+    hold(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.queryByRole('searchbox')).toBeNull();
+    unmount();
+
+    renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing({ browse: false }), library);
+    hold(screen.getByRole('heading', { name: 'Dreams' }));
+    expect(screen.getAllByRole('slider', { name: 'Volume level' })).toHaveLength(1);
+  });
+
+  test('on the vertical card the artwork opens the side panel and the browse button opens it expanded', () => {
+    const { unmount } = renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing(), library);
+    fireEvent.click(screen.getByRole('button', { name: 'Open media browser' }));
+    expect(screen.getByRole('button', { name: 'Expand' })).toBeTruthy();
+    unmount();
+
+    renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing(), library);
+    fireEvent.click(screen.getByRole('button', { name: 'Browse media' }));
+    expect(screen.getByRole('button', { name: 'Collapse' })).toBeTruthy();
+    expect(screen.getByRole('searchbox', { name: 'Search the library' })).toBeTruthy();
+  });
+
+  test('on the horizontal card hold and the artwork open the side panel, and the browse button expands it', () => {
+    const { unmount } = renderWithMock(<MediaPlayerBar entity="ha:room" />, playing(), library);
+    hold(screen.getByText('Dreams').closest('[data-status]') as HTMLElement);
+    expect(screen.getByRole('button', { name: 'Expand' })).toBeTruthy();
+    unmount();
+
+    const second = renderWithMock(<MediaPlayerBar entity="ha:room" />, playing(), library);
+    fireEvent.click(screen.getByRole('button', { name: 'Open player' }));
+    expect(screen.getByRole('button', { name: 'Expand' })).toBeTruthy();
+    second.unmount();
+
+    renderWithMock(<MediaPlayerBar entity="ha:room" />, playing(), library);
+    fireEvent.click(screen.getByRole('button', { name: 'Browse media' }));
+    expect(screen.getByRole('button', { name: 'Collapse' })).toBeTruthy();
+  });
+
+  test('the drawer stacks the player and the library at every width, with the player centered', () => {
+    renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing(), library);
+    fireEvent.click(screen.getByRole('button', { name: 'Open media browser' }));
+    expect(layoutOf(screen.getAllByRole('slider', { name: 'Volume level' })[1]!)).toEqual(SHAPE);
+    fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
+    expect(screen.getByRole('button', { name: 'Collapse' })).toBeTruthy();
+    expect(layoutOf(screen.getAllByRole('slider', { name: 'Volume level' })[1]!)).toEqual(SHAPE);
+  });
+
+  test('the full page is the same layout as the expanded drawer', () => {
+    renderWithMock(<MediaPlayerPage entity="ha:room" />, playing(), library);
+    expect(layoutOf(screen.getByRole('slider', { name: 'Volume level' }))).toEqual(SHAPE);
+  });
+});
+
+/** What `layoutOf` reports for the big player, in the drawer and on the page alike. */
+const SHAPE = {
+  direction: 'column',
+  playerMargin: 'auto',
+  playerMaxWidth: '420px',
+  libraryBelow: true,
+};
+
+/** How the player and the library are arranged around a volume slider inside the big player. */
+function layoutOf(volume: HTMLElement) {
+  const search = screen.getByRole('searchbox', { name: 'Search the library' });
+  let body = volume.parentElement as HTMLElement;
+  while (!body.contains(search)) {
+    body = body.parentElement as HTMLElement;
+  }
+
+  const player = Array.from(body.children).find((child) => child.contains(volume)) as HTMLElement;
+  return {
+    direction: getComputedStyle(body).flexDirection,
+    playerMargin: getComputedStyle(player).marginLeft,
+    playerMaxWidth: getComputedStyle(player).maxWidth,
+    libraryBelow: Boolean(
+      player.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ),
+  };
+}
+
+describe('the library’s layout follows the space it has', () => {
+  const rows = () => screen.getAllByRole('list').at(-1) as HTMLElement;
+
+  test('the full page lays the library out as a theater row', async () => {
+    renderWithMock(<MediaPlayerPage entity="ha:room" />, playing(), library);
+    await screen.findByRole('button', { name: 'Play Dreams' });
+    expect(getComputedStyle(rows()).overflowX).toBe('auto');
+    expect(getComputedStyle(rows()).flexDirection).not.toBe('column');
+  });
+
+  test('the collapsed drawer keeps rows, and expanding it makes the same theater row', async () => {
+    renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing(), library);
+    fireEvent.click(screen.getByRole('button', { name: 'Open media browser' }));
+    await screen.findAllByRole('button', { name: 'Play Dreams' });
+    expect(getComputedStyle(rows()).flexDirection).toBe('column');
+    fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
+    expect(getComputedStyle(rows()).overflowX).toBe('auto');
+    expect(getComputedStyle(rows()).flexDirection).not.toBe('column');
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse' }));
+    expect(getComputedStyle(rows()).flexDirection).toBe('column');
+  });
+
+  test('the browse button opens the drawer expanded, so it opens in theater', async () => {
+    renderWithMock(<MediaPlayerBar entity="ha:room" />, playing(), library);
+    fireEvent.click(screen.getByRole('button', { name: 'Browse media' }));
+    await screen.findAllByRole('button', { name: 'Play Dreams' });
+    expect(getComputedStyle(rows()).overflowX).toBe('auto');
+  });
+});

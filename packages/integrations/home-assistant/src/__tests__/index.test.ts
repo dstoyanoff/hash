@@ -1,0 +1,258 @@
+import { UnknownEntityError, type Entity } from '@hash/core';
+import type { HassEntities, HassEntity } from 'home-assistant-js-websocket';
+import { describe, expect, test, vi } from 'vitest';
+import { HomeAssistantIntegration, type HaClient } from '../index.ts';
+
+const entity = (id: string, state: string, attributes = {}): HassEntity =>
+  ({
+    entity_id: id,
+    state,
+    attributes,
+    last_changed: 't',
+    last_updated: 't',
+    context: { id: 'c', parent_id: null, user_id: null },
+  }) as HassEntity;
+
+function fakeClient(initial: HassEntities = {}) {
+  let push: (entities: HassEntities) => void = () => {};
+  const handlers: Record<string, () => void> = {};
+  const client: HaClient = {
+    subscribeEntities: (cb) => {
+      push = cb;
+      cb(initial);
+      return () => {};
+    },
+    callService: vi.fn<HaClient['callService']>().mockResolvedValue(undefined),
+    sendCommand: (() => Promise.resolve([])) as HaClient['sendCommand'],
+    on: (event, cb) => {
+      handlers[event] = cb;
+    },
+    close: vi.fn<HaClient['close']>(),
+  };
+
+  return { client, push: (e: HassEntities) => push(e), handlers };
+}
+
+describe('HomeAssistantIntegration', () => {
+  const connected = async (initial: HassEntities = {}) => {
+    const { client, push, handlers } = fakeClient(initial);
+    const ha = new HomeAssistantIntegration({
+      url: 'x',
+      token: 'y',
+      createClient: async () => client,
+    });
+
+    await ha.connect();
+    return { ha, client, push, handlers };
+  };
+
+  test('maps entities to the generic model with refs and notifies only on change', async () => {
+    const lamp = entity('light.lamp', 'on', {
+      brightness: 51,
+      supported_color_modes: ['brightness'],
+    });
+
+    const other = entity('light.other', 'off');
+    const { ha, push } = await connected({ 'light.lamp': lamp, 'light.other': other });
+
+    const lampListener = vi.fn<(entity: Entity | undefined) => void>();
+    const otherListener = vi.fn<(entity: Entity | undefined) => void>();
+    ha.subscribe('light.lamp', lampListener);
+    ha.subscribe('light.other', otherListener);
+    expect(lampListener).toHaveBeenLastCalledWith(
+      expect.objectContaining({ ref: 'ha:light.lamp', kind: 'light', on: true, brightness: 0.2 }),
+    );
+
+    // Same object identity for `lamp`, new object for `other`.
+    push({ 'light.lamp': lamp, 'light.other': entity('light.other', 'on') });
+    expect(lampListener).toHaveBeenCalledTimes(1);
+    expect(otherListener).toHaveBeenCalledTimes(2);
+
+    // Removal
+    push({ 'light.lamp': lamp });
+    expect(otherListener).toHaveBeenLastCalledWith(undefined);
+  });
+
+  test('connect() resolves only after the first full set of entities has loaded', async () => {
+    let deliver: (entities: HassEntities) => void = () => {};
+    const client: HaClient = {
+      ...fakeClient().client,
+      subscribeEntities: (cb) => {
+        deliver = cb;
+        return () => {};
+      },
+    };
+
+    const ha = new HomeAssistantIntegration({
+      url: 'x',
+      token: 'y',
+      createClient: async () => client,
+    });
+
+    let done = false;
+    const connecting = ha.connect().then(() => (done = true));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(done).toBe(false);
+    expect(ha.status).toBe('connecting');
+    deliver({ 'sensor.t': entity('sensor.t', '1') });
+    await connecting;
+    expect(ha.status).toBe('connected');
+    expect(ha.listEntities()).toHaveLength(1);
+  });
+
+  test('subscribing to an unknown id throws', async () => {
+    const { ha } = await connected();
+    expect(() => ha.subscribe('light.nope', () => {})).toThrow(UnknownEntityError);
+  });
+
+  test('tracks connection status and marks entities unavailable while disconnected', async () => {
+    const { ha, handlers } = await connected({ 'sensor.t': entity('sensor.t', '1') });
+    const statuses: string[] = [];
+    ha.onStatusChange((s) => statuses.push(s));
+    handlers.disconnected?.();
+    expect(ha.getEntity('sensor.t')?.availability).toBe('unavailable');
+    handlers.ready?.();
+    handlers['reconnect-error']?.();
+    ha.disconnect();
+    expect(statuses).toEqual(['disconnected', 'connected', 'error', 'disconnected']);
+  });
+
+  test('connection failure sets error status and rethrows', async () => {
+    const ha = new HomeAssistantIntegration({
+      url: 'x',
+      token: 'y',
+      createClient: async () => {
+        throw new Error('boom');
+      },
+    });
+
+    await expect(ha.connect()).rejects.toThrow('boom');
+    expect(ha.status).toBe('error');
+  });
+
+  test('commands become service calls targeting the entity, and need a connection', async () => {
+    const { client, ...rest } = fakeClient({ 'light.lamp': entity('light.lamp', 'off') });
+    const ha = new HomeAssistantIntegration({
+      url: 'x',
+      token: 'y',
+      createClient: async () => client,
+    });
+
+    await expect(ha.command('light.lamp', 'toggle')).rejects.toThrow(/not connected/);
+    await ha.connect();
+    await ha.command('light.lamp', 'setBrightness', { brightness: 0.5 });
+    expect(client.callService).toHaveBeenCalledWith(
+      'light',
+      'turn_on',
+      { brightness_pct: 50 },
+      { entity_id: ['light.lamp'] },
+    );
+
+    await expect(ha.command('light.nope', 'toggle')).rejects.toThrow(UnknownEntityError);
+    await expect(ha.command('light.lamp', 'setVolume', { volume: 1 })).rejects.toThrow(
+      /no "setVolume"/,
+    );
+
+    void rest;
+  });
+
+  test('callRaw passes any service call through', async () => {
+    const { ha, client } = await connected();
+    await ha.callRaw({
+      domain: 'script',
+      service: 'turn_on',
+      entityIds: ['script.x'],
+      data: { a: 1 },
+    });
+
+    expect(client.callService).toHaveBeenCalledWith(
+      'script',
+      'turn_on',
+      { a: 1 },
+      { entity_id: ['script.x'] },
+    );
+
+    await expect(ha.callRaw({})).rejects.toThrow(/domain/);
+  });
+});
+
+describe('HomeAssistantIntegration browse', () => {
+  const setup = async (answer: unknown) => {
+    const sent: Record<string, unknown>[] = [];
+    const { client } = fakeClient({
+      'media_player.room': entity('media_player.room', 'idle', { supported_features: 131072 }),
+    });
+
+    client.sendCommand = ((message: Record<string, unknown>) => {
+      sent.push(message);
+      return Promise.resolve(answer);
+    }) as HaClient['sendCommand'];
+
+    const ha = new HomeAssistantIntegration({
+      url: 'x',
+      token: 'y',
+      createClient: () => Promise.resolve(client),
+    });
+
+    await ha.connect();
+    return { ha, sent };
+  };
+
+  const folder = (title: string, id: string, extra = {}) => ({
+    title,
+    media_class: 'directory',
+    media_content_type: 'library',
+    media_content_id: id,
+    can_play: false,
+    can_expand: true,
+    ...extra,
+  });
+
+  test('the top level and an opened folder come from media_player/browse_media', async () => {
+    const { ha, sent } = await setup({
+      title: 'Media',
+      children: [
+        folder('Local media', 'media-source://media_source'),
+        folder('Radio', 'radio', { media_class: 'channel', can_play: true, can_expand: false }),
+      ],
+    });
+
+    const root = await ha.browse('media_player.room', {});
+    expect(sent.at(-1)).toEqual({
+      type: 'media_player/browse_media',
+      entity_id: 'media_player.room',
+    });
+
+    expect(
+      root.items.map((item) => [item.title, item.kind, item.playable, item.expandable]),
+    ).toEqual([
+      ['Local media', 'folder', false, true],
+      ['Radio', 'radio', true, false],
+    ]);
+
+    await ha.browse('media_player.room', { path: root.items[0]!.id });
+    expect(sent.at(-1)).toMatchObject({
+      media_content_type: 'library',
+      media_content_id: 'media-source://media_source',
+    });
+  });
+
+  test('only thumbnails the browser can open itself are passed on', async () => {
+    const { ha } = await setup({
+      children: [
+        folder('Public', 'a', { thumbnail: 'https://cdn.example/a.jpg' }),
+        folder('Private', 'b', { thumbnail: '/api/media_player_proxy/x?token=secret' }),
+      ],
+    });
+
+    const [open, closed] = (await ha.browse('media_player.room', {})).items;
+    expect(open).toHaveProperty('artworkUrl', 'https://cdn.example/a.jpg');
+    expect(closed).not.toHaveProperty('artworkUrl');
+  });
+
+  test('search is refused, and an unknown player is an error', async () => {
+    const { ha } = await setup({ children: [] });
+    await expect(ha.browse('media_player.room', { search: 'x' })).rejects.toThrow(/searched/);
+    await expect(ha.browse('media_player.nope', {})).rejects.toBeInstanceOf(UnknownEntityError);
+  });
+});

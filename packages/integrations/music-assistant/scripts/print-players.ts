@@ -16,14 +16,20 @@ if (!url || !token) {
 const ma = new MusicAssistantIntegration({ url, token });
 await ma.connect();
 
-const players = ma.getAllStates().sort((a, b) => a.ref.localeCompare(b.ref));
+const players = ma.listEntities().toSorted((a, b) => a.ref.localeCompare(b.ref));
 if (players.length === 0) {
   console.error('Connected, but no players were returned.');
 } else {
   for (const p of players) {
-    const title = p.attributes.media_title;
-    console.log(`${p.ref}\t${p.state}${typeof title === 'string' ? `\t${title}` : ''}`);
+    if (p.kind !== 'mediaPlayer') {
+      continue;
+    }
+
+    const title = p.media?.title;
+    console.log(`${p.ref}\t${p.name}\t${p.playback}${title ? `\t${title}` : ''}`);
   }
+
   console.error(`${players.length} player(s)`);
 }
+
 ma.disconnect();

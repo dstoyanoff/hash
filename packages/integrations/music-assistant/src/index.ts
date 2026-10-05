@@ -1,4 +1,13 @@
-import { BaseIntegration, formatEntityRef, type EntityState, type ServiceCall } from '@hash/core';
+import {
+  BaseIntegration,
+  UnknownEntityError,
+  type BrowseItem,
+  type BrowseQuery,
+  type BrowseResult,
+  type EntityInput,
+} from '@hash/core';
+import { parseUri, SHELVES, toBrowseItem, type MaItem } from './browse.ts';
+import { toMediaPlayer, type MaPlayer } from './mapper.ts';
 
 /**
  * Direct client for the Music Assistant WebSocket API (not via Home Assistant), reverse-engineered
@@ -15,35 +24,25 @@ import { BaseIntegration, formatEntityRef, type EntityState, type ServiceCall } 
  * Local entity ids are the player's own `player_id` verbatim (`ma:<player_id>`), not a
  * `domain.name` pair like Home Assistant's — Music Assistant's player ids are opaque strings that
  * may themselves contain dots, so splitting on one would be ambiguous.
+ *
+ * Every player is a native `mediaPlayer` entity (see `@hash/core`'s model): there is no Home
+ * Assistant vocabulary here, and `command()` maps the model's commands straight to `players/cmd/*`.
  */
 
 export interface MusicAssistantOptions {
   /** Base URL, e.g. `http://mass.local:8095`. */
   url: string;
+
   /** Access token, created in Music Assistant under Settings → Profile. */
   token: string;
+
   /** Integration id used in entity refs. Defaults to `ma`. */
   id?: string;
+
   /** Override for tests. */
   createSocket?: (url: string) => WebSocket;
   reconnectMinMs?: number;
   reconnectMaxMs?: number;
-}
-
-interface MaPlayerMedia {
-  title?: string | null;
-  artist?: string | null;
-  album?: string | null;
-  image_url?: string | null;
-}
-
-interface MaPlayer {
-  player_id: string;
-  available?: boolean;
-  playback_state?: string;
-  volume_level?: number | null;
-  volume_muted?: boolean | null;
-  current_media?: MaPlayerMedia | null;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -52,52 +51,83 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isMaPlayer = (value: unknown): value is MaPlayer =>
   isRecord(value) && typeof value.player_id === 'string';
 
-function toEntityState(id: string, integrationId: string, player: MaPlayer): EntityState {
-  const media = player.current_media ?? undefined;
-  return {
-    ref: formatEntityRef(integrationId, id),
-    state: player.available === false ? 'unavailable' : (player.playback_state ?? 'unknown'),
-    attributes: {
-      // Named like Home Assistant's `media_player` attributes so `usePlayer`/`MediaPlayerBar`
-      // (in @hash/ui) work unmodified against either backend.
-      media_title: media?.title ?? undefined,
-      media_artist: media?.artist ?? undefined,
-      media_album_name: media?.album ?? undefined,
-      entity_picture: media?.image_url ?? undefined,
-      volume_level: typeof player.volume_level === 'number' ? player.volume_level / 100 : undefined,
-      is_volume_muted: player.volume_muted ?? undefined,
-    },
-  };
-}
-
-/** Maps a generic `media_player` service call onto a Music Assistant `players/cmd/*` command. */
+/** Maps a model command onto a Music Assistant `players/cmd/*` command, validating its arguments. */
 function commandFor(
-  service: string,
-  data: ServiceCall['data'],
-): { command: string; args?: Record<string, unknown> } {
-  switch (service) {
-    case 'media_play':
+  name: string,
+  args: Record<string, unknown> | undefined,
+): { command: string; args?: Record<string, unknown>; idKey?: 'player_id' | 'queue_id' } {
+  switch (name) {
+    case 'play':
       return { command: 'players/cmd/play' };
-    case 'media_pause':
+    case 'pause':
       return { command: 'players/cmd/pause' };
-    case 'media_play_pause':
+    case 'togglePlay':
       return { command: 'players/cmd/play_pause' };
-    case 'media_next_track':
+    case 'next':
       return { command: 'players/cmd/next' };
-    case 'media_previous_track':
+    case 'previous':
       return { command: 'players/cmd/previous' };
-    case 'volume_set': {
-      const level = data?.volume_level;
-      if (typeof level !== 'number') throw new Error('volume_set needs a numeric volume_level');
-      return { command: 'players/cmd/volume_set', args: { volume_level: Math.round(level * 100) } };
-    }
-    case 'volume_mute':
+    case 'setVolume': {
+      const volume = args?.volume;
+      if (typeof volume !== 'number' || !Number.isFinite(volume)) {
+        throw new Error('setVolume needs a numeric volume between 0 and 1');
+      }
+
       return {
-        command: 'players/cmd/volume_mute',
-        args: { muted: data?.is_volume_muted === true },
+        command: 'players/cmd/volume_set',
+        args: { volume_level: Math.round(Math.min(1, Math.max(0, volume)) * 100) },
       };
+    }
+
+    case 'setMuted':
+      if (typeof args?.muted !== 'boolean') {
+        throw new Error('setMuted needs a boolean "muted"');
+      }
+
+      return { command: 'players/cmd/volume_mute', args: { muted: args.muted } };
+    case 'setShuffle':
+      if (typeof args?.shuffle !== 'boolean') {
+        throw new Error('setShuffle needs a boolean "shuffle"');
+      }
+
+      return {
+        command: 'player_queues/shuffle',
+        args: { shuffle_enabled: args.shuffle },
+        idKey: 'queue_id',
+      };
+    case 'seek': {
+      const position = args?.position;
+      if (typeof position !== 'number' || !Number.isFinite(position)) {
+        throw new Error('seek needs a numeric position in seconds');
+      }
+
+      // Queues are addressed by their own id, which is the player's.
+      return {
+        command: 'player_queues/seek',
+        args: { position: Math.max(0, Math.round(position)) },
+        idKey: 'queue_id',
+      };
+    }
+
+    case 'playMedia': {
+      const mode = args?.mode ?? 'play';
+      if (typeof args?.item !== 'string' || args.item === '') {
+        throw new Error('playMedia needs an item id');
+      }
+
+      if (!['play', 'replace', 'next', 'add'].includes(String(mode))) {
+        throw new Error('"mode" must be play, replace, next or add');
+      }
+
+      return {
+        command: 'player_queues/play_media',
+        args: { media: args.item, option: mode },
+        idKey: 'queue_id',
+      };
+    }
+
     default:
-      throw new Error(`Music Assistant does not support the "${service}" service`);
+      throw new Error(`A media player has no "${name}" command`);
   }
 }
 
@@ -113,6 +143,10 @@ export class MusicAssistantIntegration extends BaseIntegration {
   #options: MusicAssistantOptions;
   #socket: WebSocket | undefined;
   #nextMessageId = 1;
+
+  /** The last raw player and queue shuffle seen, so either can change without the other. */
+  #players = new Map<string, MaPlayer>();
+  #shuffle = new Map<string, boolean>();
   #pending = new Map<
     string,
     { resolve: (result: unknown) => void; reject: (error: Error) => void }
@@ -120,6 +154,7 @@ export class MusicAssistantIntegration extends BaseIntegration {
   #stopped = true;
   #retry = 0;
   #timer: ReturnType<typeof setTimeout> | undefined;
+
   /** True once the initial handshake has succeeded at least once — only then does a later close
    * count as a "drop" worth auto-reconnecting; a close during the *first* attempt is a connect()
    * failure that the runtime's own startup retry loop owns (see `connect()`'s doc comment). */
@@ -135,7 +170,10 @@ export class MusicAssistantIntegration extends BaseIntegration {
    * reconnected internally with backoff (mirrors how the runtime treats every integration: it
    * only calls `connect()` once, at startup). */
   connect(): Promise<void> {
-    if (!this.#stopped) return Promise.resolve();
+    if (!this.#stopped) {
+      return Promise.resolve();
+    }
+
     this.#stopped = false;
     this.setStatus('connecting');
     return this.#open();
@@ -144,29 +182,103 @@ export class MusicAssistantIntegration extends BaseIntegration {
   disconnect(): void {
     this.#stopped = true;
     clearTimeout(this.#timer);
-    for (const { reject } of this.#pending.values()) reject(new Error('Disconnected'));
+    for (const { reject } of this.#pending.values()) {
+      reject(new Error('Disconnected'));
+    }
+
     this.#pending.clear();
     this.#socket?.close();
     this.#socket = undefined;
     this.setStatus('disconnected');
   }
 
-  async callService(call: ServiceCall): Promise<void> {
-    if (call.domain !== 'media_player') {
-      throw new Error(
-        `Music Assistant only supports the "media_player" domain, got "${call.domain}"`,
-      );
+  async command(entityId: string, name: string, args?: Record<string, unknown>): Promise<void> {
+    if (!this.getEntity(entityId)) {
+      throw new UnknownEntityError(this.id, entityId);
     }
-    const playerId = call.entityIds?.[0];
-    if (!playerId) throw new Error('Music Assistant service calls need a target player');
-    const { command, args } = commandFor(call.service, call.data);
-    await this.#send(command, { player_id: playerId, ...args });
+
+    const { command, args: commandArgs, idKey = 'player_id' } = commandFor(name, args);
+    await this.#send(command, { [idKey]: entityId, ...commandArgs });
+  }
+
+  /** One level of the library, or a search across it, through Music Assistant's own API. */
+  async browse(entityId: string, query: BrowseQuery): Promise<BrowseResult> {
+    if (!this.getEntity(entityId)) {
+      throw new UnknownEntityError(this.id, entityId);
+    }
+
+    if (query.search !== undefined) {
+      return this.#search(query.search);
+    }
+
+    if (query.path === undefined) {
+      return { items: SHELVES.map((shelf) => ({ ...shelf, playable: false, expandable: true })) };
+    }
+
+    const shelf = SHELVES.find((candidate) => candidate.id === query.path);
+    const found = shelf ? await this.#shelfItems(shelf.id) : await this.#childItems(query.path);
+    return { ...(shelf ? { title: shelf.title } : {}), items: found };
+  }
+
+  async #shelfItems(shelfId: string): Promise<BrowseItem[]> {
+    const library: Record<string, [string, Record<string, unknown>]> = {
+      'shelf:recent': ['music/recently_played_items', { limit: 25 }],
+      'shelf:playlists': ['music/playlists/library_items', { limit: 200, order_by: 'name' }],
+      'shelf:albums': ['music/albums/library_items', { limit: 200, order_by: 'name' }],
+      'shelf:artists': ['music/artists/library_items', { limit: 200, order_by: 'name' }],
+      'shelf:radio': ['music/radios/library_items', { limit: 200, order_by: 'name' }],
+    };
+
+    const [command, args] = library[shelfId] ?? [];
+    return command ? this.#items(await this.#send(command, args ?? {})) : [];
+  }
+
+  /** What is inside an album, a playlist or an artist. */
+  async #childItems(uri: string): Promise<BrowseItem[]> {
+    const { provider, type, id } = parseUri(uri);
+    const command = {
+      album: 'music/albums/album_tracks',
+      playlist: 'music/playlists/playlist_tracks',
+      artist: 'music/artists/artist_albums',
+    }[type];
+
+    if (!command) {
+      throw new Error(`"${uri}" has nothing inside it`);
+    }
+
+    return this.#items(
+      await this.#send(command, { item_id: id, provider_instance_id_or_domain: provider }),
+    );
+  }
+
+  async #search(text: string): Promise<BrowseResult> {
+    const results = await this.#send('music/search', {
+      search_query: text,
+      media_types: ['album', 'artist', 'track', 'playlist', 'radio'],
+      limit: 8,
+    });
+
+    const groups = isRecord(results)
+      ? [results.albums, results.artists, results.tracks, results.playlists, results.radio]
+      : [];
+
+    return { title: `Results for “${text}”`, items: groups.flatMap((group) => this.#items(group)) };
+  }
+
+  #items(list: unknown): BrowseItem[] {
+    return Array.isArray(list)
+      ? list.flatMap((item) => {
+          const mapped = isRecord(item) ? toBrowseItem(item as MaItem) : undefined;
+          return mapped ? [mapped] : [];
+        })
+      : [];
   }
 
   async #open(): Promise<void> {
     const socket = (this.#options.createSocket ?? ((url) => new WebSocket(url)))(
       wsUrl(this.#options.url),
     );
+
     this.#socket = socket;
 
     socket.addEventListener('message', (event) => {
@@ -175,11 +287,15 @@ export class MusicAssistantIntegration extends BaseIntegration {
 
     const closed = new Promise<never>((_resolve, reject) => {
       socket.addEventListener('close', () => {
-        if (this.#socket !== socket) return;
+        if (this.#socket !== socket) {
+          return;
+        }
+
         this.#socket = undefined;
         for (const { reject: rejectPending } of this.#pending.values()) {
           rejectPending(new Error('Connection lost'));
         }
+
         this.#pending.clear();
         reject(new Error('Music Assistant connection closed'));
         // A close during the first handshake is this attempt failing (status is already
@@ -187,7 +303,9 @@ export class MusicAssistantIntegration extends BaseIntegration {
         // and trigger our own reconnect; a first-attempt failure is retried by the caller.
         if (this.#everConnected) {
           this.setStatus('disconnected');
-          if (!this.#stopped) this.#scheduleReconnect();
+          if (!this.#stopped) {
+            this.#scheduleReconnect();
+          }
         }
       });
     });
@@ -217,7 +335,10 @@ export class MusicAssistantIntegration extends BaseIntegration {
     const max = this.#options.reconnectMaxMs ?? 10_000;
     const delay = Math.min(max, min * 2 ** this.#retry++);
     this.#timer = setTimeout(() => {
-      if (this.#stopped) return;
+      if (this.#stopped) {
+        return;
+      }
+
       this.setStatus('connecting');
       this.#open().catch(() => this.#scheduleReconnect());
     }, delay);
@@ -226,19 +347,58 @@ export class MusicAssistantIntegration extends BaseIntegration {
   async #authenticateAndLoad(): Promise<void> {
     await this.#send('auth', { token: this.#options.token });
     const players = await this.#send('players/all', {});
-    const next = new Map<string, EntityState>();
+    const next = new Map<string, EntityInput>();
+    this.#players.clear();
     if (Array.isArray(players)) {
       for (const player of players) {
-        if (isMaPlayer(player))
-          next.set(player.player_id, toEntityState(player.player_id, this.id, player));
+        if (isMaPlayer(player)) {
+          this.#players.set(player.player_id, player);
+          next.set(player.player_id, this.#entityFor(player));
+        }
       }
     }
-    this.replaceStates(next);
+
+    this.replaceEntities(next);
+    // Shuffle lives on the queues. They are asked for after the players are known, and without
+    // holding the connection up: a server that does not answer just leaves shuffle unreported.
+    this.#send('player_queues/all', {}).then(
+      (queues) => {
+        if (Array.isArray(queues)) {
+          queues.forEach((queue) => this.#applyQueue(queue));
+        }
+      },
+      () => {},
+    );
+  }
+
+  /** What a player looks like with its queue's shuffle setting copied onto it. */
+  #entityFor(player: MaPlayer): EntityInput {
+    const shuffle = this.#shuffle.get(player.player_id);
+    return toMediaPlayer(shuffle === undefined ? player : { ...player, shuffle_enabled: shuffle });
+  }
+
+  #applyQueue(queue: unknown): void {
+    if (!isRecord(queue) || typeof queue.queue_id !== 'string') {
+      return;
+    }
+
+    if (typeof queue.shuffle_enabled !== 'boolean') {
+      return;
+    }
+
+    this.#shuffle.set(queue.queue_id, queue.shuffle_enabled);
+    const player = this.#players.get(queue.queue_id);
+    if (player) {
+      this.setEntity(player.player_id, this.#entityFor(player));
+    }
   }
 
   #send(command: string, args: Record<string, unknown>): Promise<unknown> {
     const socket = this.#socket;
-    if (!socket) return Promise.reject(new Error('Not connected'));
+    if (!socket) {
+      return Promise.reject(new Error('Not connected'));
+    }
+
     const messageId = String(this.#nextMessageId++);
     return new Promise((resolve, reject) => {
       this.#pending.set(messageId, { resolve, reject });
@@ -253,15 +413,25 @@ export class MusicAssistantIntegration extends BaseIntegration {
     } catch {
       return;
     }
-    if (!isRecord(message)) return;
+
+    if (!isRecord(message)) {
+      return;
+    }
 
     if (typeof message.event === 'string') {
       this.#handleEvent(message.event, message.object_id, message.data);
       return;
     }
-    if (typeof message.message_id !== 'string') return;
+
+    if (typeof message.message_id !== 'string') {
+      return;
+    }
+
     const pending = this.#pending.get(message.message_id);
-    if (!pending) return;
+    if (!pending) {
+      return;
+    }
+
     this.#pending.delete(message.message_id);
     if (typeof message.error_code === 'number') {
       pending.reject(
@@ -280,11 +450,23 @@ export class MusicAssistantIntegration extends BaseIntegration {
     switch (event) {
       case 'player_added':
       case 'player_updated':
-        if (isMaPlayer(data))
-          this.setState(data.player_id, toEntityState(data.player_id, this.id, data));
+        if (isMaPlayer(data)) {
+          this.#players.set(data.player_id, data);
+          this.setEntity(data.player_id, this.#entityFor(data));
+        }
+
+        return;
+      case 'queue_added':
+      case 'queue_updated':
+        this.#applyQueue(data);
         return;
       case 'player_removed':
-        if (typeof objectId === 'string') this.setState(objectId, undefined);
+        if (typeof objectId === 'string') {
+          this.#players.delete(objectId);
+          this.#shuffle.delete(objectId);
+          this.setEntity(objectId, undefined);
+        }
+
         return;
       default:
         return;

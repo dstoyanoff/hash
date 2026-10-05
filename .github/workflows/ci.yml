@@ -16,8 +16,7 @@ jobs:
       - run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm test
-      - run: pnpm validate:dashboards
       - name: Check the ui catalog is up to date
         run: |
           pnpm generate:catalog
-          git diff --exit-code .claude/skills/ui-catalog/CATALOG.md
+          git diff --exit-code .claude/skills/ui-catalog/CATALOG.md packages/ui/src/gallery/props-data.ts

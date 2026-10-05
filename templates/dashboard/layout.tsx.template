@@ -1,0 +1,20 @@
+import { Outlet } from 'react-router';
+import { HomeTopBar } from '../../shared/top-bar.tsx';
+
+// The dashboard's layout: the shared top bar (shared/top-bar.tsx) above whichever page is showing.
+// Everything here is yours to change:
+//   - Drop <HomeTopBar /> for a chrome-less kiosk panel (see dashboards/hello).
+//   - Add scene shortcuts to the bar: <HomeTopBar title="..." scenes={['ha:scene.movie_night']} />.
+//   - Add navigation for a multi-page dashboard: render a <NavRail items={[...]} base="/dashboard/__DASHBOARD_ID__" />
+//     (or <NavDock />) from '@hash/ui' here and add the pages as children of this dashboard's route in app/routes.ts — see dashboards/home/layout.tsx.
+// The tab title.
+export const meta = () => [{ title: '__DASHBOARD_TITLE__' }];
+
+export default function Layout() {
+  return (
+    <>
+      <HomeTopBar title="__DASHBOARD_TITLE__" />
+      <Outlet />
+    </>
+  );
+}

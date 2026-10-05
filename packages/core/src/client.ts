@@ -1,5 +1,6 @@
-import type { EntityRef, EntityState } from './entity.ts';
-import type { ConnectionStatus, ServiceCall, Unsubscribe } from './integration.ts';
+import type { EntityRef } from './entity.ts';
+import type { ConnectionStatus, Unsubscribe } from './integration.ts';
+import type { BrowseQuery, BrowseResult, Entity } from './model/index.ts';
 import { encodeMessage, parseServerMessage, type ClientMessage } from './protocol.ts';
 
 export type LinkStatus = 'connecting' | 'open' | 'closed';
@@ -7,13 +8,14 @@ export type LinkStatus = 'connecting' | 'open' | 'closed';
 export interface RemoteClientOptions {
   /** WebSocket URL of the runtime, e.g. `ws://localhost:3000/ws`. */
   url: string;
+
   /** Override for tests / non-browser environments. */
   createSocket?: (url: string) => WebSocket;
   reconnectMinMs?: number;
   reconnectMaxMs?: number;
 }
 
-export type StateListener = (state: EntityState | null | undefined) => void;
+export type EntityListener = (entity: Entity | null | undefined) => void;
 
 /**
  * What the UI layer needs from a backend connection. `RemoteClient` talks to the runtime over
@@ -24,19 +26,33 @@ export interface Client {
   connect(): void;
   close(): void;
   onLinkChange(listener: (status: LinkStatus) => void): Unsubscribe;
+
   /** Status of a backend integration (`undefined` until known). */
   getIntegrationStatus(integration: string): ConnectionStatus | undefined;
   onIntegrationStatusChange(listener: () => void): Unsubscribe;
+
+  /** Every known integration's status. The same object is returned until something changes, so
+   * it is safe as a `useSyncExternalStore` snapshot. */
+  getIntegrationStatuses(): Readonly<Record<string, ConnectionStatus>>;
+
   /** `undefined` while loading, `null` if the entity does not exist. */
-  getState(ref: EntityRef): EntityState | null | undefined;
-  subscribe(ref: EntityRef, listener: StateListener): Unsubscribe;
-  callService(integration: string, call: ServiceCall): Promise<void>;
+  getEntity(ref: EntityRef): Entity | null | undefined;
+  subscribe(ref: EntityRef, listener: EntityListener): Unsubscribe;
+
+  /** Runs a named command on the entity; resolves once the backend accepted it. */
+  command(ref: EntityRef, name: string, args?: Record<string, unknown>): Promise<void>;
+
+  /** Lists one level of the entity's media library, or searches it. */
+  browse(ref: EntityRef, query: BrowseQuery): Promise<BrowseResult>;
+
+  /** Escape hatch: a backend-specific request, answered with whatever the integration returns. */
+  callRaw(integration: string, request: Record<string, unknown>): Promise<unknown>;
 }
 
 /**
  * Browser-side (and React-free) client for the runtime proxy. Ref-counts
  * subscriptions, resubscribes and reconnects with backoff. Listeners receive
- * `undefined` until the server has answered, then a state or `null` (unknown entity).
+ * `undefined` until the server has answered, then an entity or `null` (unknown entity).
  */
 export class RemoteClient implements Client {
   #options: RemoteClientOptions;
@@ -44,10 +60,14 @@ export class RemoteClient implements Client {
   #link: LinkStatus = 'closed';
   #linkListeners = new Set<(status: LinkStatus) => void>();
   #integrationStatus = new Map<string, ConnectionStatus>();
+  #statusSnapshot: Readonly<Record<string, ConnectionStatus>> = {};
   #statusListeners = new Set<() => void>();
-  #states = new Map<EntityRef, EntityState | null>();
-  #listeners = new Map<EntityRef, Set<StateListener>>();
-  #pending = new Map<number, { resolve: () => void; reject: (error: Error) => void }>();
+  #entities = new Map<EntityRef, Entity | null>();
+  #listeners = new Map<EntityRef, Set<EntityListener>>();
+  #pending = new Map<
+    number,
+    { resolve: (data: unknown) => void; reject: (error: Error) => void }
+  >();
   #nextId = 1;
   #retry = 0;
   #timer: ReturnType<typeof setTimeout> | undefined;
@@ -62,7 +82,10 @@ export class RemoteClient implements Client {
   }
 
   connect(): void {
-    if (!this.#stopped) return;
+    if (!this.#stopped) {
+      return;
+    }
+
     this.#stopped = false;
     this.#open();
   }
@@ -85,24 +108,29 @@ export class RemoteClient implements Client {
     return this.#integrationStatus.get(integration);
   }
 
+  getIntegrationStatuses(): Readonly<Record<string, ConnectionStatus>> {
+    return this.#statusSnapshot;
+  }
+
   onIntegrationStatusChange(listener: () => void): Unsubscribe {
     this.#statusListeners.add(listener);
     return () => this.#statusListeners.delete(listener) && undefined;
   }
 
-  getState(ref: EntityRef): EntityState | null | undefined {
-    return this.#states.get(ref);
+  getEntity(ref: EntityRef): Entity | null | undefined {
+    return this.#entities.get(ref);
   }
 
-  subscribe(ref: EntityRef, listener: StateListener): Unsubscribe {
+  subscribe(ref: EntityRef, listener: EntityListener): Unsubscribe {
     let set = this.#listeners.get(ref);
     if (!set) {
       set = new Set();
       this.#listeners.set(ref, set);
       this.#send({ type: 'subscribe', ref });
     }
+
     set.add(listener);
-    listener(this.#states.get(ref));
+    listener(this.#entities.get(ref));
     return () => {
       set.delete(listener);
       if (set.size === 0) {
@@ -112,26 +140,58 @@ export class RemoteClient implements Client {
     };
   }
 
-  callService(integration: string, call: ServiceCall): Promise<void> {
+  async command(ref: EntityRef, name: string, args?: Record<string, unknown>): Promise<void> {
+    await this.#request((id) => ({
+      type: 'command',
+      id,
+      ref,
+      command: name,
+      ...(args ? { args } : {}),
+    }));
+  }
+
+  async browse(ref: EntityRef, query: BrowseQuery): Promise<BrowseResult> {
+    return (await this.#request((id) => ({
+      type: 'query',
+      id,
+      ref,
+      query: 'browse',
+      args: { ...query },
+    }))) as BrowseResult;
+  }
+
+  callRaw(integration: string, request: Record<string, unknown>): Promise<unknown> {
+    return this.#request((id) => ({ type: 'raw', id, integration, request }));
+  }
+
+  #request(build: (id: number) => ClientMessage): Promise<unknown> {
     const id = this.#nextId++;
     return new Promise((resolve, reject) => {
       if (this.#socket?.readyState !== 1) {
         reject(new Error('Not connected to runtime'));
         return;
       }
+
       this.#pending.set(id, { resolve, reject });
-      this.#send({ type: 'call', id, integration, ...call });
+      this.#send(build(id));
     });
   }
 
   #setLink(status: LinkStatus) {
-    if (status === this.#link) return;
+    if (status === this.#link) {
+      return;
+    }
+
     this.#link = status;
-    for (const listener of [...this.#linkListeners]) listener(status);
+    for (const listener of Array.from(this.#linkListeners)) {
+      listener(status);
+    }
   }
 
   #send(message: ClientMessage) {
-    if (this.#socket?.readyState === 1) this.#socket.send(encodeMessage(message));
+    if (this.#socket?.readyState === 1) {
+      this.#socket.send(encodeMessage(message));
+    }
   }
 
   #open() {
@@ -142,21 +202,34 @@ export class RemoteClient implements Client {
     socket.addEventListener('open', () => {
       this.#retry = 0;
       this.#setLink('open');
-      for (const ref of this.#listeners.keys()) this.#send({ type: 'subscribe', ref });
+      for (const ref of this.#listeners.keys()) {
+        this.#send({ type: 'subscribe', ref });
+      }
     });
 
     socket.addEventListener('message', (event) => {
       const message = parseServerMessage(String(event.data));
-      if (message) this.#handle(message);
+      if (message) {
+        this.#handle(message);
+      }
     });
 
     socket.addEventListener('close', () => {
-      if (this.#socket !== socket) return;
+      if (this.#socket !== socket) {
+        return;
+      }
+
       this.#socket = undefined;
-      for (const { reject } of this.#pending.values()) reject(new Error('Connection lost'));
+      for (const { reject } of this.#pending.values()) {
+        reject(new Error('Connection lost'));
+      }
+
       this.#pending.clear();
       this.#setLink('closed');
-      if (this.#stopped) return;
+      if (this.#stopped) {
+        return;
+      }
+
       const min = this.#options.reconnectMinMs ?? 500;
       const max = this.#options.reconnectMaxMs ?? 10_000;
       const delay = Math.min(max, min * 2 ** this.#retry++);
@@ -166,22 +239,34 @@ export class RemoteClient implements Client {
 
   #handle(message: ReturnType<typeof parseServerMessage> & object) {
     switch (message.type) {
-      case 'state':
-        this.#states.set(message.ref, message.state);
-        for (const listener of [...(this.#listeners.get(message.ref) ?? [])]) {
-          listener(message.state);
+      case 'entity':
+        this.#entities.set(message.ref, message.entity);
+        for (const listener of Array.from(this.#listeners.get(message.ref) ?? [])) {
+          listener(message.entity);
         }
+
         break;
       case 'status':
         this.#integrationStatus.set(message.integration, message.status);
-        for (const listener of [...this.#statusListeners]) listener();
+        this.#statusSnapshot = Object.fromEntries(this.#integrationStatus);
+        for (const listener of Array.from(this.#statusListeners)) {
+          listener();
+        }
+
         break;
       case 'result': {
         const pending = this.#pending.get(message.id);
-        if (!pending) break;
+        if (!pending) {
+          break;
+        }
+
         this.#pending.delete(message.id);
-        if (message.ok) pending.resolve();
-        else pending.reject(new Error(message.error));
+        if (message.ok) {
+          pending.resolve(message.data);
+        } else {
+          pending.reject(new Error(message.error));
+        }
+
         break;
       }
     }

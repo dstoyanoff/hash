@@ -1,43 +1,81 @@
-import { parseEntityRef, type EntityRef } from '@hash/core';
+import type { EntityRef } from '@hash/core';
 import { useEffect, useRef, useState } from 'react';
-import { useCallService } from '../hooks.ts';
+import { fallbackName, type EntityHandle } from '../entity-handle.ts';
+import { useCommand, useEntity } from '../hooks.ts';
+import type { IconName } from '../icon-data.ts';
 import { Tile } from '../layout/tile.tsx';
+import { entityStatus, type EntityStatus } from '../status.ts';
 
 export interface ActionButtonProps {
-  label: string;
-  /** SVG path. */
-  icon?: string;
+  /** Button text. Defaults to the entity's name. */
+  label?: string;
+
+  /** Icon id, e.g. `lu:coffee`. */
+  icon?: IconName;
+
+  /** A second line of text under the label. */
   secondary?: string;
-  /** Service to call, e.g. `{ domain: 'script', service: 'turn_on', entity: 'ha:script.shower' }`. */
-  action: {
-    domain: string;
-    service: string;
-    /** Target entity; its prefix picks the integration. */
-    entity?: EntityRef;
-    /** Integration when there is no `entity`. Default `ha`. */
-    integration?: string;
-    data?: Record<string, unknown>;
+
+  /** What to trigger: an action entity (scene, script, button — it runs) or a switch (it flips), as a ref or a handle. */
+  entity?: EntityRef | EntityHandle<'action'> | EntityHandle<'switch'>;
+
+  /** A custom press for something no entity covers (a raw backend call, your own logic). Used instead of `entity`. */
+  onPress?: () => Promise<unknown>;
+}
+
+interface Pressable {
+  status: EntityStatus;
+  name: string | undefined;
+  press: (() => Promise<unknown>) | undefined;
+}
+
+/** Normalizes an entity ref or handle to what the button needs: status, name, and how to press it. */
+function usePressable(entity: ActionButtonProps['entity']): Pressable {
+  const ref = typeof entity === 'string' ? entity : undefined;
+  const live = useEntity(ref);
+  const send = useCommand(ref);
+
+  if (entity === undefined) {
+    return { status: 'missing', name: undefined, press: undefined };
+  }
+
+  if (typeof entity === 'string') {
+    const supported =
+      live === undefined || live === null || live.kind === 'action' || live.kind === 'switch';
+
+    return {
+      status: supported ? entityStatus(live) : 'unsupported',
+      name: live?.name,
+      press: live ? () => send(live.kind === 'switch' ? 'toggle' : 'trigger') : undefined,
+    };
+  }
+
+  const found = entity.entity;
+  return {
+    status: entity.status,
+    name: found?.name,
+    press: found
+      ? () =>
+          found.kind === 'switch'
+            ? (entity as EntityHandle<'switch'>).command('toggle')
+            : (entity as EntityHandle<'action'>).command('trigger')
+      : undefined,
   };
 }
 
-/** Any one-shot service call (script, button, automation, ...) with pending / done / error feedback. */
-export function ActionButton({ label, icon, secondary, action }: ActionButtonProps) {
-  const callService = useCallService();
+/** Any one-shot thing to trigger — a scene, script, button or switch, or your own `onPress` — with pending / done / error feedback. */
+export function ActionButton({ label, icon, secondary, entity, onPress }: ActionButtonProps) {
+  const target = usePressable(onPress ? undefined : entity);
   const [feedback, setFeedback] = useState<'pending' | 'done' | 'error' | undefined>();
   const [error, setError] = useState<string>();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
 
+  const run = onPress ?? target.press;
   const press = () => {
-    const target = action.entity ? parseEntityRef(action.entity) : undefined;
     setFeedback('pending');
     setError(undefined);
-    callService(target?.integration ?? action.integration ?? 'ha', {
-      domain: action.domain,
-      service: action.service,
-      ...(target ? { entityIds: [target.id] } : {}),
-      ...(action.data ? { data: action.data } : {}),
-    })
+    Promise.resolve(run ? run() : Promise.reject(new Error('Nothing to trigger')))
       .then(
         () => setFeedback('done'),
         (err: unknown) => {
@@ -53,9 +91,10 @@ export function ActionButton({ label, icon, secondary, action }: ActionButtonPro
 
   return (
     <Tile
-      label={label}
+      label={label ?? target.name ?? fallbackName(entity)}
       {...(icon ? { icon } : {})}
       {...(secondary ? { secondary } : {})}
+      status={onPress ? 'ready' : target.status}
       feedback={feedback}
       onPress={feedback === 'pending' ? undefined : press}
       {...(error ? { title: error } : {})}

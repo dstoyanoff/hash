@@ -1,15 +1,19 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { Grid as EPrimGrid } from 'e-prim';
+import type { ReactNode } from 'react';
 
 export interface GridProps {
   /** Number of equal columns. Default 2. */
   columns?: number;
+
+  /** Tiles (or any content) to lay out, one per cell. */
   children: ReactNode;
 }
 
+/** A grid of equal-width columns for tiles; cells share the width and never overflow it. */
 export function Grid({ columns = 2, children }: GridProps) {
   return (
-    <div className="hash-grid" style={{ '--hash-grid-columns': columns } as CSSProperties}>
+    <EPrimGrid columns={[columns, 'minmax(0, 1fr)']} gap={3}>
       {children}
-    </div>
+    </EPrimGrid>
   );
 }

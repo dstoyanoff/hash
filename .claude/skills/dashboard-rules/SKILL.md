@@ -1,6 +1,6 @@
 ---
 name: dashboard-rules
-description: The hard constraints for creating or editing a dashboard in examples/*. Load this before writing any dashboard code — it defines what you may touch and the sharp edges found while building examples/home.
+description: The hard constraints for creating or editing a dashboard in example/dashboards/*. Load this before writing any dashboard code — it defines what you may touch and the sharp edges found while building example/dashboards/home.
 ---
 
 # Dashboard rules
@@ -10,18 +10,23 @@ instead of working around it — see "When a rule is in the way" at the end.
 
 ## Scope
 
-- A dashboard lives entirely under `examples/<id>/`. You may create and edit files there freely.
-- **Never edit `packages/core`, `packages/ui`, or `apps/runtime`** while creating or changing a
+- A dashboard lives entirely under `example/dashboards/<id>/`. You may create and edit files
+  there freely. It's a plain folder, not its own package — no `package.json`/`tsconfig.json`/
+  `vitest.config.ts` of its own; it's built as part of the one `@hash/example` project.
+  **Don't write tests for it** — this repo's test suite covers `packages/*` only; verify a
+  dashboard with `verify-dashboard` instead (typecheck + an actual look at it running).
+- **Never edit `packages/core`, `packages/ui`, or `packages/runtime`** while creating or changing a
   dashboard, even for a one-line fix, even if it seems trivial. If the design system is missing
   something, that's a separate, explicit task — see `add-ui-component`.
-- A dashboard's code may import only: `react`, `react-router`, `@hash/ui`, `@hash/core`. This is
-  enforced by oxlint (`no-restricted-imports` in `.oxlintrc.json`) — a violation fails `pnpm lint`.
-  No raw `fetch`/`WebSocket`, no relative imports into `packages/` or `apps/`.
+- A dashboard's code (`example/dashboards/<id>/**`) is ordinary app code and may import
+  whatever it needs, including the project's own `example/shared/` files. Build with `@hash/ui`
+  components and hooks; prefer them to raw `fetch`/`WebSocket`, which would bypass the runtime's
+  entity handling. Don't import from `packages/` by relative path.
 - `pnpm format` (write mode) reformats the _whole repo_, not just your dashboard — if another
   file happened to already be out of sync with Prettier, running it can sweep in an unrelated
   change. After running it, check `git status`/`git diff` and make sure everything outside
-  `examples/<id>/` (and the expected `hash.config.ts` mock-data addition) is unchanged before
-  committing.
+  `example/dashboards/<id>/` (and the expected `hash.config.ts`/registration changes) is
+  unchanged before committing.
 - Read `.claude/skills/ui-catalog/CATALOG.md` before writing dashboard code. It lists every
   component, its props and its doc comment, generated straight from `packages/ui/src` so it can't
   be stale. Don't invent a component that isn't there — use what's listed, or raise it as a
@@ -29,27 +34,46 @@ instead of working around it — see "When a rule is in the way" at the end.
 
 ## Required shape
 
-Every dashboard is a package at `examples/<id>/`:
+Every dashboard is a plain folder at `example/dashboards/<id>/`:
 
 ```
-examples/<id>/
-├─ package.json       name: "@hash/example-<id>"
-├─ tsconfig.json
-├─ vitest.config.ts
-└─ src/
-   ├─ dashboard.ts     export default defineDashboard({ id, title, viewport })
-   ├─ routes.tsx       export default RouteObject[]
-   ├─ pages/*.tsx
-   └─ *.test.tsx
+example/dashboards/<id>/
+├─ layout.tsx       optional: shared chrome (top bar, nav) around the pages; exports `meta`
+└─ pages/*.tsx      route modules (default-export a component)
 ```
 
-- `<id>` is kebab-case (`^[a-z0-9][a-z0-9-]*$`) and **must equal** `manifest.id` in `dashboard.ts`
-  — `pnpm validate:dashboards` enforces this along with a required, positive `viewport`.
-- Use `create-dashboard` to scaffold this from `templates/dashboard/`; don't hand-roll it.
-- Pick a viewport that matches the real device: a tablet mount is typically landscape
-  (`1024x768`-ish), a small square wall display is small and square (`480x480`-ish, see the
-  Shelly-style panel in Milestone 5's original screenshots), a phone-shaped mount is tall and
-  narrow. Ask if you don't know the device.
+- `<id>` is kebab-case (`^[a-z0-9][a-z0-9-]*$`) and matches its URL: `route('dashboard/<id>', …)` in
+  `example/app/routes.ts`, the one file that lists every route. There is no manifest: the tab
+  title is the entry module's `meta` export, and the switcher's list lives in `shared/dashboards.ts`.
+- Use `create-dashboard` to scaffold this from `templates/dashboard/` — including the
+  project-level registration step, not just the `dashboards/<id>/` folder. Don't hand-roll it.
+- Layouts are responsive; there is no per-dashboard viewport. Ask what device it targets only to
+  choose density and how much fits on screen.
+
+## Layout and chrome
+
+A dashboard owns its whole layout. There is no runtime-rendered chrome: a page builds its own structure from `@hash/ui` components:
+
+- There is no page wrapper to write. The theme, spacing and density are global (`HashProvider`;
+  spacing follows density, so `gap={3}` is always one space on any display),
+  and the padded, scrolling page every dashboard renders into is `@hash/ui`'s `Page`, rendered by
+  the app's root layout (`example/app/root.tsx`) — the project's own code, free to swap for
+  its own wrapper. A page just returns its rooms (see `dashboards/kitchen`).
+- The **top bar** and the **nav** (`NavRail`, which is fixed to the left, or `NavDock`) are ordinary
+  components a dashboard includes — or leaves out. `NavRail`/`NavDock` reserve their size in the surrounding
+  `Page`, which pads so content never sits under them. A small kiosk panel is simply
+  its content with no chrome (see `dashboards/hello`).
+- A **multi-page** dashboard puts the shared structure in a layout route: `routes.ts` nests the pages under
+  `route('dashboard/<id>', 'layout.tsx', [index(…), route('lights', …)])`, and `layout.tsx` renders a
+  `NavRail` (absolute `base`, e.g. `/dashboard/home`, items relative to it), the top bar and an
+  `<Outlet />` (see `dashboards/home`).
+- To make several dashboards match, share the configuration in the project: `example/shared/`
+  holds `HomeTopBar` (weather, presence, clock, the switcher) and `dashboards.ts` (which dashboards
+  the switcher lists). That is a **convention of the example project** — `@hash` knows nothing about
+  it, and a dashboard can ignore it or use different chrome.
+- Dashboards are ordinary app code: they may import anything, including the project's own shared
+  files. The only things to avoid are dashboard-specific CSS and hand-rolled entity state handling
+  (see Style).
 
 ## Entity refs and state
 
@@ -68,63 +92,71 @@ examples/<id>/
 
 ## Layout
 
-Read `examples/home/src/pages/downstairs.tsx` and `upstairs.tsx` as the reference layout, and open
-`/gallery` (`pnpm dev`) to see every component live. Concretely:
+Read `example/dashboards/home/pages/home.tsx` and
+`example/dashboards/second-floor/pages/home.tsx` as the reference layout (two separate
+dashboards, each a single page — see "Layout and chrome" above), and
+run `pnpm --filter @hash/ui docs` to see
+every component live, documented with its supported states. Concretely:
 
-- Group by room with `<Section title="..." icon={...} readouts={...}>`; put per-room sensors in
-  `readouts`, not as standalone tiles, unless they're the main point of that section.
+- Group by room: a `<RoomHeader title="..." icon={...} readouts={...} />` followed by that room's
+  tiles (in a `<Grid columns={n}>`, or loose for a full-width row). The header adds its own space
+  above, so consecutive rooms read as groups. Put per-room sensors in `readouts`, not as
+  standalone tiles, unless they're the main point of that room.
 - **Give a `ClimateTile` its own row.** It renders a mode button and a temperature stepper and
   needs real width — cramming it into the same 3-column grid as light tiles truncates its label.
-  Found the hard way while building `examples/home`:
+  Found the hard way while building `example/dashboards/home`:
   ```tsx
-  <Section title="living room" icon={mdiSofa} columns={0}>
-    <Grid columns={3}>
-      <LightTile entity="ha:light.lamp" name="lamp" />
-      {/* ...other lights */}
-    </Grid>
-    <ClimateTile entity="ha:climate.heater" name="heater" /> {/* full width, own row */}
-    <Grid columns={2}>{/* scene/action buttons */}</Grid>
-  </Section>
+  <RoomHeader title="living room" icon="lu:sofa" />
+  <Grid columns={3}>
+    <LightTile entity="ha:light.lamp" name="lamp" />
+    {/* ...other lights */}
+  </Grid>
+  <ClimateTile entity="ha:climate.heater" name="heater" /> {/* full width, own row */}
+  <Grid columns={2}>{/* scene/action buttons */}</Grid>
   ```
-  (`Section columns={0}` renders its children directly instead of wrapping them in one shared
-  `Grid`, so you can mix row shapes like this.)
+  (A room is just a header plus whatever rows follow it, so you can mix row shapes like this.)
 - **Give every tile on a page a distinct label.** Two tiles both named "lamp" (e.g. a living-room
-  lamp and a porch lamp) are ambiguous to a user and to `getByRole('button', { name })` in tests —
-  found and fixed in `examples/home`. Prefer the entity's own room-qualified name, or pass an
-  explicit `name` when it would otherwise collide.
-- A media bar or anything else that wants the full width goes in its own
-  `<Section columns={0}>`, not squeezed into a grid cell.
+  lamp and a porch lamp) are ambiguous to a user, and to assistive tech reading the accessible
+  name — found and fixed in `example/dashboards/home`. Prefer the entity's own room-qualified
+  name, or pass an explicit `name` when it would otherwise collide.
+- A media bar or anything else that wants the full width goes in its own row (no `Grid`), not
+  squeezed into a grid cell.
 
-## Multi-page dashboards and `NavTabs`
+## Multi-page dashboards
 
-If you add a second page, wrap the pages in a pathless layout route (element + `children`, no
-`path`) that renders `<Outlet />`, as `examples/home/src/layout.tsx` does. **`NavTabs`' `to` values
-must be absolute, e.g. `` `/dashboard/${dashboard.id}/upstairs` `` — not relative segments like
-`upstairs`.** React Router's default relative-link resolution under a pathless layout route
-resolves against the _current_ matched route, not the layout's own base, so a relative link from
-one page to a sibling page turns into a broken doubled path (e.g. `/upstairs/upstairs`) and highlights
-the wrong tab. This bit `examples/home`; copy its `layout.tsx` pattern (compute
-`` `/dashboard/${dashboard.id}` `` from the dashboard's own manifest, once).
+Put the shared structure in a layout route (see "Layout and chrome"): `routes.ts` nests the pages under
+`route('dashboard/<id>', '../dashboards/<id>/layout.tsx', [index(…), route('lights', …)])` and `layout.tsx` renders a `NavRail`
+or `NavDock`, the top bar, and an `<Outlet />`. `NavRail`/`NavDock` take an
+absolute `base` (e.g. `/dashboard/home`) and `items[].to` relative to it (`''` for the dashboard's
+home, `'lights'` for `/dashboard/<id>/lights`), and highlight the current page themselves. Read
+`dashboards/home/layout.tsx` and its block in `app/routes.ts` for the working example.
 
 ## Icons
 
-`import { mdiXxx } from '@hash/ui'` — any name from the
-[Material Design Icons set](https://pictogrammers.com/library/mdi/) is re-exported.
+Icon props take a plain prefixed string, no import needed: `'lu:lightbulb'` (Lucide) or
+`'tb:vacuum-cleaner'` (Tabler outline), `prefix:name`. Browse names at lucide.dev/icons and
+tabler.io/icons.
 
 ## Style
 
 - No custom CSS beyond what `@hash/ui` components already provide. If a layout genuinely can't be
-  built from `Dashboard` / `Screen` / `Grid` / `Section` / `Tile` plus the entity components, that
+  built from `Grid` / `RoomHeader` / `Tile` plus the entity components, that
   points at a missing primitive — raise it (see `add-ui-component`), don't reach for inline styles
-  as a workaround. (`examples/home/src/layout.tsx` uses a couple of small inline styles for its
-  header row and connection badge — that's fine; it's page chrome, not a device tile.)
-- Exact dependency versions, no `^`/`~` (see the root `.npmrc`); match the versions already used
-  by `examples/home` and `packages/ui` for shared deps like `react`, `react-router`,
-  `@testing-library/react`.
+  as a workaround.
+- To change how everything looks (a color, a radius, a type size, the spacing), set `OVERRIDES` in
+  `example/app/root.tsx` (`HashProvider`'s `overrides`, partial, per light/dark for colors) —
+  never edit `packages/ui` for that.
+- `e-prim` (`Box`, `Flex`, `Typography`) is part of the project's own install, like `@hash/ui`: use
+  it for structural layout the `@hash/ui` primitives don't cover, with its typed props or the `css`
+  prop (add `/** @jsxImportSource @emotion/react */` to the file), never a raw `style` object.
+- A dashboard folder has no `package.json` of its own — it never adds or changes a dependency.
+  `example/package.json` (exact versions, no `^`/`~`, per the root `.npmrc`) covers the whole
+  project; if a dashboard genuinely needs a new dependency, that's itself a sign the work belongs
+  in `@hash/ui` instead (see `add-ui-component`), not a reason to edit that `package.json`.
 
 ## When a rule is in the way
 
-If following the user's request seems to require editing `packages/*` or `apps/runtime`, or
-inventing an import outside the allowed list: stop, explain what's missing and why it needs a core
-change, and propose it as a separate task (`add-ui-component`). Don't quietly work around the
-restriction inside the dashboard package.
+If following the user's request seems to require editing `packages/*`, or inventing an import
+outside the allowed list: stop, explain what's missing and why it needs a core change, and propose
+it as a separate task (`add-ui-component`). Don't quietly work around the restriction inside the
+dashboard's own files.

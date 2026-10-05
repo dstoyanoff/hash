@@ -1,6 +1,0 @@
-import type { RouteObject } from 'react-router';
-import Home from './pages/home.tsx';
-
-// Add more entries here for a multi-page dashboard (see dashboard-rules for the pattern used
-// with NavTabs — it has a sharp edge worth reading before adding a second page).
-export default [{ index: true, element: <Home /> }] satisfies RouteObject[];

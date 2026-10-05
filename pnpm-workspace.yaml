@@ -1,8 +1,7 @@
 packages:
   - packages/*
   - packages/integrations/*
-  - apps/*
-  - examples/*
+  - example
   - templates/*
 
 saveExact: true

@@ -14,6 +14,7 @@
   },
   "exports": {
     ".": "./src/index.ts",
+    "./mock": "./src/mock.ts",
     "./package.json": "./package.json"
   }
 }

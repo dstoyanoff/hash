@@ -1,0 +1,171 @@
+/** @jsxImportSource @emotion/react */
+import { Flex, Grid, Typography } from 'e-prim';
+import type { ReactNode } from 'react';
+import type { EntityHandle } from '../entity-handle.ts';
+import { Icon } from '../icon.tsx';
+import { ValueBar } from '../layout/drawer-controls.tsx';
+import { PlainButton } from '../layout/plain-button.tsx';
+import { IconButton } from '../layout/tile.tsx';
+import { statusLabels } from '../status.ts';
+import { usePressFeedback, useVolumeControl } from './media-controls.ts';
+import { formatDuration, useMediaPosition } from './media-progress.ts';
+import { useSeekHold } from './media-seek.ts';
+import { ArtworkRing } from './artwork-ring.tsx';
+
+/** The upright "now playing" panel the media column and page share: the artwork on a record, what is playing, how
+ * far along it is, the transport buttons and a volume bar that is always there. Not exported from
+ * the package; `MediaPlayerColumn` and `MediaPlayerPage` are its public forms. */
+export function NowPlaying({
+  handle,
+  fallback,
+  extra,
+  onOpenArtwork,
+}: {
+  handle: EntityHandle<'mediaPlayer'>;
+
+  /** What to call the player before it reports a name. */
+  fallback: string;
+
+  /** One more button, to the right of the transport (the browse button). Shuffle takes the slot on the left. */
+  extra?: ReactNode;
+
+  /** Makes the artwork a button that calls this (opens the library). */
+  onOpenArtwork?: () => void;
+}) {
+  const player = handle.entity;
+  const { status } = handle;
+  const ready = status === 'ready';
+  const caps = player?.capabilities;
+  const playing = player?.playback === 'playing';
+  const { feedbackFor, press } = usePressFeedback();
+  const volume = useVolumeControl(handle);
+  const position = useMediaPosition(player);
+  const duration = ready ? player?.duration : undefined;
+  // The ring and the time under the title share one position, so dragging the ring moves both.
+  const seek = useSeekHold(
+    ready ? position : undefined,
+    caps?.seek ? (next) => void handle.command('seek', { position: next }) : undefined,
+  );
+
+  return (
+    <Flex direction="column" gap={4} data-status={status}>
+      <ArtworkRing
+        artworkUrl={player?.media?.artworkUrl}
+        seek={seek}
+        duration={duration}
+        seekable={caps?.seek === true}
+        onOpen={onOpenArtwork}
+      />
+      <Flex direction="column" align="center" gap={0.5} color={ready ? 'text' : 'textMuted'}>
+        <Typography as="h2" variant="title" noWrap textOverflow="ellipsis" m={0} maxWidth="100%">
+          {ready
+            ? (player?.media?.title ?? 'Nothing playing')
+            : statusLabels[status as Exclude<typeof status, 'ready'>]}
+        </Typography>
+        {ready && player?.media?.artist ? (
+          <Typography as="span" variant="body" color="textMuted" noWrap textOverflow="ellipsis">
+            {[player.media.artist, player.media.album].filter(Boolean).join(' · ')}
+          </Typography>
+        ) : (
+          <Typography as="span" variant="body" color="textMuted" noWrap textOverflow="ellipsis">
+            {player?.name ?? fallback}
+          </Typography>
+        )}
+      </Flex>
+      {seek.shown !== undefined && duration ? (
+        <Typography
+          as="span"
+          variant="secondary"
+          color="textMuted"
+          align="center"
+          css={{ fontVariantNumeric: 'tabular-nums' }}
+        >
+          {formatDuration(seek.shown)} / {formatDuration(duration)}
+        </Typography>
+      ) : null}
+      {/* Five equal slots, so play/pause stays in the middle whichever side buttons there are. */}
+      <Grid
+        gap={3}
+        css={({ density }) => ({
+          gridTemplateColumns: `repeat(5, ${density.iconCircle}px)`,
+          justifyContent: 'center',
+        })}
+      >
+        {caps?.shuffle ? (
+          <IconButton
+            icon="lu:shuffle"
+            label="Shuffle"
+            glyph={18}
+            active={player?.shuffle === true}
+            pressed={player?.shuffle === true}
+            disabled={!ready}
+            onClick={() => void handle.command('setShuffle', { shuffle: player?.shuffle !== true })}
+          />
+        ) : (
+          <span />
+        )}
+        <IconButton
+          icon="lu:skip-back"
+          label="Previous"
+          glyph={18}
+          disabled={!ready || caps?.previous === false}
+          feedback={feedbackFor('previous')}
+          onClick={() => press('previous', () => handle.command('previous'))}
+        />
+        <IconButton
+          icon={playing ? 'lu:pause' : 'lu:play'}
+          label={playing ? 'Pause' : 'Play'}
+          glyph={18}
+          disabled={!ready}
+          primary
+          onClick={() => void handle.command('togglePlay')}
+        />
+        <IconButton
+          icon="lu:skip-forward"
+          label="Next"
+          glyph={18}
+          disabled={!ready || caps?.next === false}
+          feedback={feedbackFor('next')}
+          onClick={() => press('next', () => handle.command('next'))}
+        />
+        {extra ?? <span />}
+      </Grid>
+      {caps?.volume !== false || caps.mute ? (
+        <Flex align="center" gap={2}>
+          <PlainButton
+            aria-label={volume.muted ? 'Unmute' : 'Mute'}
+            aria-pressed={volume.muted}
+            title={volume.muted ? 'Unmute' : 'Mute'}
+            disabled={!ready || caps?.mute === false}
+            onClick={volume.toggleMute}
+            center
+            color={volume.muted ? 'accent' : 'textMuted'}
+            css={{ flex: 'none' }}
+          >
+            <Icon name={volume.muted ? 'lu:volume-x' : 'lu:volume-2'} size={16} />
+          </PlainButton>
+          <ValueBar
+            label="Volume level"
+            value={volume.shown}
+            min={0}
+            max={100}
+            keyStep={5}
+            height={10}
+            onDrag={volume.drag}
+            onCommit={volume.commit}
+          />
+          <Typography
+            as="span"
+            variant="secondary"
+            color="textMuted"
+            minWidth={32}
+            align="right"
+            css={{ flex: 'none', fontVariantNumeric: 'tabular-nums' }}
+          >
+            {volume.shown}%
+          </Typography>
+        </Flex>
+      ) : null}
+    </Flex>
+  );
+}

@@ -41,7 +41,7 @@ silently, since `dashboard-rules` otherwise forbids touching `packages/*`.
 
 ## List real players from a live Music Assistant
 
-For a `MediaPlayerBar`/`usePlayer` backed directly by Music Assistant (not via Home Assistant —
+For a `MediaPlayerBar` backed directly by Music Assistant (not via Home Assistant —
 see `packages/integrations/music-assistant`), not a `ha:` ref:
 
 ```bash
@@ -54,9 +54,11 @@ verbatim — copy it as-is, it isn't `domain.name` like a Home Assistant entity 
 
 ## No live Home Assistant / Music Assistant available
 
-Mock data works everywhere without credentials — used by `examples/home`, the `/gallery` route,
-and every `@hash/ui` test. See `MockIntegration` in `packages/core/src/mock.ts` and
-`examples/home`'s root `hash.config.ts` entry for the shape (state + attributes per entity id).
+Mock data works everywhere without credentials — used by every dashboard in
+`example/dashboards/*`, the `@hash/ui` gallery (`pnpm --filter @hash/ui docs`, its own
+self-contained fixtures in `packages/ui/src/gallery/fixtures.ts`), and every `@hash/ui` test. See
+`MockIntegration` in `packages/core/src/mock.ts` and `example/hash.config.ts`'s `ha`/`ma`
+entries for the shape used by `pnpm dev` (state + attributes per entity id).
 Use realistic entity ids and attributes (`supported_color_modes`, `hvac_modes`,
 `device_class`/`unit_of_measurement`, ...) so the dashboard's states match what the components
 expect — see the component catalog for which attributes each one reads.
@@ -75,7 +77,7 @@ it, and mention that you added it.
 Home Assistant and Music Assistant aren't special-cased anywhere — `@hash/core` only exports the
 generic `Integration`/`BaseIntegration` pieces. A new backend is a new package that extends
 `BaseIntegration`, picks a unique `id` (its entity-ref prefix), and gets constructed in
-`hash.config.ts` like any other — see `packages/integrations/home-assistant` or
+`example/hash.config.ts` like any other — see `packages/integrations/home-assistant` or
 `packages/integrations/music-assistant` as a template. The runtime enforces id uniqueness at
 startup, so a prefix collision with an existing integration fails fast with a clear error instead
 of silently misrouting entities.
