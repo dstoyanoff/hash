@@ -9,4 +9,5 @@ coverage
 !.env.example
 .DS_Store
 .hash
-release
+/release
+/example/release
