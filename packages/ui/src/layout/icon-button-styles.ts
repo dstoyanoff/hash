@@ -8,6 +8,8 @@ import type { CSSObject, Theme } from '@emotion/react';
 export const iconButtonStyles = ({ palette, radius }: Theme): CSSObject => ({
   display: 'grid',
   placeItems: 'center',
+  // A circle stays a circle: in a row with long text it keeps its size instead of being squeezed.
+  flexShrink: 0,
   padding: 0,
   border: 0,
   borderRadius: radius.full,

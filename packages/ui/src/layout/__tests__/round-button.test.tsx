@@ -25,10 +25,15 @@ test('a size sets both sides from props, and the usual size is not forced over i
   expect(style.height).toBe('28px');
 });
 
+test('it keeps its size in a row of long text instead of being squeezed', () => {
+  render(<RoundButton aria-label="Go" />);
+  expect(getComputedStyle(screen.getByRole('button', { name: 'Go' })).flexShrink).toBe('0');
+});
+
 test('its own css is added to the shared look instead of replacing it', () => {
-  render(<RoundButton aria-label="Mine" css={{ flex: 'none' }} />);
+  render(<RoundButton aria-label="Mine" css={{ opacity: 0.5 }} />);
   const style = getComputedStyle(screen.getByRole('button', { name: 'Mine' }));
-  expect(style.flexShrink).toBe('0');
+  expect(style.opacity).toBe('0.5');
   expect(style.borderRadius).toBe('999px');
   expect(style.width).toBe('44px');
 });

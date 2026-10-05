@@ -226,6 +226,23 @@ describe('layouts', () => {
     },
   );
 
+  test('the search keeps its height when the list takes all the room', async () => {
+    show();
+    await screen.findByRole('button', { name: 'Play Dreams' });
+    const search = screen.getByRole('searchbox', { name: 'Search the library' }).parentElement!;
+    expect(getComputedStyle(search).flexShrink).toBe('0');
+    // The list is what gives way: it scrolls inside the room it has.
+    expect(getComputedStyle(rows()).overflowY).toBe('auto');
+  });
+
+  test('a row’s play button is not squeezed by a long title', async () => {
+    show();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Albums' }));
+    // An album can be opened and played, so it has a play button of its own beside the title.
+    const play = await screen.findByRole('button', { name: 'Play Rumours' });
+    expect(getComputedStyle(play).flexShrink).toBe('0');
+  });
+
   test('a theater card is large, an artist’s is round, and its play button sits over the artwork', async () => {
     const { ha } = show('theater');
     fireEvent.click(await screen.findByRole('tab', { name: 'Artists' }));

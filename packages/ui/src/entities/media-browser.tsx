@@ -51,7 +51,7 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
   /** Something is open inside the selected shelf (not a search): the tab shows the way back. */
   const inside = browser.canGoBack && !browser.searching;
   const header = (
-    <Flex align="center" gap={2}>
+    <Flex align="center" gap={2} css={{ flexShrink: 0 }}>
       {browser.canGoBack ? (
         <IconButton icon="lu:arrow-left" label="Back" glyph={16} onClick={browser.back} />
       ) : null}
@@ -70,6 +70,8 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
       px={3}
       height={36}
       color="textMuted"
+      // Fixed height: when the list takes all the room, the search keeps its size and the list scrolls.
+      css={{ flexShrink: 0 }}
     >
       <Icon name="lu:search" size={16} />
       <Box
@@ -146,12 +148,7 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
           m={0}
           p={0}
           pb={2}
-          css={({ palette }) => ({
-            listStyle: 'none',
-            scrollSnapType: 'x proximity',
-            scrollbarWidth: 'thin',
-            scrollbarColor: `${palette.border} transparent`,
-          })}
+          css={{ listStyle: 'none', scrollSnapType: 'x proximity' }}
         >
           {browser.items.map((item) => (
             <li key={item.id} css={{ flex: 'none', scrollSnapAlign: 'start' }}>
