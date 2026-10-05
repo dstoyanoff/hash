@@ -16,14 +16,16 @@ if (!url || !token) {
 
 const ha = new HomeAssistantIntegration({ url, token });
 await ha.connect();
-// Entities arrive asynchronously after subscribing.
-await new Promise((resolve) => setTimeout(resolve, 1500));
 
-const states = ha.getAllStates().sort((a, b) => a.ref.localeCompare(b.ref));
+const states = ha.listEntities().toSorted((a, b) => a.ref.localeCompare(b.ref));
 if (process.argv.includes('--types')) {
   console.log(generateEntityTypes(states.map((s) => s.ref)));
 } else {
-  for (const s of states) console.log(`${s.ref}\t${s.state}`);
+  for (const s of states) {
+    console.log(`${s.ref}\t${s.kind}\t${s.name}`);
+  }
+
   console.error(`${states.length} entities`);
 }
+
 ha.disconnect();

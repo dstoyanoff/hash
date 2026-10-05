@@ -1,36 +1,60 @@
-import type { EntityRef, EntityState } from './entity.ts';
+import type { EntityRef } from './entity.ts';
+import type { BrowseQuery, BrowseResult, Entity } from './model/index.ts';
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 export type Unsubscribe = () => void;
 
-export interface ServiceCall {
-  domain: string;
-  service: string;
-  /** Integration-local entity ids (without the `<integration>:` prefix). */
-  entityIds?: string[];
-  data?: Record<string, unknown>;
-}
-
 /**
- * A backend the runtime can talk to (Home Assistant, Music Assistant, ...).
- * Entity ids handled by an integration are local ids; full refs appear on
- * `EntityState.ref`.
+ * A backend the runtime can talk to (Home Assistant, Music Assistant, ...). This is the whole
+ * surface a third-party integration package implements — see ARCHITECTURE.md, "The integration
+ * contract", for the rules each member must follow.
+ *
+ * Integrations work only in **local ids** (the part of a ref after `<integration>:`); the runtime
+ * does all the addressing, and `BaseIntegration` stamps `ref` onto the entities it stores.
  */
 export interface Integration {
+  /** The prefix of every ref this integration owns. Fixed for the instance's lifetime. */
   readonly id: string;
+
   readonly status: ConnectionStatus;
 
+  /** Resolves once connected **and** the first full set of entities is loaded; rejects if the
+   * first attempt fails; idempotent. After a first success the integration reconnects itself. */
   connect(): Promise<void>;
+
+  /** Synchronous and idempotent: closes the link, cancels timers, rejects in-flight commands. */
   disconnect(): void;
 
+  /** Called only when the status actually changes. */
   onStatusChange(listener: (status: ConnectionStatus) => void): Unsubscribe;
 
-  getState(entityId: string): EntityState | undefined;
-  /** Called immediately with the current state (or `undefined`) and on every change. */
-  subscribe(entityId: string, listener: (state: EntityState | undefined) => void): Unsubscribe;
+  listEntities(): Entity[];
+  getEntity(entityId: string): Entity | undefined;
 
-  callService(call: ServiceCall): Promise<void>;
+  /**
+   * Calls `listener` immediately with the current entity, then on every change (`undefined` if
+   * the entity is removed). Throws `UnknownEntityError` for an id this integration does not have.
+   */
+  subscribe(entityId: string, listener: (entity: Entity | undefined) => void): Unsubscribe;
+
+  /**
+   * Runs a named command from the entity's kind (`setVolume`, `next`). Resolves once the backend
+   * has accepted it, not when the state changes. Rejects with a displayable `Error` for an
+   * unknown entity, a command the kind does not define, invalid arguments, or a refusing backend.
+   * Arguments come from a browser: validate them.
+   */
+  command(entityId: string, name: string, args?: Record<string, unknown>): Promise<void>;
+
+  /**
+   * Lists one level of the entity's media library (or searches it). Only for players that report
+   * `capabilities.browse`; the library is the integration's own, with no mixing across backends.
+   * Rejects with a displayable `Error` for an unknown entity or path. Arguments come from a browser.
+   */
+  browse?(entityId: string, query: BrowseQuery): Promise<BrowseResult>;
+
+  /** Escape hatch: a backend-specific request no command covers. `@hash/ui` never calls it. */
+  callRaw?(request: Record<string, unknown>): Promise<unknown>;
 }
 
 export type { EntityRef };

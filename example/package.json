@@ -1,0 +1,31 @@
+{
+  "name": "@hash/example",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The dogfood consumer project: one real app wiring every dashboard in dashboards/ together.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "dev": "hash-dash dev",
+    "build": "hash-dash build",
+    "start": "hash-dash start"
+  },
+  "dependencies": {
+    "@emotion/react": "11.14.0",
+    "@hash/core": "workspace:*",
+    "@hash/integration.home-assistant": "workspace:*",
+    "@hash/integration.music-assistant": "workspace:*",
+    "@hash/runtime": "workspace:*",
+    "@hash/ui": "workspace:*",
+    "e-prim": "2.0.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router": "8.4.0"
+  },
+  "devDependencies": {
+    "@react-router/dev": "8.4.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "vite": "8.3.1"
+  }
+}

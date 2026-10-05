@@ -1,0 +1,38 @@
+import { ClimateTile, Grid, LightTile, RoomHeader, SceneButton, SensorReadout } from '@hash/ui';
+
+// A working starter: two rooms, each a header plus a grid of tiles. Swap the entity ids for your
+// own devices (find them with the entity-discovery skill), rename the rooms, and add or remove
+// tiles — every tile handles loading / unavailable / not-found states by itself, so a wrong id
+// shows "Not found" instead of breaking the page. See the component catalog
+// (.claude/skills/ui-catalog/CATALOG.md) or `pnpm --filter @hash/ui docs` for everything available.
+//
+// The page renders into the app's root layout (app/root.tsx: padded, scrolling) and this
+// dashboard's layout.tsx (the top bar), so it only returns its rooms.
+export default function Home() {
+  return (
+    <>
+      <RoomHeader
+        title="Living Room"
+        icon="lu:sofa"
+        readouts={
+          <>
+            <SensorReadout entity="ha:sensor.living_room_temperature" />
+            <SensorReadout entity="ha:sensor.living_room_humidity" />
+          </>
+        }
+      />
+      <Grid columns={3}>
+        <LightTile entity="ha:light.living_room_lamp" name="Lamp" />
+        <LightTile entity="ha:light.living_room_ceiling" name="Ceiling" />
+        <SceneButton entity="ha:scene.movie_night" name="Movie Night" />
+      </Grid>
+      <ClimateTile entity="ha:climate.living_room" name="Heater" />
+
+      <RoomHeader title="Kitchen" icon="lu:utensils-crossed" />
+      <Grid columns={3}>
+        <LightTile entity="ha:light.kitchen_ceiling" name="Ceiling" />
+        <LightTile entity="ha:light.kitchen_led" name="LED Strip" />
+      </Grid>
+    </>
+  );
+}

@@ -10,11 +10,10 @@
     }
   },
   "devDependencies": {
-    "@hash/core": "workspace:*",
-    "@hash/integration.home-assistant": "workspace:*",
-    "@hash/integration.music-assistant": "workspace:*",
-    "@hash/runtime": "workspace:*",
+    "@stylistic/eslint-plugin": "5.10.0",
+    "@tabler/icons": "3.48.0",
     "@types/node": "24.13.6",
+    "lucide": "1.49.0",
     "oxlint": "1.85.0",
     "prettier": "3.9.9",
     "typescript": "7.0.2",
@@ -27,11 +26,11 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r --if-present typecheck",
-    "build": "hash-dash build",
+    "build": "pnpm --filter @hash/example build",
     "test": "vitest run",
-    "dev": "hash-dash dev",
-    "start": "hash-dash start",
-    "validate:dashboards": "node scripts/validate-dashboards.ts",
-    "generate:catalog": "node scripts/generate-ui-catalog.ts"
+    "dev": "pnpm --filter @hash/example dev",
+    "start": "pnpm --filter @hash/example start",
+    "generate:catalog": "node scripts/generate-ui-catalog.ts",
+    "generate:icons": "node scripts/generate-icons.ts"
   }
 }

@@ -9,10 +9,11 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import prettier from 'prettier';
+import { format, resolveConfig } from 'prettier';
 
 const UI_SRC = join(import.meta.dirname, '..', 'packages', 'ui', 'src');
 const OUT_FILE = join(import.meta.dirname, '..', '.claude', 'skills', 'ui-catalog', 'CATALOG.md');
+const PROPS_FILE = join(UI_SRC, 'gallery', 'props-data.ts');
 
 interface PropInfo {
   name: string;
@@ -46,11 +47,13 @@ const sections: Section[] = [
   {
     heading: 'Layout',
     files: [
-      'layout/dashboard.tsx',
-      'layout/screen.tsx',
       'layout/grid.tsx',
-      'layout/section.tsx',
+      'layout/page.tsx',
+      'layout/room-header.tsx',
       'layout/tile.tsx',
+      'layout/energy-chart.tsx',
+      'layout/history-section.tsx',
+      'icon.tsx',
     ],
   },
   {
@@ -62,12 +65,17 @@ const sections: Section[] = [
       'entities/action-button.tsx',
       'entities/scene-button.tsx',
       'entities/media-player-bar.tsx',
-      'entities/nav-tabs.tsx',
+      'entities/media-player-column.tsx',
+      'entities/media-player-page.tsx',
+      'entities/media-browser.tsx',
+      'entities/nav-rail.tsx',
+      'entities/nav-dock.tsx',
+      'entities/top-bar.tsx',
     ],
   },
   {
     heading: 'Hooks and provider',
-    files: ['provider.tsx', 'hooks.ts', 'use-player.ts'],
+    files: ['provider.tsx', 'hooks.ts', 'entity-handle.ts'],
   },
 ];
 
@@ -75,20 +83,39 @@ const sections: Section[] = [
 function matchBrace(text: string, openIndex: number): number {
   let depth = 1;
   for (let i = openIndex + 1; i < text.length; i++) {
-    if (text[i] === '{') depth++;
-    else if (text[i] === '}') {
+    if (text[i] === '{') {
+      depth++;
+    } else if (text[i] === '}') {
       depth--;
-      if (depth === 0) return i;
+      if (depth === 0) {
+        return i;
+      }
     }
   }
+
   throw new Error(`Unmatched '{' at index ${openIndex}`);
 }
 
-/** The single-line `/** ... *\/` doc comment on its own line directly above `beforeIndex`, if any. */
+/** Turns the inside of a `/** ... *\/` block into one line: leading `*`s dropped, lines joined. */
+function cleanDoc(raw: string): string {
+  return raw
+    .split('\n')
+    .map((line) => line.replace(/^\s*\*?\s?/, '').trim())
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+}
+
+/** The doc comment (single- or multi-line) directly above `beforeIndex`, if any. */
 function docCommentBefore(text: string, beforeIndex: number): string {
   const before = text.slice(0, beforeIndex);
-  const match = /\/\*\*\s?(.*?)\s?\*\/\s*\n\s*$/.exec(before);
-  return match?.[1] ?? '';
+  const end = before.lastIndexOf('*/');
+  if (end === -1 || before.slice(end + 2).trim() !== '') {
+    return '';
+  }
+
+  const start = before.lastIndexOf('/**', end);
+  return start === -1 ? '' : cleanDoc(before.slice(start + 3, end));
 }
 
 /** Splits an interface body into member texts on top-level `;` (ignoring `;` nested in `{}`/`()`/`[]`,
@@ -106,28 +133,36 @@ function splitMembers(body: string): string[] {
   let start = 0;
   for (let i = 0; i < body.length; i++) {
     if (inComment) {
-      if (body.startsWith('*/', i)) inComment = false;
+      if (body.startsWith('*/', i)) {
+        inComment = false;
+      }
+
       continue;
     }
+
     if (body.startsWith('/*', i)) {
       inComment = true;
       continue;
     }
+
     const ch = body[i];
-    if (ch === '{' || ch === '(' || ch === '[') depth++;
-    else if (ch === '}' || ch === ')' || ch === ']') depth--;
-    else if (ch === ';' && depth === 0) {
+    if (ch === '{' || ch === '(' || ch === '[') {
+      depth++;
+    } else if (ch === '}' || ch === ')' || ch === ']') {
+      depth--;
+    } else if (ch === ';' && depth === 0) {
       members.push(body.slice(start, i));
       start = i + 1;
     }
   }
+
   return members;
 }
 
 function parseInterfaces(text: string): InterfaceInfo[] {
   const interfaces: InterfaceInfo[] = [];
   const re = /export interface (\w+) \{/g;
-  const memberRe = /^(?:\/\*\*\s?(.*?)\s?\*\/\s*)?(\w+)(\??):\s*([\s\S]+)$/;
+  const memberRe = /^(?:\/\*\*([\s\S]*?)\*\/\s*)?(\w+)(\??):\s*([\s\S]+)$/;
 
   for (const match of text.matchAll(re)) {
     const openIndex = match.index + match[0].length - 1;
@@ -137,9 +172,12 @@ function parseInterfaces(text: string): InterfaceInfo[] {
     const props: PropInfo[] = [];
     for (const member of splitMembers(body)) {
       const propMatch = memberRe.exec(member.trim());
-      if (!propMatch) continue;
+      if (!propMatch) {
+        continue;
+      }
+
       props.push({
-        doc: propMatch[1] ?? '',
+        doc: cleanDoc(propMatch[1] ?? ''),
         name: propMatch[2]!,
         optional: propMatch[3] === '?',
         // A prop's type can itself be a multi-line inline object (e.g. `ActionButtonProps.action`);
@@ -150,8 +188,10 @@ function parseInterfaces(text: string): InterfaceInfo[] {
           .trim(),
       });
     }
+
     interfaces.push({ name: match[1]!, props });
   }
+
   return interfaces;
 }
 
@@ -163,28 +203,35 @@ function parseFunctions(text: string): FunctionInfo[] {
     let depth = 1;
     let i = parenOpen + 1;
     for (; i < text.length; i++) {
-      if (text[i] === '(') depth++;
-      else if (text[i] === ')') {
+      if (text[i] === '(') {
+        depth++;
+      } else if (text[i] === ')') {
         depth--;
-        if (depth === 0) break;
+        if (depth === 0) {
+          break;
+        }
       }
     }
+
     const params = text
       .slice(parenOpen + 1, i)
       .replace(/\s+/g, ' ')
       .trim();
+
     const braceOpen = text.indexOf('{', i);
     const returnType = text
       .slice(i + 1, braceOpen)
       .replace(/^\s*:\s*/, '')
       .replace(/\s+/g, ' ')
       .trim();
+
     functions.push({
       name: match[1]!,
       doc: docCommentBefore(text, match.index),
       signature: `(${params})${returnType ? `: ${returnType}` : ''}`,
     });
   }
+
   return functions;
 }
 
@@ -202,7 +249,10 @@ function renderFile(catalog: FileCatalog): string {
   for (const fn of catalog.functions) {
     const props = catalog.interfaces.find((i) => i.name === `${fn.name}Props`);
     parts.push(`### \`${fn.name}\``);
-    if (fn.doc) parts.push(fn.doc);
+    if (fn.doc) {
+      parts.push(fn.doc);
+    }
+
     if (props && props.props.length > 0) {
       parts.push('| Prop | Type | Required | |', '|---|---|---|---|');
       for (const prop of props.props) {
@@ -213,8 +263,10 @@ function renderFile(catalog: FileCatalog): string {
     } else {
       parts.push(`\`\`\`ts\nfunction ${fn.name}${fn.signature}\n\`\`\``);
     }
+
     parts.push('');
   }
+
   return parts.join('\n');
 }
 
@@ -224,15 +276,29 @@ const lines: string[] = [
   '_Generated by `pnpm generate:catalog` from `packages/ui/src`. Do not edit by hand — edit the ' +
     "source doc comments and prop types, then regenerate. CI fails if this file doesn't match._",
   '',
-  "Import everything from `@hash/ui` (e.g. `import { LightTile, Section, mdiSofa } from '@hash/ui';`). " +
-    'Icons: any `mdiXxx` name from `@mdi/js` is re-exported — browse names at ' +
-    'https://pictogrammers.com/library/mdi/.',
+  "Import everything from `@hash/ui` (e.g. `import { LightTile, RoomHeader } from '@hash/ui';`). " +
+    "Icons are plain strings, no import needed — `'lu:lightbulb'` (Lucide) or `'tb:vacuum-cleaner'` " +
+    '(Tabler outline), prefix:name. Browse names at lucide.dev/icons and tabler.io/icons.',
   '',
 ];
 
+/** Every documented component, for the gallery's props tables (`gallery/props-data.ts`). */
+const componentProps: Record<string, { doc: string; props: PropInfo[] }> = {};
+
 for (const section of sections) {
   lines.push(`## ${section.heading}`, '');
-  for (const file of section.files) lines.push(renderFile(parseFile(file)));
+  for (const file of section.files) {
+    const catalog = parseFile(file);
+    lines.push(renderFile(catalog));
+    for (const fn of catalog.functions) {
+      if (!/^[A-Z]/.test(fn.name)) {
+        continue;
+      }
+
+      const props = catalog.interfaces.find((i) => i.name === `${fn.name}Props`);
+      componentProps[fn.name] = { doc: fn.doc, props: props?.props ?? [] };
+    }
+  }
 }
 
 const raw =
@@ -244,8 +310,21 @@ const raw =
 // Format with this repo's own Prettier config so the output always matches `pnpm format:check`
 // (e.g. markdown table column padding) — generating already-formatted output, rather than hoping
 // a hand-rolled renderer happens to match, is what keeps this file from drifting.
-const config = await prettier.resolveConfig(OUT_FILE);
-const formatted = await prettier.format(raw, { ...config, filepath: OUT_FILE });
+const config = await resolveConfig(OUT_FILE);
+const formatted = await format(raw, { ...config, filepath: OUT_FILE });
 
 writeFileSync(OUT_FILE, formatted);
 console.log(`Wrote ${OUT_FILE}`);
+
+const propsSource =
+  "// Generated by `pnpm generate:catalog` from the components' own prop interfaces and doc comments.\n" +
+  "// Do not edit by hand. The gallery renders this as each component's props table.\n\n" +
+  'export interface DocumentedProp {\n  name: string;\n  type: string;\n  optional: boolean;\n  doc: string;\n}\n\n' +
+  'export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedProp[] }> = ' +
+  JSON.stringify(componentProps, null, 2) +
+  ';\n';
+
+const propsConfig = await resolveConfig(PROPS_FILE);
+writeFileSync(PROPS_FILE, await format(propsSource, { ...propsConfig, filepath: PROPS_FILE }));
+
+console.log(`Wrote ${PROPS_FILE}`);

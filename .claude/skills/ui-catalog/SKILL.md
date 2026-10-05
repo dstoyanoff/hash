@@ -13,6 +13,9 @@ CI fails if it isn't.
 `packages/ui/src` (see `add-ui-component`), then regenerate. If you just changed a component's doc
 comment or props, run `pnpm generate:catalog` before finishing.
 
-Icon props (`icon`) take an `mdiXxx` name from `@mdi/js`, re-exported from `@hash/ui`. There's no
-in-repo lookup for valid names — an unknown one simply fails to import, which `pnpm typecheck`
-catches immediately, so it's a cheap mistake to make and cheap to catch.
+Icon props (`icon`) take a plain prefixed string, no import needed: `'lu:lightbulb'` (Lucide) or
+`'tb:vacuum-cleaner'` (Tabler outline), `prefix:name`. Browse real names at lucide.dev/icons and
+tabler.io/icons. `IconName` only checks the `lu:`/`tb:` prefix at compile time, not that the name
+after it actually exists (a ~7000-entry exact union made `tsc` hang) — a typo'd name doesn't fail
+`pnpm typecheck`, it renders nothing and logs a console warning at runtime, so check the browser
+console if an icon is unexpectedly blank.

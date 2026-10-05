@@ -1,24 +1,22 @@
-import { parseEntityRef, type EntityRef } from '@hash/core';
-import { mdiPalette } from '@mdi/js';
-import { useEntity } from '../hooks.ts';
-import { friendlyName } from '../status.ts';
+import type { EntityRef } from '@hash/core';
+import type { EntityHandle } from '../entity-handle.ts';
+import type { IconName } from '../icon-data.ts';
 import { ActionButton } from './action-button.tsx';
 
 export interface SceneButtonProps {
-  /** A `scene.*` entity. */
-  entity: EntityRef;
+  /** A scene (an `action` entity), as a ref like `ha:scene.movie_night` or a handle. */
+  entity: EntityRef | EntityHandle<'action'>;
+
+  /** Defaults to the scene's name. */
   name?: string;
-  icon?: string;
+
+  /** Icon id. Defaults to a palette. */
+  icon?: IconName;
 }
 
 /** Activates a scene. */
 export function SceneButton({ entity, name, icon }: SceneButtonProps) {
-  const state = useEntity(entity);
   return (
-    <ActionButton
-      label={name ?? friendlyName(state, parseEntityRef(entity).id)}
-      icon={icon ?? mdiPalette}
-      action={{ domain: 'scene', service: 'turn_on', entity }}
-    />
+    <ActionButton entity={entity} {...(name ? { label: name } : {})} icon={icon ?? 'lu:palette'} />
   );
 }

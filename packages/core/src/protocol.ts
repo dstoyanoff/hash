@@ -1,27 +1,41 @@
-import type { EntityRef, EntityState } from './entity.ts';
+import type { EntityRef } from './entity.ts';
 import type { ConnectionStatus } from './integration.ts';
+import type { Entity } from './model/index.ts';
 
 /** Messages sent by the browser to the runtime's `/ws` endpoint. */
 export type ClientMessage =
   | { type: 'subscribe'; ref: EntityRef }
   | { type: 'unsubscribe'; ref: EntityRef }
   | {
-      type: 'call';
+      type: 'command';
+
       /** Client-chosen id echoed in the matching `result`. */
       id: number;
+      ref: EntityRef;
+      command: string;
+      args?: Record<string, unknown>;
+    }
+  | {
+      /** A read that is not a subscription: one level of a media library, answered by `result`. */
+      type: 'query';
+      id: number;
+      ref: EntityRef;
+      query: 'browse';
+      args?: Record<string, unknown>;
+    }
+  | {
+      type: 'raw';
+      id: number;
       integration: string;
-      domain: string;
-      service: string;
-      entityIds?: string[];
-      data?: Record<string, unknown>;
+      request: Record<string, unknown>;
     };
 
-/** Messages sent by the runtime to the browser. */
+/** Messages sent by the runtime to the browser. `entity: null` means the entity does not exist (or
+ * was removed). */
 export type ServerMessage =
-  /** `state: null` means the entity does not exist (or was removed). */
-  | { type: 'state'; ref: EntityRef; state: EntityState | null }
+  | { type: 'entity'; ref: EntityRef; entity: Entity | null }
   | { type: 'status'; integration: string; status: ConnectionStatus }
-  | { type: 'result'; id: number; ok: true }
+  | { type: 'result'; id: number; ok: true; data?: unknown }
   | { type: 'result'; id: number; ok: false; error: string };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -29,9 +43,6 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const isRef = (value: unknown): value is EntityRef =>
   typeof value === 'string' && /^[^:]+:.+$/.test(value);
-
-const isStringArray = (value: unknown): value is string[] =>
-  Array.isArray(value) && value.every((item) => typeof item === 'string');
 
 /** Parse and validate an untrusted client frame. Returns `undefined` if malformed. */
 export function parseClientMessage(raw: string): ClientMessage | undefined {
@@ -41,33 +52,69 @@ export function parseClientMessage(raw: string): ClientMessage | undefined {
   } catch {
     return undefined;
   }
-  if (!isRecord(value)) return undefined;
+
+  if (!isRecord(value)) {
+    return undefined;
+  }
 
   switch (value.type) {
     case 'subscribe':
     case 'unsubscribe':
       return isRef(value.ref) ? { type: value.type, ref: value.ref } : undefined;
-    case 'call': {
+    case 'command': {
+      if (typeof value.id !== 'number' || !isRef(value.ref) || typeof value.command !== 'string') {
+        return undefined;
+      }
+
+      if (value.args !== undefined && !isRecord(value.args)) {
+        return undefined;
+      }
+
+      return {
+        type: 'command',
+        id: value.id,
+        ref: value.ref,
+        command: value.command,
+        ...(value.args ? { args: value.args } : {}),
+      };
+    }
+
+    case 'query': {
       if (
         typeof value.id !== 'number' ||
-        typeof value.integration !== 'string' ||
-        typeof value.domain !== 'string' ||
-        typeof value.service !== 'string'
+        !isRef(value.ref) ||
+        value.query !== 'browse' ||
+        (value.args !== undefined && !isRecord(value.args))
       ) {
         return undefined;
       }
-      if (value.entityIds !== undefined && !isStringArray(value.entityIds)) return undefined;
-      if (value.data !== undefined && !isRecord(value.data)) return undefined;
+
       return {
-        type: 'call',
+        type: 'query',
         id: value.id,
-        integration: value.integration,
-        domain: value.domain,
-        service: value.service,
-        ...(value.entityIds ? { entityIds: value.entityIds } : {}),
-        ...(value.data ? { data: value.data } : {}),
+        ref: value.ref,
+        query: 'browse',
+        ...(value.args ? { args: value.args } : {}),
       };
     }
+
+    case 'raw': {
+      if (
+        typeof value.id !== 'number' ||
+        typeof value.integration !== 'string' ||
+        !isRecord(value.request)
+      ) {
+        return undefined;
+      }
+
+      return {
+        type: 'raw',
+        id: value.id,
+        integration: value.integration,
+        request: value.request,
+      };
+    }
+
     default:
       return undefined;
   }
@@ -80,11 +127,14 @@ export function parseServerMessage(raw: string): ServerMessage | undefined {
   } catch {
     return undefined;
   }
-  if (!isRecord(value)) return undefined;
+
+  if (!isRecord(value)) {
+    return undefined;
+  }
 
   switch (value.type) {
-    case 'state':
-      return isRef(value.ref) && (value.state === null || isRecord(value.state))
+    case 'entity':
+      return isRef(value.ref) && (value.entity === null || isRecord(value.entity))
         ? (value as ServerMessage)
         : undefined;
     case 'status':

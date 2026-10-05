@@ -2,7 +2,9 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    projects: ['packages/*', 'apps/*', 'examples/*'],
+    // Tests live in packages/* only — example is a consumer project, not something this repo
+    // maintains test coverage for.
+    projects: ['packages/*'],
     passWithNoTests: true,
   },
 });

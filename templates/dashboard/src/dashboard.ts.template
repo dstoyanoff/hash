@@ -1,9 +1,0 @@
-import { defineDashboard } from '@hash/core';
-
-export default defineDashboard({
-  id: '__DASHBOARD_ID__',
-  title: '__DASHBOARD_TITLE__',
-  // Match the target device. Common sizes: 1024x768 (tablet landscape), 480x320 (small square
-  // display), 800x1280 (tablet portrait). See dashboard-rules for how this is used.
-  viewport: { width: __VIEWPORT_WIDTH__, height: __VIEWPORT_HEIGHT__ },
-});

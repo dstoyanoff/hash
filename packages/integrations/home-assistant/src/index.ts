@@ -8,11 +8,15 @@ import {
 } from 'home-assistant-js-websocket';
 import {
   BaseIntegration,
-  formatEntityRef,
-  type EntityState,
-  type ServiceCall,
+  UnknownEntityError,
+  type BrowseQuery,
+  type BrowseResult,
+  type EntityInput,
   type Unsubscribe,
 } from '@hash/core';
+import { decodeItemId, toBrowseItem, type HaBrowseMedia } from './browse.ts';
+import { toServiceRequest } from './commands.ts';
+import { mapEntity } from './mappers/index.ts';
 
 export interface HaArea {
   area_id: string;
@@ -48,10 +52,16 @@ export interface HaClient {
 export interface HomeAssistantOptions {
   /** Base URL, e.g. `http://homeassistant.local:8123`. */
   url: string;
+
   /** Long-lived access token. */
   token: string;
+
   /** Integration id used in entity refs. Defaults to `ha`. */
   id?: string;
+
+  /** Home Assistant reports its temperature unit in its own config, not per entity. Default `°C`. */
+  temperatureUnit?: '°C' | '°F';
+
   /** Override for tests. */
   createClient?: () => Promise<HaClient>;
 }
@@ -69,22 +79,12 @@ export async function createHaClient(options: { url: string; token: string }): P
   };
 }
 
-function toEntityState(id: string, integrationId: string, entity: HassEntity): EntityState {
-  return {
-    ref: formatEntityRef(integrationId, id),
-    state: entity.state,
-    attributes: entity.attributes,
-    lastChanged: entity.last_changed,
-    lastUpdated: entity.last_updated,
-  };
-}
-
 export class HomeAssistantIntegration extends BaseIntegration {
   readonly id: string;
   #options: HomeAssistantOptions;
   #client: HaClient | undefined;
   #stopEntities: Unsubscribe | undefined;
-  #cache = new Map<string, { source: HassEntity; state: EntityState }>();
+  #cache = new Map<string, { source: HassEntity; input: EntityInput }>();
 
   constructor(options: HomeAssistantOptions) {
     super();
@@ -93,7 +93,10 @@ export class HomeAssistantIntegration extends BaseIntegration {
   }
 
   async connect(): Promise<void> {
-    if (this.#client) return;
+    if (this.#client) {
+      return;
+    }
+
     this.setStatus('connecting');
     try {
       const client = await (this.#options.createClient ?? (() => createHaClient(this.#options)))();
@@ -101,7 +104,16 @@ export class HomeAssistantIntegration extends BaseIntegration {
       client.on('ready', () => this.setStatus('connected'));
       client.on('disconnected', () => this.setStatus('disconnected'));
       client.on('reconnect-error', () => this.setStatus('error'));
-      this.#stopEntities = client.subscribeEntities((entities) => this.#applyEntities(entities));
+      // `connect()` resolves only once the first full set of entities has arrived, so
+      // `listEntities()` is complete — and "unknown entity" can be decided — from then on.
+      const firstLoad = new Promise<void>((resolve) => {
+        this.#stopEntities = client.subscribeEntities((entities) => {
+          this.#applyEntities(entities);
+          resolve();
+        });
+      });
+
+      await firstLoad;
       this.setStatus('connected');
     } catch (error) {
       this.setStatus('error');
@@ -117,10 +129,56 @@ export class HomeAssistantIntegration extends BaseIntegration {
     this.setStatus('disconnected');
   }
 
-  async callService(call: ServiceCall): Promise<void> {
+  async command(entityId: string, name: string, args?: Record<string, unknown>): Promise<void> {
     const client = this.#requireClient();
-    const target = call.entityIds?.length ? { entity_id: call.entityIds } : undefined;
-    await client.callService(call.domain, call.service, call.data, target);
+    const entity = this.getEntity(entityId);
+    if (!entity) {
+      throw new UnknownEntityError(this.id, entityId);
+    }
+
+    const { domain, service, data } = toServiceRequest(entityId, entity, name, args);
+    await client.callService(domain, service, data, { entity_id: [entityId] });
+  }
+
+  /** One level of the player's own media library, from `media_player/browse_media`. */
+  async browse(entityId: string, query: BrowseQuery): Promise<BrowseResult> {
+    const client = this.#requireClient();
+    const entity = this.getEntity(entityId);
+    if (entity?.kind !== 'mediaPlayer') {
+      throw new UnknownEntityError(this.id, entityId);
+    }
+
+    if (query.search !== undefined) {
+      throw new Error('This library cannot be searched');
+    }
+
+    const at = query.path === undefined ? undefined : decodeItemId(query.path);
+    const level = await client.sendCommand<HaBrowseMedia>({
+      type: 'media_player/browse_media',
+      entity_id: entityId,
+      ...(at ? { media_content_type: at.contentType, media_content_id: at.contentId } : {}),
+    });
+
+    return {
+      ...(at && level.title ? { title: level.title } : {}),
+      items: (level.children ?? []).map(toBrowseItem),
+    };
+  }
+
+  /** Calls any Home Assistant service: `{ domain, service, entityIds?, data? }`. */
+  async callRaw(request: Record<string, unknown>): Promise<unknown> {
+    const { domain, service, entityIds, data } = request;
+    if (typeof domain !== 'string' || typeof service !== 'string') {
+      throw new Error('A raw Home Assistant request needs a "domain" and a "service"');
+    }
+
+    const ids = Array.isArray(entityIds) ? entityIds.filter((i) => typeof i === 'string') : [];
+    return this.#requireClient().callService(
+      domain,
+      service,
+      data && typeof data === 'object' ? (data as Record<string, unknown>) : undefined,
+      ids.length > 0 ? { entity_id: ids } : undefined,
+    );
   }
 
   async getAreas(): Promise<HaArea[]> {
@@ -134,25 +192,31 @@ export class HomeAssistantIntegration extends BaseIntegration {
   }
 
   #requireClient(): HaClient {
-    if (!this.#client) throw new Error('Home Assistant integration is not connected');
+    if (!this.#client) {
+      throw new Error('Home Assistant integration is not connected');
+    }
+
     return this.#client;
   }
 
   #applyEntities(entities: HassEntities): void {
-    const next = new Map<string, EntityState>();
-    const nextCache = new Map<string, { source: HassEntity; state: EntityState }>();
+    const next = new Map<string, EntityInput>();
+    const nextCache = new Map<string, { source: HassEntity; input: EntityInput }>();
+    const options = { temperatureUnit: this.#options.temperatureUnit ?? '°C' };
     for (const [id, entity] of Object.entries(entities)) {
-      // The HA lib keeps object identity for unchanged entities; reuse ours so
-      // replaceStates only notifies subscribers of real changes.
+      // The HA lib keeps object identity for unchanged entities; reuse our mapped input so
+      // replaceEntities only notifies subscribers of real changes.
       const cached = this.#cache.get(id);
       const entry =
         cached && cached.source === entity
           ? cached
-          : { source: entity, state: toEntityState(id, this.id, entity) };
+          : { source: entity, input: mapEntity(entity, options) };
+
       nextCache.set(id, entry);
-      next.set(id, entry.state);
+      next.set(id, entry.input);
     }
+
     this.#cache = nextCache;
-    this.replaceStates(next);
+    this.replaceEntities(next);
   }
 }
