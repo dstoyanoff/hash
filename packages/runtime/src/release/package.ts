@@ -51,7 +51,7 @@ export interface ReleaseOptions {
   platform?: string | undefined;
   targets: readonly Target[];
 
-  /** Build the image and write `image.tar` for the targets that run one (`compose`, `helm`). Needs Docker. */
+  /** Build the image and write `image.tar` for the targets that run one (`compose`, `helm`, `image`). Needs Docker. */
   image: boolean;
   port: number;
 }
@@ -87,9 +87,12 @@ const write = (dir: string, files: Record<string, string>) => {
  * to the built client; `compose` and `helm` are run from an image, so they also get `image.tar`.
  * `build` must have run (the client is read from `build/client`).
  */
-export async function packageRelease(options: ReleaseOptions): Promise<string> {
+export async function packageRelease(
+  options: ReleaseOptions,
+): Promise<{ out: string; image?: string }> {
   const { root, targets } = options;
-  const needsImage = targets.includes('compose') || targets.includes('helm');
+  const needsImage =
+    targets.includes('compose') || targets.includes('helm') || targets.includes('image');
   const client = join(root, 'build', 'client');
   if (!existsSync(join(client, 'index.html'))) {
     throw new Error('No build found. Run `hash-dash build` first.');
@@ -170,5 +173,5 @@ export async function packageRelease(options: ReleaseOptions): Promise<string> {
     'README.md': releaseReadme(info, targets),
   });
 
-  return out;
+  return { out, ...(info.image ? { image: imageRef(info) } : {}) };
 }

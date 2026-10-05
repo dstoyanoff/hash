@@ -1,7 +1,7 @@
 /** The files of a release, as text. Pure: `package.ts` writes them out. */
 
-export type Target = 'plain' | 'compose' | 'helm';
-export const TARGETS: readonly Target[] = ['plain', 'compose', 'helm'];
+export type Target = 'plain' | 'compose' | 'helm' | 'image';
+export const TARGETS: readonly Target[] = ['plain', 'compose', 'helm', 'image'];
 
 export interface ReleaseInfo {
   /** The project's name: the image, the compose service and the chart. A valid DNS label. */
@@ -359,6 +359,7 @@ export function releaseReadme(info: ReleaseInfo, targets: readonly Target[]): st
       '- `plain/`: the server bundle and the client. Runs with just Node, or builds into an image.',
     compose: '- `compose/`: Docker Compose, for a machine running Docker.',
     helm: '- `helm/`: a Helm chart for k3s/Kubernetes (loads the image, no registry).',
+    image: '- `image.tar`: just the container image, for your own manifests.',
   };
 
   return `# ${info.name} ${info.tag}
@@ -366,7 +367,7 @@ export function releaseReadme(info: ReleaseInfo, targets: readonly Target[]): st
 Built for \`${info.platform}\`. Deploy it as:
 
 ${targets.map((t) => lines[t]).join('\n')}
-${info.image ? `- \`image.tar\`: the container image (\`${imageRef(info)}\`), for compose and helm.\n` : ''}
+${info.image && !targets.includes('image') ? `- \`image.tar\`: the container image (\`${imageRef(info)}\`), for compose and helm.\n` : ''}
 Your tokens and addresses are not in any of these files. They are set where it runs: an \`.env\`
 file for compose, a Kubernetes Secret for helm, the environment for plain.
 `;

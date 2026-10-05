@@ -12,6 +12,7 @@ Targets (one or more; with none, \`package.targets\` in hash.config.ts):
   plain     The server (one file) and the client. Runs with just Node 24+. No Docker needed.
   compose   A Docker Compose file and the container image (image.tar).
   helm      A Helm chart for k3s/Kubernetes and the container image (image.tar).
+  image     Only the container image (image.tar), for manifests you write yourself.
 
 Options:
   --platform <p>   What the image runs on, e.g. linux/amd64 (default: package.platform, else this machine's)
@@ -100,7 +101,7 @@ export async function packageCommand(args: string[]) {
 
   await build({ exit: false });
   try {
-    const out = await packageRelease({
+    const { out, image: ref } = await packageRelease({
       root,
       out: options.out,
       name: options.name ?? defaults.name,
@@ -112,6 +113,9 @@ export async function packageCommand(args: string[]) {
     });
 
     console.log(`\nRelease (${[...new Set(targets)].join(', ')}) written to ${out}`);
+    if (ref) {
+      console.log(`\nImage: ${ref}\nOn the server: k3s ctr -n k8s.io images import image.tar`);
+    }
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);

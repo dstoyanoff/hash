@@ -113,7 +113,7 @@ it into the app, and checking it all actually renders — see
 Build once on your own machine; nothing is compiled, and no source is copied, where it runs.
 
 ```bash
-pnpm package helm --platform linux/amd64   # or: compose, plain
+pnpm package helm --platform linux/amd64   # or: compose, plain, image
 ```
 
 `hash-dash package` builds your dashboards, bundles the server (your `hash.config.ts` and its

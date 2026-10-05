@@ -5,8 +5,8 @@ import { pathToFileURL } from 'node:url';
 
 /** How a project is packaged for deployment: what `hash-dash package` does without being told. */
 export interface PackageConfig {
-  /** What to write: `plain` (the server bundle and client, runs with Node), `compose` (Docker Compose), `helm` (a Helm chart for k3s). Command-line targets win over this. */
-  targets?: ('plain' | 'compose' | 'helm')[];
+  /** What to write: `plain` (the server bundle and client, runs with Node), `compose` (Docker Compose), `helm` (a Helm chart for k3s), `image` (just the container image, for your own manifests). Command-line targets win over this. */
+  targets?: ('plain' | 'compose' | 'helm' | 'image')[];
 
   /** What the image runs on, e.g. `linux/amd64`. Default: the machine that builds it. */
   platform?: string;
