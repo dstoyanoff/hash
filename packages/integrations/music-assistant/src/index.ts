@@ -150,7 +150,7 @@ const samePosition = (a: Position, b: Position) =>
   a.elapsed === b.elapsed &&
   a.resume === b.resume &&
   a.held === b.held &&
-  a.resumedAt === b.resumedAt;
+  a.inherited === b.inherited;
 
 /** Which track a queue is on, as something comparable: its address when it has one, else its name or place. */
 function itemOf(queue: Record<string, unknown>): string | undefined {
