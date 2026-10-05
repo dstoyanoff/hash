@@ -338,7 +338,13 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'string',
       },
       {
-        doc: 'Readings over time (oldest first). Adds a chart and min/max for today / this week / this month to the drawer, plus a custom date and time range when expanded. No default source yet — pass explicitly.',
+        doc: "The sensor's battery level, as a sensor ref like `ha:sensor.kitchen_t_h_sensor_battery` (a percentage). Shown in the drawer, in red when low.",
+        name: 'battery',
+        optional: true,
+        type: 'EntityRef',
+      },
+      {
+        doc: "Readings over time (oldest first). Adds a chart and min/max for today / this week / this month to the drawer, plus a custom date and time range when expanded. Left out, they come from the backend's own history when it keeps one (Home Assistant's long-term statistics).",
         name: 'history',
         optional: true,
         type: 'SensorSample[]',
