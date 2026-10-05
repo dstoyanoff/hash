@@ -195,6 +195,16 @@ browser or a kiosk app at `http://<the server>:3000/<id>`.
 How the release is built, and how to load the image on k3s, is in
 [ARCHITECTURE.md](ARCHITECTURE.md#packaging-and-deployment).
 
+## Security
+
+- **Dashboards have no login.** A Hashsome server shows and controls everything its integrations
+  expose to anyone who can reach it. Run it on a trusted network, or put it behind a reverse proxy
+  that authenticates (Authelia, Authentik, Cloudflare Access, basic auth, a VPN). Do not expose it to
+  the internet as is.
+- **Tokens stay on the server**, read from its environment: never in the browser, the image or the
+  release files. Where you can, give Home Assistant a dedicated non-admin user for the token.
+- To report a vulnerability, see [SECURITY.md](SECURITY.md).
+
 ## Packages
 
 Published to npm under the `@hashsome` scope, all at the same version.
@@ -270,6 +280,11 @@ yet. They are modelled generically where the backend allows it, and have no dedi
 New device types are welcome: see [ARCHITECTURE.md](ARCHITECTURE.md#adding-things).
 
 Milestones and open work are tracked as [GitHub issues](https://github.com/dstoyanoff/hashsome/issues).
+
+## Contributing
+
+Issues, ideas and pull requests are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Questions go in
+[Discussions](https://github.com/dstoyanoff/hashsome/discussions).
 
 ## License
 
