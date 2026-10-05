@@ -1,16 +1,22 @@
+import type { Integration } from '@hash/core';
 import express, { type Express } from 'express';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
 import type { ResolvedConfig } from '../config.ts';
+import { serveAsset } from './assets.ts';
 import { Proxy } from './proxy.ts';
 import { startIntegrations } from './integrations.ts';
 import { attachWebSocket } from './websocket.ts';
 
-export function createApp(clientDir: string): Express {
+export function createApp(clientDir: string, integrations: Integration[] = []): Express {
   const app = express();
   app.disable('x-powered-by');
   app.get('/healthz', (_req, res) => {
     res.json({ status: 'ok' });
+  });
+
+  app.use((req, res, next) => {
+    serveAsset(integrations, req, res).then((served) => (served ? undefined : next()), next);
   });
 
   app.get('/favicon.ico', (_req, res) => {
@@ -28,7 +34,7 @@ export function createApp(clientDir: string): Express {
 
 export function startServer(config: ResolvedConfig) {
   const clientDir = join(config.root, 'build', 'client');
-  const server = createServer(createApp(clientDir));
+  const server = createServer(createApp(clientDir, config.integrations));
   const proxy = new Proxy(config.integrations, { log: console.log });
   attachWebSocket(server, proxy);
   const stop = startIntegrations(config.integrations, { log: console.log });

@@ -2,6 +2,16 @@ import type { EntityRef } from './entity.ts';
 import type { ConnectionStatus } from './integration.ts';
 import type { Entity } from './model/index.ts';
 
+/** Where the runtime serves files an integration's entities point at (artwork, pictures). */
+export const ASSET_PATH = '/_hash/asset';
+
+/** The address a browser can load a backend's own file from: the runtime fetches it with the
+ * integration's credentials, so the backend need not be reachable or trusted by the browser.
+ * `path` is the backend's own path, e.g. `/api/image/serve/…`. */
+export function assetUrl(integration: string, path: string): string {
+  return `${ASSET_PATH}/${encodeURIComponent(integration)}?path=${encodeURIComponent(path)}`;
+}
+
 /** Messages sent by the browser to the runtime's `/ws` endpoint. */
 export type ClientMessage =
   | { type: 'subscribe'; ref: EntityRef }

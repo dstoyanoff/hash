@@ -1,6 +1,6 @@
 import type { EntityInput } from '@hash/core';
 import type { HassEntity } from 'home-assistant-js-websocket';
-import { baseOf, num, str } from './common.ts';
+import { baseOf, fileUrl, num, str } from './common.ts';
 
 export function mapSensor(entity: HassEntity): EntityInput {
   const unit = str(entity.attributes.unit_of_measurement);
@@ -27,8 +27,12 @@ export function mapAction(entity: HassEntity): EntityInput {
   return { kind: 'action', ...baseOf(entity), ...(last ? { lastTriggered: last } : {}) };
 }
 
-export function mapPerson(entity: HassEntity): EntityInput {
-  const picture = str(entity.attributes.entity_picture);
+export function mapPerson(
+  entity: HassEntity,
+  toAssetUrl: (path: string) => string = (path) => path,
+): EntityInput {
+  const raw = str(entity.attributes.entity_picture);
+  const picture = raw ? fileUrl(raw, toAssetUrl) : undefined;
   return {
     kind: 'person',
     ...baseOf(entity),

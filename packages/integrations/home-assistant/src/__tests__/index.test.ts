@@ -237,7 +237,7 @@ describe('HomeAssistantIntegration browse', () => {
     });
   });
 
-  test('only thumbnails the browser can open itself are passed on', async () => {
+  test('thumbnails Home Assistant serves itself go through the runtime, full ones stay', async () => {
     const { ha } = await setup({
       children: [
         folder('Public', 'a', { thumbnail: 'https://cdn.example/a.jpg' }),
@@ -247,12 +247,51 @@ describe('HomeAssistantIntegration browse', () => {
 
     const [open, closed] = (await ha.browse('media_player.room', {})).items;
     expect(open).toHaveProperty('artworkUrl', 'https://cdn.example/a.jpg');
-    expect(closed).not.toHaveProperty('artworkUrl');
+    expect(closed).toHaveProperty(
+      'artworkUrl',
+      `/_hash/asset/ha?path=${encodeURIComponent('/api/media_player_proxy/x?token=secret')}`,
+    );
   });
 
   test('search is refused, and an unknown player is an error', async () => {
     const { ha } = await setup({ children: [] });
     await expect(ha.browse('media_player.room', { search: 'x' })).rejects.toThrow(/searched/);
     await expect(ha.browse('media_player.nope', {})).rejects.toBeInstanceOf(UnknownEntityError);
+  });
+
+  describe('files', () => {
+    const withFetch = async (response: Response) => {
+      const spy = vi.fn<typeof fetch>(async () => response);
+      vi.stubGlobal('fetch', spy);
+      const ha = new HomeAssistantIntegration({
+        url: 'https://ha.test:8123',
+        token: 'secret',
+        createClient: async () => fakeClient().client,
+      });
+
+      return { ha, spy };
+    };
+
+    test('artwork is addressed through the runtime and fetched with the token', async () => {
+      const { ha, spy } = await withFetch(new Response('img'));
+      await ha.connect();
+      await ha.fetchAsset('/api/media_player_proxy/media_player.a?token=1');
+      expect(String(spy.mock.calls[0]?.[0])).toBe(
+        'https://ha.test:8123/api/media_player_proxy/media_player.a?token=1',
+      );
+
+      expect(spy.mock.calls[0]?.[1]?.headers).toEqual({ Authorization: 'Bearer secret' });
+      vi.unstubAllGlobals();
+    });
+
+    test('refuses an address that is not a path on Home Assistant', async () => {
+      const { ha, spy } = await withFetch(new Response('img'));
+      for (const path of ['https://evil.test/a', '//evil.test/a', 'api/x']) {
+        await expect(ha.fetchAsset(path)).rejects.toThrow('Not a path on Home Assistant');
+      }
+
+      expect(spy).not.toHaveBeenCalled();
+      vi.unstubAllGlobals();
+    });
   });
 });

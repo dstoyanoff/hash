@@ -9,6 +9,9 @@ import { mapAction, mapGeneric, mapPerson, mapSensor, mapSwitch } from './simple
 export interface MapOptions {
   /** Home Assistant reports the temperature unit in its own config, not per entity. */
   temperatureUnit: '°C' | '°F';
+
+  /** Turns a path on Home Assistant into an address the browser can load. Defaults to leaving it. */
+  assetUrl?: (path: string) => string;
 }
 
 /** Domains that are something to trigger, not something with a state to read. */
@@ -22,7 +25,7 @@ export function mapEntity(entity: HassEntity, options: MapOptions): EntityInput 
   const domain = domainOf(entity.entity_id);
   switch (domain) {
     case 'media_player':
-      return mapMediaPlayer(entity);
+      return mapMediaPlayer(entity, options.assetUrl);
     case 'light':
       return mapLight(entity);
     case 'climate':
@@ -31,7 +34,7 @@ export function mapEntity(entity: HassEntity, options: MapOptions): EntityInput 
     case 'binary_sensor':
       return mapSensor(entity);
     case 'person':
-      return mapPerson(entity);
+      return mapPerson(entity, options.assetUrl);
     default:
       if (SWITCH_DOMAINS.includes(domain)) {
         return mapSwitch(entity);

@@ -1,6 +1,6 @@
 import type { EntityInput, PlaybackState } from '@hash/core';
 import type { HassEntity } from 'home-assistant-js-websocket';
-import { baseOf, num, str } from './common.ts';
+import { baseOf, fileUrl, num, str } from './common.ts';
 
 /** `MediaPlayerEntityFeature` bit flags from Home Assistant. */
 const FEATURE = {
@@ -23,7 +23,10 @@ const PLAYBACK: Record<string, PlaybackState> = {
   buffering: 'buffering',
 };
 
-export function mapMediaPlayer(entity: HassEntity): EntityInput {
+export function mapMediaPlayer(
+  entity: HassEntity,
+  toAssetUrl: (path: string) => string = (path) => path,
+): EntityInput {
   const a = entity.attributes;
   const features = num(a.supported_features);
   const has = (flag: number, fallback: boolean) =>
@@ -33,7 +36,8 @@ export function mapMediaPlayer(entity: HassEntity): EntityInput {
   const title = str(a.media_title);
   const artist = str(a.media_artist);
   const album = str(a.media_album_name);
-  const artworkUrl = str(a.entity_picture_local) ?? str(a.entity_picture);
+  const picture = str(a.entity_picture_local) ?? str(a.entity_picture);
+  const artworkUrl = picture ? fileUrl(picture, toAssetUrl) : undefined;
   const position = num(a.media_position);
   const duration = num(a.media_duration);
   const positionUpdatedAt = str(a.media_position_updated_at);

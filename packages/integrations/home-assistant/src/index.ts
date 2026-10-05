@@ -7,6 +7,7 @@ import {
   type HassEntity,
 } from 'home-assistant-js-websocket';
 import {
+  assetUrl,
   BaseIntegration,
   UnknownEntityError,
   type BrowseQuery,
@@ -140,6 +141,20 @@ export class HomeAssistantIntegration extends BaseIntegration {
     await client.callService(domain, service, data, { entity_id: [entityId] });
   }
 
+  #assetUrl = (path: string): string => assetUrl(this.id, path);
+
+  /** A file Home Assistant serves (artwork, a person's picture), fetched with the token. Only a
+   * path on Home Assistant itself is accepted, never another address. */
+  async fetchAsset(path: string): Promise<Response> {
+    const base = new URL(this.#options.url);
+    const target = new URL(path, base);
+    if (!path.startsWith('/') || path.startsWith('//') || target.origin !== base.origin) {
+      throw new Error('Not a path on Home Assistant');
+    }
+
+    return fetch(target, { headers: { Authorization: `Bearer ${this.#options.token}` } });
+  }
+
   /** One level of the player's own media library, from `media_player/browse_media`. */
   async browse(entityId: string, query: BrowseQuery): Promise<BrowseResult> {
     const client = this.#requireClient();
@@ -161,7 +176,7 @@ export class HomeAssistantIntegration extends BaseIntegration {
 
     return {
       ...(at && level.title ? { title: level.title } : {}),
-      items: (level.children ?? []).map(toBrowseItem),
+      items: (level.children ?? []).map((media) => toBrowseItem(media, this.#assetUrl)),
     };
   }
 
@@ -202,7 +217,11 @@ export class HomeAssistantIntegration extends BaseIntegration {
   #applyEntities(entities: HassEntities): void {
     const next = new Map<string, EntityInput>();
     const nextCache = new Map<string, { source: HassEntity; input: EntityInput }>();
-    const options = { temperatureUnit: this.#options.temperatureUnit ?? '°C' };
+    const options = {
+      temperatureUnit: this.#options.temperatureUnit ?? '°C',
+      assetUrl: this.#assetUrl,
+    };
+
     for (const [id, entity] of Object.entries(entities)) {
       // The HA lib keeps object identity for unchanged entities; reuse our mapped input so
       // replaceEntities only notifies subscribers of real changes.

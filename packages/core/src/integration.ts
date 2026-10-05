@@ -53,6 +53,14 @@ export interface Integration {
    */
   browse?(entityId: string, query: BrowseQuery): Promise<BrowseResult>;
 
+  /**
+   * Fetches a file the backend serves for its entities, such as artwork, with the integration's own
+   * credentials. `path` is the backend's own path and starts with `/`; it comes from a browser, so
+   * refuse anything else. The runtime serves only image responses. Optional: omit it when entities
+   * only carry addresses the browser can open itself.
+   */
+  fetchAsset?(path: string): Promise<Response>;
+
   /** Escape hatch: a backend-specific request no command covers. `@hash/ui` never calls it. */
   callRaw?(request: Record<string, unknown>): Promise<unknown>;
 }
