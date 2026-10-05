@@ -90,3 +90,42 @@ describe('a different track', () => {
     expect(positionOf(position, 'idle')).toBe(0);
   });
 });
+
+describe('playing started from a stop that was not seen', () => {
+  test('a resume spot cleared as playback starts is not shown', () => {
+    // Connected while stopped, with Music Assistant ready to resume at 30.
+    let position = queue({}, 18, 'idle', 1, { resume: 30 });
+    expect(positionOf(position, 'idle')).toBe(30);
+
+    // Pressing play: it clears the resume spot before the player says it is playing.
+    position = queue(position, 0, 'idle', 70, { resume: 0 });
+    expect(positionOf(position, 'idle')).toBe(30);
+  });
+
+  test('and neither is the stream starting over, nor a start a little before the spot', () => {
+    let position = queue({}, 18, 'idle', 1, { resume: 30 });
+    position = queue(position, 0, 'idle', 70, { resume: 0 });
+    position = onPlayback(position, 'idle', 'playing', 70.3);
+    expect(positionOf(position, 'playing')).toBe(30);
+
+    position = queue(position, 15, 'playing', 70.4, { resume: 0 });
+    expect(positionOf(position, 'playing')).toBe(30);
+    position = queue(position, 29.3, 'playing', 71);
+    expect(positionOf(position, 'playing')).toBe(30);
+    position = queue(position, 31, 'playing', 72);
+    expect(positionOf(position, 'playing')).toBe(31);
+  });
+
+  test('the resume spot never goes down while stopped, but a stop at an earlier spot starts afresh', () => {
+    let position = queue({}, 0, 'idle', 1, { resume: 30 });
+    position = queue(position, 0, 'idle', 2, { resume: 5 });
+    expect(positionOf(position, 'idle')).toBe(30);
+
+    // Played from there and stopped earlier in the track: where it was held is what counts.
+    position = onPlayback(position, 'idle', 'playing', 3);
+    position = queue(position, 30, 'playing', 3.2);
+    position = queue(position, 4, 'playing', 20);
+    position = onPlayback(position, 'playing', 'idle', 26);
+    expect(positionOf(position, 'idle')).toBeCloseTo(10);
+  });
+});

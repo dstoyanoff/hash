@@ -152,11 +152,24 @@ const samePosition = (a: Position, b: Position) =>
   a.held === b.held &&
   a.resumedAt === b.resumedAt;
 
-/** Which item a queue is on, as something comparable: its id when it has one, else its place. */
+/** Which track a queue is on, as something comparable: its address when it has one, else its name or place. */
 function itemOf(queue: Record<string, unknown>): string | undefined {
+  // The track's own address. The queue's id for the item is not kept when a stopped queue is
+  // resumed, so it would make a resume look like a different track.
   const current = queue.current_item;
-  if (isRecord(current) && typeof current.queue_item_id === 'string') {
-    return current.queue_item_id;
+  if (isRecord(current)) {
+    const media = current.media_item;
+    if (isRecord(media) && typeof media.uri === 'string') {
+      return media.uri;
+    }
+
+    if (typeof current.name === 'string') {
+      return current.name;
+    }
+
+    if (typeof current.queue_item_id === 'string') {
+      return current.queue_item_id;
+    }
   }
 
   return typeof queue.current_index === 'number' ? `#${queue.current_index}` : undefined;
@@ -403,7 +416,12 @@ export class MusicAssistantIntegration extends BaseIntegration {
   #entityFor(player: MaPlayer): EntityInput {
     const queue = this.#queues.get(player.player_id);
     if (!queue) {
-      return toMediaPlayer(player);
+      // A stopped player's own counter is back at the start: until the queue says more, no position.
+      return toMediaPlayer(
+        player.playback_state === 'idle'
+          ? { ...player, elapsed_time: null, elapsed_time_last_updated: null }
+          : player,
+      );
     }
 
     const position = positionOf(queue.position, player.playback_state);

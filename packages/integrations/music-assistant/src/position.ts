@@ -57,10 +57,17 @@ export function onQueue(
     message.item === undefined || position.item === undefined || message.item === position.item;
 
   const base: Position = same ? position : {};
+  // Stopped, Music Assistant clears the resume spot as playback is about to start, before the player
+  // says so. A resume spot that goes down while stopped is that, and is not where it will resume.
+  const resume =
+    !following(playback) && base.resume !== undefined && message.resume !== undefined
+      ? Math.max(base.resume, message.resume)
+      : message.resume;
+
   const next: Position = {
     ...base,
     ...(message.item !== undefined ? { item: message.item } : {}),
-    ...(message.resume !== undefined ? { resume: message.resume } : {}),
+    ...(resume !== undefined ? { resume } : {}),
   };
 
   if (message.elapsed === undefined) {
@@ -118,8 +125,17 @@ export function onPlayback(
     return { ...position, held: position.elapsed + since };
   }
 
-  if (!following(from) && following(to) && position.held !== undefined) {
-    return { ...position, elapsed: position.held, elapsedAt: now, resumedAt: now };
+  if (!following(from) && following(to)) {
+    // Starting from a stop: from where it was held, or, if that stop was not seen, from the spot
+    // Music Assistant says it will resume at.
+    const origin = position.held ?? position.resume ?? position.elapsed;
+    if (origin === undefined) {
+      return position;
+    }
+
+    // The resume spot is only meaningful while stopped; the next stop brings a new one.
+    const { resume: _resume, ...rest } = position;
+    return { ...rest, held: origin, elapsed: origin, elapsedAt: now, resumedAt: now };
   }
 
   return position;

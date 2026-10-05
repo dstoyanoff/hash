@@ -521,6 +521,35 @@ test('pause and resume, as Music Assistant reports them, never move the position
   expect(afterPause.every((spot) => spot >= 16.69)).toBe(true);
 });
 
+test('a resumed queue is the same track even if its id in the queue is not', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket, [player({ playback_state: 'idle' })]);
+  const queue = (id: string, data: Record<string, unknown>) =>
+    socket().receive({
+      event: 'queue_updated',
+      object_id: 'kitchen_speaker',
+      data: {
+        queue_id: 'kitchen_speaker',
+        current_item: { queue_item_id: id, media_item: { uri: 'spotify://track/1' } },
+        ...data,
+      },
+    });
+
+  queue('first', { elapsed_time: 18, resume_pos: 30 });
+  expect(ma.getEntity('kitchen_speaker')).toMatchObject({ position: 30 });
+  queue('second', { elapsed_time: 0, resume_pos: 0 });
+  expect(ma.getEntity('kitchen_speaker')).toMatchObject({ position: 30 });
+});
+
+test('a stopped player shows no position until its queue has said where it is', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket, [
+    player({ playback_state: 'idle', elapsed_time: 0, elapsed_time_last_updated: 1_767_225_600 }),
+  ]);
+
+  expect(ma.getEntity('kitchen_speaker')).not.toHaveProperty('position');
+});
+
 test('a track the queue moves to starts at its own position, not where the last was paused', async () => {
   const { ma, socket } = make();
   await connect(ma, socket, [player({ playback_state: 'playing' })]);
@@ -530,7 +559,7 @@ test('a track the queue moves to starts at its own position, not where the last 
       object_id: 'kitchen_speaker',
       data: {
         queue_id: 'kitchen_speaker',
-        current_item: { queue_item_id: item },
+        current_item: { queue_item_id: item, name: item },
         elapsed_time: elapsed,
       },
     });
