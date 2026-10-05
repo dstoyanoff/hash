@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig.build.json",
+  "compilerOptions": { "rootDir": ".", "outDir": "dist", "tsBuildInfoFile": "dist/.tsbuildinfo" },
+  "include": ["src", "app", "bin"],
+  "exclude": ["**/__tests__", "**/*.test.ts", "**/*.test.tsx", "**/test-utils.tsx"],
+  "references": [{ "path": "../core/tsconfig.build.json" }, { "path": "../ui/tsconfig.build.json" }]
+}

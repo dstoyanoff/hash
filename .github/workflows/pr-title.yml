@@ -1,0 +1,21 @@
+name: PR title
+
+# Squash-merging makes the PR title the commit message, and releases are worked out from those.
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  conventional:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if ! printf '%s' "$TITLE" | grep -Eq '^(feat|fix|perf|docs|style|refactor|test|build|ci|chore|revert)(\([^)]+\))?!?: .+'; then
+            echo "::error::PR title must be a conventional commit, e.g. 'feat(ui): add a battery readout'. Got: $TITLE"
+            exit 1
+          fi

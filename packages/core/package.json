@@ -1,15 +1,41 @@
 {
   "name": "@hashsome/core",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "description": "Framework-agnostic integration interface, entity types and wire protocol (no vendor-specific code)",
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -b tsconfig.build.json"
   },
   "exports": {
     ".": "./src/index.ts",
     "./conformance": "./src/conformance.ts",
     "./package.json": "./package.json"
+  },
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dstoyanoff/hashsome.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/dstoyanoff/hashsome#readme",
+  "bugs": "https://github.com/dstoyanoff/hashsome/issues",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./conformance": {
+        "types": "./dist/conformance.d.ts",
+        "default": "./dist/conformance.js"
+      },
+      "./package.json": "./package.json"
+    }
   }
 }

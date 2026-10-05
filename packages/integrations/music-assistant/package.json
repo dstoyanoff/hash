@@ -1,12 +1,12 @@
 {
   "name": "@hashsome/integration.music-assistant",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "description": "Music Assistant integration: direct WebSocket client, not via Home Assistant",
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "players": "node scripts/print-players.ts"
+    "players": "node scripts/print-players.ts",
+    "build": "tsc -b tsconfig.build.json"
   },
   "dependencies": {
     "@hashsome/core": "workspace:*"
@@ -15,5 +15,31 @@
     ".": "./src/index.ts",
     "./mock": "./src/mock.ts",
     "./package.json": "./package.json"
+  },
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dstoyanoff/hashsome.git",
+    "directory": "packages/integrations/music-assistant"
+  },
+  "homepage": "https://github.com/dstoyanoff/hashsome#readme",
+  "bugs": "https://github.com/dstoyanoff/hashsome/issues",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./mock": {
+        "types": "./dist/mock.d.ts",
+        "default": "./dist/mock.js"
+      },
+      "./package.json": "./package.json"
+    }
   }
 }
