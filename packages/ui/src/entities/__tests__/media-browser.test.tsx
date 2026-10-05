@@ -213,6 +213,19 @@ describe('layouts', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Play Rumours' }));
   });
 
+  test.each(['list', 'theater'] as const)(
+    'a long title is cut with an ellipsis instead of running over the next item (%s)',
+    async (layout) => {
+      show(layout);
+      await screen.findByRole('button', { name: 'Play Dreams' });
+      const title = screen.getAllByText('Dreams')[0] as HTMLElement;
+      const style = getComputedStyle(title);
+      expect(style.whiteSpace).toBe('nowrap');
+      expect(style.textOverflow).toBe('ellipsis');
+      expect(style.overflow).toBe('hidden');
+    },
+  );
+
   test('a theater card is large, an artist’s is round, and its play button sits over the artwork', async () => {
     const { ha } = show('theater');
     fireEvent.click(await screen.findByRole('tab', { name: 'Artists' }));

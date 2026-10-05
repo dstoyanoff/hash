@@ -20,17 +20,21 @@ export function NowPlaying({
   fallback,
   extra,
   onOpenArtwork,
+  size,
 }: {
   handle: EntityHandle<'mediaPlayer'>;
 
   /** What to call the player before it reports a name. */
   fallback: string;
 
-  /** One more button, to the right of the transport (the browse button). Shuffle takes the slot on the left. */
+  /** One more button, to the right of the transport (the browse button). */
   extra?: ReactNode;
 
   /** Makes the artwork a button that calls this (opens the library). */
   onOpenArtwork?: () => void;
+
+  /** The artwork ring's diameter in px, for a roomier player. Default 168. */
+  size?: number;
 }) {
   const player = handle.entity;
   const { status } = handle;
@@ -55,19 +59,58 @@ export function NowPlaying({
         duration={duration}
         seekable={caps?.seek === true}
         onOpen={onOpenArtwork}
+        {...(size !== undefined ? { size } : {})}
       />
       <Flex direction="column" align="center" gap={0.5} color={ready ? 'text' : 'textMuted'}>
-        <Typography as="h2" variant="title" noWrap textOverflow="ellipsis" m={0} maxWidth="100%">
-          {ready
-            ? (player?.media?.title ?? 'Nothing playing')
-            : statusLabels[status as Exclude<typeof status, 'ready'>]}
-        </Typography>
+        {/* Shuffle sits by the title, so the transport below is just previous, play and next. */}
+        <Flex align="center" justify="center" gap={2} maxWidth="100%">
+          <Typography
+            as="h2"
+            variant="title"
+            noWrap
+            textOverflow="ellipsis"
+            overflow="hidden"
+            m={0}
+            minWidth={0}
+          >
+            {ready
+              ? (player?.media?.title ?? 'Nothing playing')
+              : statusLabels[status as Exclude<typeof status, 'ready'>]}
+          </Typography>
+          {caps?.shuffle ? (
+            <IconButton
+              icon="lu:shuffle"
+              label="Shuffle"
+              size={14}
+              active={player?.shuffle === true}
+              pressed={player?.shuffle === true}
+              disabled={!ready}
+              onClick={() =>
+                void handle.command('setShuffle', { shuffle: player?.shuffle !== true })
+              }
+            />
+          ) : null}
+        </Flex>
         {ready && player?.media?.artist ? (
-          <Typography as="span" variant="body" color="textMuted" noWrap textOverflow="ellipsis">
+          <Typography
+            as="span"
+            variant="body"
+            color="textMuted"
+            noWrap
+            textOverflow="ellipsis"
+            overflow="hidden"
+          >
             {[player.media.artist, player.media.album].filter(Boolean).join(' · ')}
           </Typography>
         ) : (
-          <Typography as="span" variant="body" color="textMuted" noWrap textOverflow="ellipsis">
+          <Typography
+            as="span"
+            variant="body"
+            color="textMuted"
+            noWrap
+            textOverflow="ellipsis"
+            overflow="hidden"
+          >
             {player?.name ?? fallback}
           </Typography>
         )}
@@ -91,19 +134,7 @@ export function NowPlaying({
           justifyContent: 'center',
         })}
       >
-        {caps?.shuffle ? (
-          <IconButton
-            icon="lu:shuffle"
-            label="Shuffle"
-            glyph={18}
-            active={player?.shuffle === true}
-            pressed={player?.shuffle === true}
-            disabled={!ready}
-            onClick={() => void handle.command('setShuffle', { shuffle: player?.shuffle !== true })}
-          />
-        ) : (
-          <span />
-        )}
+        <span />
         <IconButton
           icon="lu:skip-back"
           label="Previous"

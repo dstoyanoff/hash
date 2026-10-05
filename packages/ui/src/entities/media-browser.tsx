@@ -218,7 +218,13 @@ function BrowseRow({
           )}
         </Flex>
         <Flex direction="column" minWidth={0}>
-          <Typography as="span" variant="bodyStrong" noWrap textOverflow="ellipsis">
+          <Typography
+            as="span"
+            variant="bodyStrong"
+            noWrap
+            textOverflow="ellipsis"
+            overflow="hidden"
+          >
             {item.title}
           </Typography>
           {item.subtitle ? (
@@ -228,6 +234,7 @@ function BrowseRow({
               color="textMuted"
               noWrap
               textOverflow="ellipsis"
+              overflow="hidden"
             >
               {item.subtitle}
             </Typography>
@@ -285,7 +292,13 @@ function BrowseCard({
           )}
         </Flex>
         <Flex direction="column" minWidth={0} px={1}>
-          <Typography as="span" variant="bodyStrong" noWrap textOverflow="ellipsis">
+          <Typography
+            as="span"
+            variant="bodyStrong"
+            noWrap
+            textOverflow="ellipsis"
+            overflow="hidden"
+          >
             {item.title}
           </Typography>
           {item.subtitle ? (
@@ -295,6 +308,7 @@ function BrowseCard({
               color="textMuted"
               noWrap
               textOverflow="ellipsis"
+              overflow="hidden"
             >
               {item.subtitle}
             </Typography>

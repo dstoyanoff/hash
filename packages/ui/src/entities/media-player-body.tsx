@@ -7,6 +7,9 @@ import { useEntityHandle } from '../hooks.ts';
 import { useDetail } from '../layout/detail-provider.tsx';
 import { NowPlaying } from './now-playing.tsx';
 
+/** The artwork ring's diameter in a full-size player, against the usual 168px. */
+const FULL_SIZE = 260;
+
 /** The big player: the player centered at the top, and the library (or whatever `browser` is)
  * below it. This one layout is the drawer, at every width, and the full page, so the two are the
  * same thing and cannot drift apart. Not exported from the package; `MediaPlayerPage` and the
@@ -26,15 +29,22 @@ export function MediaPlayerBody({
   const { detail } = useDetail();
   const full = wide ?? detail?.expanded === true;
   return (
-    <Flex direction="column" gap={5}>
-      <Box width="100%" maxWidth={420} mx="auto">
-        <NowPlaying handle={handle} fallback={fallbackName(entity)} />
-      </Box>
+    <Flex direction="column" gap={5} grow={1}>
+      {/* Full size, the player is larger and centered in whatever room the library leaves. */}
+      <Flex grow={1} align="center" justify="center">
+        <Box width="100%" maxWidth={full ? 560 : 420}>
+          <NowPlaying
+            handle={handle}
+            fallback={fallbackName(entity)}
+            {...(full ? { size: FULL_SIZE } : {})}
+          />
+        </Box>
+      </Flex>
       {browser !== undefined ? (
         <>
           <Box height={1} background="border" />
           {/* A list is capped so a row is never a long way from its play button on a very wide
-              screen; the theater row uses the whole width. */}
+              screen; the theater row uses the whole width. Full size it is docked to the bottom. */}
           <Box width="100%" {...(full ? {} : { maxWidth: 960, mx: 'auto' })}>
             {browser}
           </Box>

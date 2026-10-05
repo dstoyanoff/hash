@@ -464,27 +464,38 @@ describe('long press on the vertical card, and what each way of opening the draw
   test('the drawer stacks the player and the library at every width, with the player centered', () => {
     renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing(), library);
     fireEvent.click(screen.getByRole('button', { name: 'Open media browser' }));
-    expect(layoutOf(screen.getAllByRole('slider', { name: 'Volume level' })[1]!)).toEqual(SHAPE);
+    expect(layoutOf(screen.getAllByRole('slider', { name: 'Volume level' })[1]!)).toEqual({
+      ...SHAPE,
+      playerMaxWidth: '420px',
+    });
+
+    // Expanded, the player is larger.
     fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
     expect(screen.getByRole('button', { name: 'Collapse' })).toBeTruthy();
-    expect(layoutOf(screen.getAllByRole('slider', { name: 'Volume level' })[1]!)).toEqual(SHAPE);
+    expect(layoutOf(screen.getAllByRole('slider', { name: 'Volume level' })[1]!)).toEqual({
+      ...SHAPE,
+      playerMaxWidth: '560px',
+    });
   });
 
   test('the full page is the same layout as the expanded drawer', () => {
     renderWithMock(<MediaPlayerPage entity="ha:room" />, playing(), library);
-    expect(layoutOf(screen.getByRole('slider', { name: 'Volume level' }))).toEqual(SHAPE);
+    expect(layoutOf(screen.getByRole('slider', { name: 'Volume level' }))).toEqual({
+      ...SHAPE,
+      playerMaxWidth: '560px',
+    });
   });
 });
 
 /** What `layoutOf` reports for the big player, in the drawer and on the page alike. */
 const SHAPE = {
   direction: 'column',
-  playerMargin: 'auto',
-  playerMaxWidth: '420px',
+  playerCentered: true,
   libraryBelow: true,
 };
 
-/** How the player and the library are arranged around a volume slider inside the big player. */
+/** How the player and the library are arranged around a volume slider inside the big player: the
+ * player sits in a box that centers it in the room above the library. */
 function layoutOf(volume: HTMLElement) {
   const search = screen.getByRole('searchbox', { name: 'Search the library' });
   let body = volume.parentElement as HTMLElement;
@@ -492,14 +503,15 @@ function layoutOf(volume: HTMLElement) {
     body = body.parentElement as HTMLElement;
   }
 
-  const player = Array.from(body.children).find((child) => child.contains(volume)) as HTMLElement;
+  const area = Array.from(body.children).find((child) => child.contains(volume)) as HTMLElement;
+  const player = area.firstElementChild as HTMLElement;
   return {
     direction: getComputedStyle(body).flexDirection,
-    playerMargin: getComputedStyle(player).marginLeft,
+    playerCentered:
+      getComputedStyle(area).justifyContent === 'center' &&
+      getComputedStyle(area).alignItems === 'center',
     playerMaxWidth: getComputedStyle(player).maxWidth,
-    libraryBelow: Boolean(
-      player.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ),
+    libraryBelow: Boolean(area.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING),
   };
 }
 
