@@ -1,11 +1,14 @@
 # Hashsome
 
 [![CI](https://github.com/dstoyanoff/hashsome/actions/workflows/ci.yml/badge.svg)](https://github.com/dstoyanoff/hashsome/actions/workflows/ci.yml)
+[![Component gallery](https://img.shields.io/badge/component%20gallery-live-blue)](https://dstoyanoff.github.io/hashsome/)
 
 **Smart-home dashboards you build like software.** A real design system, real React components and
 a small server, in place of a drag-and-drop card editor. You write the dashboard for a wall tablet,
 a phone or a small kitchen display as ordinary code, and Hashsome keeps it live, themed and easy to
 deploy.
+
+**[Explore the component gallery →](https://dstoyanoff.github.io/hashsome/)** Every component in every state, live in your browser.
 
 > **Alpha.** Hashsome is early software: not every device type is built yet, and what is built has
 > only been tried against one real home. See [Status](#status-alpha) for exactly what works.
