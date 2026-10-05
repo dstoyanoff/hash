@@ -8,7 +8,8 @@ a small server, in place of a drag-and-drop card editor. You write the dashboard
 a phone or a small kitchen display as ordinary code, and Hashsome keeps it live, themed and easy to
 deploy.
 
-**[Explore the component gallery →](https://dstoyanoff.github.io/hashsome/)** Every component in every state, live in your browser.
+**[Try the live demo →](https://dstoyanoff.github.io/hashsome/demo/)** The example dashboards on mock data, in your browser.
+**[Explore the component gallery →](https://dstoyanoff.github.io/hashsome/)** Every component in every state.
 
 > **Alpha.** Hashsome is early software: not every device type is built yet, and what is built has
 > only been tried against one real home. See [Status](#status-alpha) for exactly what works.
@@ -224,6 +225,7 @@ those, and you only import it yourself to write an integration.
 ```
 packages/        the packages above, one folder each (integrations under packages/integrations/)
 example/         a complete project you can run, and the template for your own
+demo/            the example's dashboards as a static site on mock data (the live demo)
 templates/       scaffolds for new dashboards
 docs/            screenshots
 ```

@@ -1,6 +1,7 @@
 name: Docs site
 
-# The @hashsome/ui component gallery, built as a static site and served by GitHub Pages.
+# The @hashsome/ui component gallery at the site root and the example as a live demo under /demo/,
+# built as one static site and served by GitHub Pages.
 on:
   push:
     branches: [main]
@@ -27,6 +28,15 @@ jobs:
         env:
           # Served from https://<owner>.github.io/<repo>/
           DOCS_BASE: /${{ github.event.repository.name }}/
+      - run: pnpm --filter @hashsome/demo build
+        env:
+          DEMO_BASE: /${{ github.event.repository.name }}/demo/
+      - name: Put the demo under /demo/
+        run: |
+          cp -r demo/build/client packages/ui/docs/dist/demo
+          # Pages serves 404.html for any unknown path, so a reload on a demo page (a single-page
+          # app route) still loads the demo.
+          cp demo/build/client/index.html packages/ui/docs/dist/404.html
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
