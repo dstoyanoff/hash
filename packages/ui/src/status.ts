@@ -2,7 +2,12 @@ import type { Entity } from '@hash/core';
 
 /** Uniform lifecycle of an entity as seen by components. */
 export type EntityStatus =
-  'loading' | 'missing' | 'unsupported' | 'unavailable' | 'unknown' | 'ready';
+  | 'loading'
+  | 'missing'
+  | 'unsupported'
+  | 'unavailable'
+  | 'unknown'
+  | 'ready';
 
 /** `undefined` = still loading, `null` = no such entity. */
 export function entityStatus(entity: Entity | null | undefined): EntityStatus {
