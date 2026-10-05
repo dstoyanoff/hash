@@ -194,10 +194,25 @@ browser or a kiosk app at `http://<the server>:3000/<id>`.
 How the release is built, and how to load the image on k3s, is in
 [ARCHITECTURE.md](ARCHITECTURE.md#packaging-and-deployment).
 
+## Packages
+
+Published to npm under the `@hashsome` scope, all at the same version.
+
+| Package                                                                                                        | What it is for                                                                                                                                  |
+| -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@hashsome/ui`](https://www.npmjs.com/package/@hashsome/ui)                                                   | The design system: themed components for lights, climate, sensors, scenes and media players, layout pieces, hooks and the theme tokens.         |
+| [`@hashsome/runtime`](https://www.npmjs.com/package/@hashsome/runtime)                                         | The `hashsome` command (`dev`, `build`, `start`, `package`), the server that talks to your backends, and the app entry files your project uses. |
+| [`@hashsome/core`](https://www.npmjs.com/package/@hashsome/core)                                               | The generic entity model, the integration contract and the wire protocol. No React, nothing vendor-specific; what you build an integration on.  |
+| [`@hashsome/integration.home-assistant`](https://www.npmjs.com/package/@hashsome/integration.home-assistant)   | Connects Home Assistant: lights, climate, sensors, scenes, media players, people, weather and history.                                          |
+| [`@hashsome/integration.music-assistant`](https://www.npmjs.com/package/@hashsome/integration.music-assistant) | Connects Music Assistant directly: players, queues, library browsing and search.                                                                |
+
+A project depends on `ui` and `runtime`, plus one integration per backend. `core` comes along with
+those, and you only import it yourself to write an integration.
+
 ## Layout
 
 ```
-packages/        the framework: core, ui, runtime, and one package per integration
+packages/        the packages above, one folder each (integrations under packages/integrations/)
 example/         a complete project you can run, and the template for your own
 templates/       scaffolds for new dashboards
 docs/            screenshots
@@ -231,8 +246,8 @@ Hashsome is **alpha**. It runs a real home today, but expect rough edges, and ex
   Music Assistant. It has not been tried across many devices, brands or setups, so integrations will
   meet states nobody has hit yet.
 - **Interfaces can change.** Component props, the integration contract and the packaging output
-  may change between versions, and the packages are not on npm yet. Today you use Hashsome by cloning
-  the repository and adding dashboards to a project like `example/`.
+  may change between versions. The packages are on npm at 0.x, but there is no scaffolder yet:
+  the easiest start is still to clone the repository and copy a project like `example/`.
 
 ### What works today
 
