@@ -2,8 +2,8 @@
 import type { ConnectionStatus, EntityRef, LinkStatus } from '@hash/core';
 import { Box, Flex, Typography } from 'e-prim';
 import { PlainButton } from '../layout/plain-button.tsx';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import type { IconName } from '../icon-data.ts';
 import { fallbackName } from '../entity-handle.ts';
 import { useConnectionStatus, useEntityHandle, useIntegrationStatuses } from '../hooks.ts';
@@ -38,6 +38,37 @@ function colorForId(id: string, colors: readonly string[]): string {
   }
 
   return colors[hash % colors.length]!;
+}
+
+/** Closes a popover (calls `close`) on a press outside `ref` or on Escape, while it is `open`. */
+function useDismiss(open: boolean, close: () => void, ref: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const onPointer = (event: PointerEvent) => {
+      if (!ref.current?.contains(event.target as Node)) {
+        close();
+      }
+    };
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        close();
+      }
+    };
+
+    document.addEventListener('pointerdown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+    // `close` is a fresh function each render but only ever sets state; re-subscribing for it would
+    // do nothing but churn listeners.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, ref]);
 }
 
 export interface TopBarProps {
@@ -153,13 +184,22 @@ function DashboardSwitcher({
 }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const ref = useRef<HTMLDivElement>(null);
+  useDismiss(open, () => setOpen(false), ref);
+
+  // The dashboard being shown: the one whose route the address is under, else the one the title names.
+  const current =
+    dashboards.find((d) => pathname === `/${d.id}` || pathname.startsWith(`/${d.id}/`)) ??
+    dashboards.find((d) => d.title === title);
 
   return (
-    <Flex position="relative">
+    <Flex ref={ref} position="relative">
       <Flex
         as="button"
         type="button"
         onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
         aria-expanded={open}
         align="center"
         justify="center"
@@ -180,6 +220,7 @@ function DashboardSwitcher({
       {open ? (
         <Flex
           as="ul"
+          role="listbox"
           direction="column"
           background="surfaceRaised"
           radius="row"
@@ -192,28 +233,41 @@ function DashboardSwitcher({
           minWidth="100%"
           css={{ top: '100%', left: 0, listStyle: 'none', whiteSpace: 'nowrap' }}
         >
-          {dashboards.map((d) => (
-            <li key={d.id}>
-              <PlainButton
-                onClick={() => {
-                  setOpen(false);
-                  navigate(`/${d.id}`);
-                }}
-                align="center"
-                gap={2}
-                width="100%"
-                radius="small"
-                px={2}
-                py={1.5}
-                color="text"
-              >
-                {d.icon ? <Icon name={d.icon} size={16} /> : null}
-                <Typography as="span" variant="body">
-                  {d.title}
-                </Typography>
-              </PlainButton>
-            </li>
-          ))}
+          {dashboards.map((d) => {
+            const active = d.id === current?.id;
+            return (
+              <li key={d.id} role="none">
+                <Flex
+                  as="button"
+                  type="button"
+                  role="option"
+                  aria-selected={active}
+                  // Already here: marked, and nothing to switch to.
+                  disabled={active}
+                  onClick={() => {
+                    setOpen(false);
+                    navigate(`/${d.id}`);
+                  }}
+                  align="center"
+                  gap={2}
+                  width="100%"
+                  radius="small"
+                  px={2}
+                  py={1.5}
+                  color="text"
+                  background={active ? 'surface' : 'transparent'}
+                  cursor={active ? 'default' : 'pointer'}
+                  css={{ textAlign: 'left' }}
+                >
+                  {d.icon ? <Icon name={d.icon} size={16} /> : null}
+                  <Typography as="span" variant="body" grow={1}>
+                    {d.title}
+                  </Typography>
+                  {active ? <Icon name="lu:check" size={16} /> : null}
+                </Flex>
+              </li>
+            );
+          })}
         </Flex>
       ) : null}
     </Flex>
@@ -264,30 +318,7 @@ export function SystemStatus({
   const [open, setOpen] = useState(defaultOpen);
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    const onPointer = (event: PointerEvent) => {
-      if (!ref.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener('pointerdown', onPointer);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('pointerdown', onPointer);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
+  useDismiss(open, () => setOpen(false), ref);
 
   const rows: { name: string; health: Health; label: string }[] = [
     {

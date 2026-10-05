@@ -1,5 +1,6 @@
 import { LocalClient, mockAction, mockPerson, mockSensor, MockIntegration } from '@hash/core';
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { expect, test } from 'vitest';
 import { HashProvider } from '../../provider.tsx';
 import { renderWithMock } from '../../test-utils.tsx';
@@ -40,24 +41,80 @@ test('a scene can override its default icon', () => {
   expect(ha.calls).toHaveLength(1);
 });
 
+const twoDashboards = [
+  { id: 'living-room', title: 'Living Room', icon: 'lu:sofa' },
+  { id: 'bedroom', title: 'Bedroom', icon: 'lu:bed' },
+] as const;
+
 test('a title with 2+ dashboards opens a switcher and closes it on pick', () => {
   renderWithMock(
-    <TopBar
-      title="Living Room"
-      dashboards={[
-        { id: 'living-room', title: 'Living Room', icon: 'lu:sofa' },
-        { id: 'bedroom', title: 'Bedroom', icon: 'lu:bed' },
-      ]}
-    />,
+    <TopBar title="Living Room" dashboards={[...twoDashboards]} />,
     {},
     { router: true },
   );
 
-  expect(screen.queryByRole('button', { name: 'Bedroom' })).toBeNull();
+  expect(screen.queryByRole('option', { name: 'Bedroom' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Living Room' }));
-  expect(screen.getByRole('button', { name: 'Bedroom' })).toBeTruthy();
-  fireEvent.click(screen.getByRole('button', { name: 'Bedroom' }));
-  expect(screen.queryByRole('button', { name: 'Bedroom' })).toBeNull();
+  expect(screen.getByRole('option', { name: 'Bedroom' })).toBeTruthy();
+  fireEvent.click(screen.getByRole('option', { name: 'Bedroom' }));
+  expect(screen.queryByRole('option', { name: 'Bedroom' })).toBeNull();
+});
+
+test('the dashboard being shown is marked, and cannot be picked again', () => {
+  const { container } = renderWithMock(
+    <TopBar title="Living Room" dashboards={[...twoDashboards]} />,
+    {},
+    { router: true },
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Living Room' }));
+  const here = screen.getByRole('option', { name: 'Living Room' });
+  expect(here.getAttribute('aria-selected')).toBe('true');
+  expect((here as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.getByRole('option', { name: 'Bedroom' }).getAttribute('aria-selected')).toBe(
+    'false',
+  );
+
+  // Pressing it does nothing: the list stays as it is.
+  fireEvent.click(here);
+  expect(screen.getByRole('option', { name: 'Bedroom' })).toBeTruthy();
+  expect(container).toBeTruthy();
+});
+
+test('which one is current follows the address', () => {
+  renderWithMock(
+    <MemoryRouter initialEntries={['/bedroom/lights']}>
+      <TopBar title="Whatever" dashboards={[...twoDashboards]} />
+    </MemoryRouter>,
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Whatever' }));
+  expect(screen.getByRole('option', { name: 'Bedroom' }).getAttribute('aria-selected')).toBe(
+    'true',
+  );
+});
+
+test('a press elsewhere, or Escape, closes the switcher', () => {
+  renderWithMock(
+    <TopBar title="Living Room" dashboards={[...twoDashboards]} />,
+    {},
+    { router: true },
+  );
+
+  const open = () => fireEvent.click(screen.getByRole('button', { name: 'Living Room' }));
+  open();
+  expect(screen.getByRole('listbox')).toBeTruthy();
+  fireEvent.pointerDown(document.body);
+  expect(screen.queryByRole('listbox')).toBeNull();
+
+  open();
+  fireEvent.keyDown(document, { key: 'Escape' });
+  expect(screen.queryByRole('listbox')).toBeNull();
+
+  // A press inside it is not "elsewhere".
+  open();
+  fireEvent.pointerDown(screen.getByRole('option', { name: 'Bedroom' }));
+  expect(screen.getByRole('listbox')).toBeTruthy();
 });
 
 test('a title with 0-1 dashboards is plain, non-interactive text', () => {
