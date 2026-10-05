@@ -145,6 +145,20 @@ interface QueueState {
   /** Seconds into the current item, and the UTC epoch in seconds that was measured at. */
   elapsed?: number;
   elapsedAt?: number;
+
+  /** What the queue was doing and which item it was on, to tell a pause from a new track. */
+  state?: string;
+  item?: string;
+}
+
+/** Which item a queue is on, as something comparable: its id when it has one, else its place. */
+function itemOf(queue: Record<string, unknown>): string | undefined {
+  const current = queue.current_item;
+  if (isRecord(current) && typeof current.queue_item_id === 'string') {
+    return current.queue_item_id;
+  }
+
+  return typeof queue.current_index === 'number' ? `#${queue.current_index}` : undefined;
 }
 
 export class MusicAssistantIntegration extends BaseIntegration {
@@ -406,10 +420,18 @@ export class MusicAssistantIntegration extends BaseIntegration {
     }
 
     const known = this.#queues.get(queue.queue_id) ?? {};
+    const state = typeof queue.state === 'string' ? queue.state : undefined;
+    const item = itemOf(queue);
+    // A player that cannot hold a stream open is stopped by a pause: Music Assistant then reports
+    // the queue as idle with its counter back at the start, and only brings the position back when
+    // playback resumes. Between the two the dashboard keeps showing where it was paused.
+    const held =
+      state === 'idle' && known.elapsed !== undefined && item !== undefined && item === known.item;
+
     const next: QueueState = {
       ...known,
       ...(typeof queue.shuffle_enabled === 'boolean' ? { shuffle: queue.shuffle_enabled } : {}),
-      ...(typeof queue.elapsed_time === 'number'
+      ...(typeof queue.elapsed_time === 'number' && !held
         ? {
             elapsed: queue.elapsed_time,
             // When it was true; without a stamp, now is the best there is.
@@ -419,9 +441,16 @@ export class MusicAssistantIntegration extends BaseIntegration {
                 : Date.now() / 1000,
           }
         : {}),
+      ...(state !== undefined ? { state } : {}),
+      ...(item !== undefined ? { item } : {}),
     };
 
-    if (next.shuffle === known.shuffle && next.elapsed === known.elapsed) {
+    if (
+      next.shuffle === known.shuffle &&
+      next.elapsed === known.elapsed &&
+      next.state === known.state &&
+      next.item === known.item
+    ) {
       return;
     }
 

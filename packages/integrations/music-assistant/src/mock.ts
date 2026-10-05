@@ -24,7 +24,7 @@ const players = (): MaPlayer[] => [
       artist: 'More More',
       album: '1989',
       duration: 231,
-      image_url: 'https://picsum.photos/seed/blank-space/400',
+      image_url: 'https://picsum.photos/seed/aurora/400',
     },
     elapsed_time: 64,
     elapsed_time_last_updated: Date.now() / 1000,

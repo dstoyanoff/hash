@@ -465,6 +465,63 @@ test('the position is the queue’s, since a resumed stream starts the player’
   expect(ma.getEntity('kitchen_speaker')).toMatchObject({ position: 24 });
 });
 
+test('a pause that stops the stream keeps showing where it was paused, until playback resumes', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket);
+  const queue = (data: Record<string, unknown>) =>
+    socket().receive({
+      event: 'queue_updated',
+      object_id: 'kitchen_speaker',
+      data: {
+        queue_id: 'kitchen_speaker',
+        current_item: { queue_item_id: 'track-1' },
+        ...data,
+      },
+    });
+
+  queue({ state: 'playing', elapsed_time: 23, elapsed_time_last_updated: 1_767_225_600 });
+  expect(ma.getEntity('kitchen_speaker')).toMatchObject({ position: 23 });
+
+  // The pause stops the stream: Music Assistant reports the queue idle and back at the start.
+  queue({ state: 'idle', elapsed_time: 3, elapsed_time_last_updated: 1_767_225_610 });
+  expect(ma.getEntity('kitchen_speaker')).toMatchObject({
+    position: 23,
+    positionUpdatedAt: '2026-01-01T00:00:00.000Z',
+  });
+
+  // More of the same while it is stopped changes nothing.
+  queue({ state: 'idle', elapsed_time: 0, elapsed_time_last_updated: 1_767_225_620 });
+  expect(ma.getEntity('kitchen_speaker')).toMatchObject({ position: 23 });
+
+  // Resuming brings the queue's own position back, and it is followed again.
+  queue({ state: 'playing', elapsed_time: 23, elapsed_time_last_updated: 1_767_225_630 });
+  queue({ state: 'playing', elapsed_time: 24, elapsed_time_last_updated: 1_767_225_631 });
+  expect(ma.getEntity('kitchen_speaker')).toMatchObject({ position: 24 });
+});
+
+test('an idle queue on another track shows that track’s position, not the one paused on', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket);
+  const queue = (item: string, state: string, elapsed: number) =>
+    socket().receive({
+      event: 'queue_updated',
+      object_id: 'kitchen_speaker',
+      data: {
+        queue_id: 'kitchen_speaker',
+        state,
+        current_item: { queue_item_id: item },
+        elapsed_time: elapsed,
+        elapsed_time_last_updated: 1_767_225_600,
+      },
+    });
+
+  queue('track-1', 'playing', 90);
+  queue('track-1', 'idle', 0);
+  expect(ma.getEntity('kitchen_speaker')).toMatchObject({ position: 90 });
+  queue('track-2', 'idle', 0);
+  expect(ma.getEntity('kitchen_speaker')).toMatchObject({ position: 0 });
+});
+
 test('a queue without a stamp for its elapsed time is taken as of when it arrived', async () => {
   const { ma, socket } = make();
   await connect(ma, socket);
