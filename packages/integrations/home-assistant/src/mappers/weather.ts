@@ -1,4 +1,4 @@
-import { WEATHER_CONDITIONS, type EntityInput, type WeatherCondition } from '@hash/core';
+import { WEATHER_CONDITIONS, type EntityInput, type WeatherCondition } from '@hashsome/core';
 import type { HassEntity } from 'home-assistant-js-websocket';
 import { baseOf, num, str } from './common.ts';
 

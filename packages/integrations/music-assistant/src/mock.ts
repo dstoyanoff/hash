@@ -1,4 +1,4 @@
-import { MockIntegration, mockLibrary, type EntityInput } from '@hash/core';
+import { MockIntegration, mockLibrary, type EntityInput } from '@hashsome/core';
 import { toMediaPlayer, type MaPlayer } from './mapper.ts';
 
 export interface MusicAssistantMockOptions {

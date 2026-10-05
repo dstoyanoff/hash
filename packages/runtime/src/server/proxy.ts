@@ -12,7 +12,7 @@ import {
   type ServerMessage,
   type Unsubscribe,
   UnknownEntityError,
-} from '@hash/core';
+} from '@hashsome/core';
 
 /** The subset of a `ws` WebSocket the proxy needs. */
 export interface ProxySocket {

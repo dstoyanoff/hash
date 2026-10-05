@@ -1,4 +1,4 @@
-import type { Availability } from '@hash/core';
+import type { Availability } from '@hashsome/core';
 import type { HassEntity } from 'home-assistant-js-websocket';
 
 /** The domain of a Home Assistant entity id: `light` for `light.kitchen`. */

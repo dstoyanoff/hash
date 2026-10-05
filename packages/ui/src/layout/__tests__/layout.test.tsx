@@ -1,9 +1,9 @@
-import { LocalClient } from '@hash/core';
+import { LocalClient } from '@hashsome/core';
 import { render, screen } from '@testing-library/react';
 import { expect, test } from 'vitest';
 import { NavDock } from '../../entities/nav-dock.tsx';
 import { NavRail } from '../../entities/nav-rail.tsx';
-import { HashProvider } from '../../provider.tsx';
+import { HashsomeProvider } from '../../provider.tsx';
 import { renderWithMock } from '../../test-utils.tsx';
 import { Page } from '../page.tsx';
 import { Grid } from '../grid.tsx';
@@ -57,9 +57,9 @@ test('Page pads by the density, and further for a NavRail or NavDock while it is
 test('Page uses the compact density’s spacing', () => {
   const client = new LocalClient([]);
   render(
-    <HashProvider client={client} density="compact">
+    <HashsomeProvider client={client} density="compact">
       <Page>content</Page>
-    </HashProvider>,
+    </HashsomeProvider>,
   );
 
   expect(getComputedStyle(pageOf()).padding).toBe('8px');

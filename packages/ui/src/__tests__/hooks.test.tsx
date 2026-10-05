@@ -1,8 +1,8 @@
-import { LocalClient, mockLight, MockIntegration } from '@hash/core';
+import { LocalClient, mockLight, MockIntegration } from '@hashsome/core';
 import { act, render, screen } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
 import { useConnectionStatus, useEntity } from '../hooks.ts';
-import { HashProvider } from '../provider.tsx';
+import { HashsomeProvider } from '../provider.tsx';
 
 function Probe() {
   const entity = useEntity('ha:lamp');
@@ -16,9 +16,9 @@ test('a mounted hook subscribes once and stays subscribed across re-renders and 
   const subscribe = vi.spyOn(client, 'subscribe');
   const onLink = vi.spyOn(client, 'onLinkChange');
   render(
-    <HashProvider client={client}>
+    <HashsomeProvider client={client}>
       <Probe />
-    </HashProvider>,
+    </HashsomeProvider>,
   );
 
   expect(screen.getByText('Lamp')).toBeTruthy();

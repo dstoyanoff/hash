@@ -71,7 +71,7 @@ test('each component section lists its props with their descriptions', () => {
     ),
   ).toBeTruthy();
 
-  expect(screen.getByText(/Props · HashProvider/)).toBeTruthy();
+  expect(screen.getByText(/Props · HashsomeProvider/)).toBeTruthy();
 });
 
 test('the active media player demo shows artwork, the unavailable one shows the default glyph', () => {

@@ -1,13 +1,13 @@
-# hash
+# Hashsome
 
-[![CI](https://github.com/dstoyanoff/hash/actions/workflows/ci.yml/badge.svg)](https://github.com/dstoyanoff/hash/actions/workflows/ci.yml)
+[![CI](https://github.com/dstoyanoff/hashsome/actions/workflows/ci.yml/badge.svg)](https://github.com/dstoyanoff/hashsome/actions/workflows/ci.yml)
 
 **Smart-home dashboards you build like software.** A real design system, real React components and
 a small server, in place of a drag-and-drop card editor. You write the dashboard for a wall tablet,
-a phone or a small kitchen display as ordinary code, and hash keeps it live, themed and easy to
+a phone or a small kitchen display as ordinary code, and Hashsome keeps it live, themed and easy to
 deploy.
 
-> **Alpha.** hash is early software: not every device type is built yet, and what is built has
+> **Alpha.** Hashsome is early software: not every device type is built yet, and what is built has
 > only been tried against one real home. See [Status](#status-alpha) for exactly what works.
 
 <table>
@@ -26,14 +26,14 @@ deploy.
 - **Components that already know your devices.** Give a light tile an entity id and you get on/off,
   dimming, colour and colour temperature, a hold-to-open drawer with history and power use, and
   pending/error feedback. The same goes for climate, sensors, scenes, media players and more. See
-  every one in every state in the **[component gallery](https://dstoyanoff.github.io/hash/)**.
+  every one in every state in the **[component gallery](https://dstoyanoff.github.io/hashsome/)**.
 - **A full media experience.** A compact player bar, an upright card, and a full-page player with
   your library: playlists, albums, artists and search, with artwork, shuffle and seeking.
 - **Real history, not placeholders.** Sensor charts, energy use per day, week and month, and
   battery levels come from your backend's own records when it keeps them.
 - **Light, dark or follow the system**, plus a compact density for small square displays. Change
   any colour, radius or spacing with one overrides object.
-- **Your tokens stay on the server.** The browser talks to hash's server, which talks to your home.
+- **Your tokens stay on the server.** The browser talks to Hashsome's server, which talks to your home.
   Nothing secret reaches a tablet.
 - **Not tied to one backend.** Home Assistant and Music Assistant work today, side by side.
   See [Works with any backend](#works-with-any-backend).
@@ -55,8 +55,8 @@ deploy.
 ## Try it in two minutes
 
 ```bash
-git clone https://github.com/dstoyanoff/hash.git
-cd hash
+git clone https://github.com/dstoyanoff/hashsome.git
+cd hashsome
 corepack enable        # gets you the right pnpm
 pnpm install
 pnpm dev
@@ -65,7 +65,7 @@ pnpm dev
 Open **http://localhost:3000/home**. It runs on mock data, so there is something to click without a
 smart home connected. The other examples are at `/second-floor`, `/kitchen` and `/hello`.
 
-For the component gallery on its own: `pnpm --filter @hash/ui docs`.
+For the component gallery on its own: `pnpm --filter @hashsome/ui docs`.
 
 ### Connect your home
 
@@ -85,10 +85,10 @@ Music Assistant is talked to directly over its own API, not through Home Assista
 ## Build a dashboard
 
 A dashboard is a folder of React under your project's `dashboards/`, and a route in
-`app/routes.ts` makes it reachable at `/<id>`. You compose the page from `@hash/ui`:
+`app/routes.ts` makes it reachable at `/<id>`. You compose the page from `@hashsome/ui`:
 
 ```tsx
-import { ClimateTile, Grid, LightTile, RoomHeader, SensorReadout } from '@hash/ui';
+import { ClimateTile, Grid, LightTile, RoomHeader, SensorReadout } from '@hashsome/ui';
 
 export const meta = () => [{ title: 'Living room' }];
 
@@ -138,10 +138,10 @@ into a small, generic model (a light, a climate device, a media player, a sensor
 the UI's commands back into that backend's own. Your project lists the ones it uses:
 
 ```ts
-// hash.config.ts
-import { HomeAssistantIntegration } from '@hash/integration.home-assistant';
-import { MusicAssistantIntegration } from '@hash/integration.music-assistant';
-import { defineConfig } from '@hash/runtime';
+// hashsome.config.ts
+import { HomeAssistantIntegration } from '@hashsome/integration.home-assistant';
+import { MusicAssistantIntegration } from '@hashsome/integration.music-assistant';
+import { defineConfig } from '@hashsome/runtime';
 
 export default defineConfig({
   integrations: [
@@ -164,7 +164,7 @@ Build once on your own machine. Nothing is compiled, and no source is copied, wh
 pnpm package helm --platform linux/amd64     # or: compose, plain, image
 ```
 
-`hash-dash package` builds your dashboards, bundles the server with your config and integrations
+`hashsome package` builds your dashboards, bundles the server with your config and integrations
 into one file, and writes what you need into `./release`:
 
 | Target    | What you get                                               | Needs                  |
@@ -174,7 +174,7 @@ into one file, and writes what you need into `./release`:
 | `helm`    | a Helm chart for k3s/Kubernetes and the container image    | k3s/Kubernetes + helm  |
 | `image`   | only the container image, for manifests you write yourself | a container runtime    |
 
-Set a default in `hash.config.ts` so `pnpm package` takes no flags:
+Set a default in `hashsome.config.ts` so `pnpm package` takes no flags:
 
 ```ts
 export default defineConfig({
@@ -219,7 +219,7 @@ reads as `CLAUDE.md`.
 
 ## Status: alpha
 
-hash is **alpha**. It runs a real home today, but expect rough edges, and expect things to change.
+Hashsome is **alpha**. It runs a real home today, but expect rough edges, and expect things to change.
 
 - **Not every device type is implemented.** The table below is the whole list. Anything else shows
   up as a generic, read-only value, or not at all.
@@ -228,7 +228,7 @@ hash is **alpha**. It runs a real home today, but expect rough edges, and expect
   Music Assistant. It has not been tried across many devices, brands or setups, so integrations will
   meet states nobody has hit yet.
 - **Interfaces can change.** Component props, the integration contract and the packaging output
-  may change between versions, and the packages are not on npm yet. Today you use hash by cloning
+  may change between versions, and the packages are not on npm yet. Today you use Hashsome by cloning
   the repository and adding dashboards to a project like `example/`.
 
 ### What works today
@@ -249,7 +249,7 @@ controls, fans with speeds, `select` and `number` entities, and weather forecast
 yet. They are modelled generically where the backend allows it, and have no dedicated component.
 New device types are welcome: see [ARCHITECTURE.md](ARCHITECTURE.md#adding-things).
 
-Milestones and open work are tracked as [GitHub issues](https://github.com/dstoyanoff/hash/issues).
+Milestones and open work are tracked as [GitHub issues](https://github.com/dstoyanoff/hashsome/issues).
 
 ## License
 

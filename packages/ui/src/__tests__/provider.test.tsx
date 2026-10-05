@@ -1,9 +1,9 @@
-import { LocalClient, MockIntegration } from '@hash/core';
+import { LocalClient, MockIntegration } from '@hashsome/core';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useTheme } from '@emotion/react';
 import { Box, Flex } from 'e-prim';
 import { afterEach, expect, test } from 'vitest';
-import { HashProvider, useThemeToggle, type ThemeMode } from '../provider.tsx';
+import { HashsomeProvider, useThemeToggle, type ThemeMode } from '../provider.tsx';
 
 afterEach(cleanup);
 
@@ -14,9 +14,9 @@ function Probe() {
 function renderWithTheme(theme?: ThemeMode) {
   const client = new LocalClient([new MockIntegration({})]);
   render(
-    <HashProvider client={client} {...(theme ? { theme } : {})}>
+    <HashsomeProvider client={client} {...(theme ? { theme } : {})}>
       <Probe />
-    </HashProvider>,
+    </HashsomeProvider>,
   );
 
   return getComputedStyle(screen.getByTestId('probe')).backgroundColor;
@@ -53,9 +53,9 @@ function ToggleProbe() {
 test('useThemeToggle() flips the resolved theme, overriding the configured one', () => {
   const client = new LocalClient([new MockIntegration({})]);
   render(
-    <HashProvider client={client} theme="dark">
+    <HashsomeProvider client={client} theme="dark">
       <ToggleProbe />
-    </HashProvider>,
+    </HashsomeProvider>,
   );
 
   expect(getComputedStyle(screen.getByTestId('probe')).backgroundColor).toBe('rgb(11, 10, 13)');
@@ -67,9 +67,9 @@ test('useThemeToggle() flips the resolved theme, overriding the configured one',
 function mount(props: { theme?: ThemeMode; density?: 'comfortable' | 'compact' } = {}) {
   const client = new LocalClient([new MockIntegration({})]);
   return render(
-    <HashProvider client={client} {...props}>
+    <HashsomeProvider client={client} {...props}>
       <Probe />
-    </HashProvider>,
+    </HashsomeProvider>,
   );
 }
 
@@ -83,13 +83,13 @@ function DensityProbe() {
   return <output data-testid="density">{JSON.stringify(density)}</output>;
 }
 
-test('density is a HashProvider setting: compact tightens the spacing tokens in the theme', () => {
+test('density is a HashsomeProvider setting: compact tightens the spacing tokens in the theme', () => {
   const read = (density?: 'comfortable' | 'compact') => {
     const client = new LocalClient([new MockIntegration({})]);
     render(
-      <HashProvider client={client} {...(density ? { density } : {})}>
+      <HashsomeProvider client={client} {...(density ? { density } : {})}>
         <DensityProbe />
-      </HashProvider>,
+      </HashsomeProvider>,
     );
 
     const tokens = JSON.parse(screen.getByTestId('density').textContent ?? '{}') as {
@@ -122,12 +122,12 @@ function ThemeProbe() {
   );
 }
 
-const themeOf = (props: Partial<React.ComponentProps<typeof HashProvider>>) => {
+const themeOf = (props: Partial<React.ComponentProps<typeof HashsomeProvider>>) => {
   const client = new LocalClient([new MockIntegration({})]);
   render(
-    <HashProvider client={client} {...props}>
+    <HashsomeProvider client={client} {...props}>
       <ThemeProbe />
-    </HashProvider>,
+    </HashsomeProvider>,
   );
 
   const value = JSON.parse(screen.getByTestId('theme').textContent ?? '{}') as Record<
@@ -174,12 +174,12 @@ function SpacingProbe() {
   );
 }
 
-const spacingOf = (props: Partial<React.ComponentProps<typeof HashProvider>>) => {
+const spacingOf = (props: Partial<React.ComponentProps<typeof HashsomeProvider>>) => {
   const client = new LocalClient([new MockIntegration({})]);
   render(
-    <HashProvider client={client} {...props}>
+    <HashsomeProvider client={client} {...props}>
       <SpacingProbe />
-    </HashProvider>,
+    </HashsomeProvider>,
   );
 
   const result = {

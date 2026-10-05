@@ -1,4 +1,4 @@
-import { mockSensor, type Entity } from '@hash/core';
+import { mockSensor, type Entity } from '@hashsome/core';
 import { expect, test } from 'vitest';
 import { entityStatus } from '../status.ts';
 

@@ -23,6 +23,6 @@ export interface EntityBase<K extends string = string> {
   lastUpdated?: string;
 
   /** The backend's own payload, untouched — an escape hatch for project code, never read by
-   * `@hash/ui`. It reaches the browser, so it must hold no credentials. */
+   * `@hashsome/ui`. It reaches the browser, so it must hold no credentials. */
   raw?: Record<string, unknown>;
 }

@@ -6,7 +6,7 @@ import {
   type EntityKind,
   type EntityRef,
   type KindEntity,
-} from '@hash/core';
+} from '@hashsome/core';
 import { entityStatus, type EntityStatus } from './status.ts';
 
 /**

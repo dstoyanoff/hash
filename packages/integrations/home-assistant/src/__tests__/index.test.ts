@@ -1,4 +1,4 @@
-import { UnknownEntityError, type Entity } from '@hash/core';
+import { UnknownEntityError, type Entity } from '@hashsome/core';
 import type { HassEntities, HassEntity } from 'home-assistant-js-websocket';
 import { describe, expect, test, vi } from 'vitest';
 import { HomeAssistantIntegration, type HaClient } from '../index.ts';
@@ -249,7 +249,7 @@ describe('HomeAssistantIntegration browse', () => {
     expect(open).toHaveProperty('artworkUrl', 'https://cdn.example/a.jpg');
     expect(closed).toHaveProperty(
       'artworkUrl',
-      `/_hash/asset/ha?path=${encodeURIComponent('/api/media_player_proxy/x?token=secret')}`,
+      `/_hashsome/asset/ha?path=${encodeURIComponent('/api/media_player_proxy/x?token=secret')}`,
     );
   });
 

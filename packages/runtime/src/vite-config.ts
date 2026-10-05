@@ -18,7 +18,7 @@ export default defineConfig(() => ({
   preview: { host: '127.0.0.1' },
   resolve: {
     // One copy of these across the runtime app and the instance's dashboards.
-    dedupe: ['react', 'react-dom', 'react-router', '@hash/core', '@hash/ui'],
+    dedupe: ['react', 'react-dom', 'react-router', '@hashsome/core', '@hashsome/ui'],
   },
   optimizeDeps: {
     // Vite's dependency scanner only follows *static* imports reachable from the HTML entry —
@@ -29,7 +29,7 @@ export default defineConfig(() => ({
     // — the page's own module graph update races a React Router navigation already in flight, and
     // the view can appear stuck (URL changed, nothing rendered) until the resulting full reload,
     // sometimes several seconds later. Pointing the scanner at every route module upfront (plus
-    // `app/root.tsx`, which pulls in `HashProvider`) lets it discover all of this at
+    // `app/root.tsx`, which pulls in `HashsomeProvider`) lets it discover all of this at
     // server startup instead.
     entries: ['app/root.tsx', 'dashboards/**/*.{ts,tsx}'],
   },

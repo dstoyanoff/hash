@@ -3,11 +3,11 @@ import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 
-/** The runtime's own entry for a packaged server, by path: it does not depend on how the project resolves `@hash/runtime`. */
+/** The runtime's own entry for a packaged server, by path: it does not depend on how the project resolves `@hashsome/runtime`. */
 const SERVE = fileURLToPath(new URL('../serve.ts', import.meta.url));
 
 /**
- * Bundles a project's server into one file: the runtime, the project's `hash.config.ts` and every
+ * Bundles a project's server into one file: the runtime, the project's `hashsome.config.ts` and every
  * integration it imports, with their dependencies, so the file runs with just `node` and no
  * `node_modules`. Secrets are not in it: the config reads them from the environment when it runs.
  * Uses Vite's own server build, so there is no bundler of its own to install.
@@ -15,12 +15,12 @@ const SERVE = fileURLToPath(new URL('../serve.ts', import.meta.url));
 export async function bundleServer({ root, outFile }: { root: string; outFile: string }) {
   const outDir = dirname(outFile);
   // In the project, next to its config.
-  const entry = join(root, '.hash-server-entry.ts');
+  const entry = join(root, '.hashsome-server-entry.ts');
   mkdirSync(outDir, { recursive: true });
   writeFileSync(
     entry,
     [
-      `import config from ${JSON.stringify(join(root, 'hash.config.ts'))};`,
+      `import config from ${JSON.stringify(join(root, 'hashsome.config.ts'))};`,
       `import { serve } from ${JSON.stringify(SERVE)};`,
       `serve(config, import.meta.url);`,
     ].join('\n'),
@@ -45,7 +45,7 @@ export async function bundleServer({ root, outFile }: { root: string; outFile: s
             entryFileNames: basename(outFile),
             // Dependencies that are still CommonJS (express, ws) call `require`, which an ES module lacks.
             banner:
-              "import { createRequire as __hashCreateRequire } from 'node:module';\nconst require = __hashCreateRequire(import.meta.url);",
+              "import { createRequire as __hashsomeCreateRequire } from 'node:module';\nconst require = __hashsomeCreateRequire(import.meta.url);",
           },
         },
       },

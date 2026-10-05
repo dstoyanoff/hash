@@ -16,7 +16,7 @@ import {
   type HistoryQuery,
   type HistoryResult,
   type Unsubscribe,
-} from '@hash/core';
+} from '@hashsome/core';
 import { decodeItemId, toBrowseItem, type HaBrowseMedia } from './browse.ts';
 import {
   DEFAULT_BUCKET,

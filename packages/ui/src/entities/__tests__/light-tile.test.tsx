@@ -1,4 +1,4 @@
-import { mockLight } from '@hash/core';
+import { mockLight } from '@hashsome/core';
 import { act, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { renderWithMock } from '../../test-utils.tsx';

@@ -5,7 +5,7 @@ import {
   mockMediaPlayer,
   mockSwitch,
   type Entity,
-} from '@hash/core';
+} from '@hashsome/core';
 import { describe, expect, test } from 'vitest';
 import { toServiceRequest } from '../commands.ts';
 

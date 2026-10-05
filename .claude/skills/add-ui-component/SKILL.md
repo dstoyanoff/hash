@@ -3,10 +3,10 @@ name: add-ui-component
 description: The stricter workflow for adding or changing a component in packages/ui (the design system), as opposed to building a dashboard. Use only when a dashboard genuinely needs a primitive that doesn't exist yet — confirm with the user first.
 ---
 
-# Add a `@hash/ui` component
+# Add a `@hashsome/ui` component
 
 This is the deliberate exception to `dashboard-rules`'s "never edit `packages/*`" rule. Use it only
-when: (a) you're building a dashboard and hit a real gap in `@hash/ui` — not a preference for
+when: (a) you're building a dashboard and hit a real gap in `@hashsome/ui` — not a preference for
 different styling — and (b) you've told the user this needs a core change and they've agreed to it
 as a separate change from the dashboard itself. Don't silently fold a UI change into a "create a
 dashboard" task.
@@ -46,7 +46,7 @@ isn't documented clearly. Only proceed if it's genuinely missing.
    and CI fails if it doesn't match; if the catalog output looks wrong, fix the source comment,
    not the generated file.
 7. **Verify**: `pnpm lint && pnpm format:check && pnpm typecheck && pnpm test`, plus look at it in
-   `pnpm --filter @hash/ui docs` (the gallery is `packages/ui`'s own standalone dev command, not
+   `pnpm --filter @hashsome/ui docs` (the gallery is `packages/ui`'s own standalone dev command, not
    part of `packages/runtime` or any project's own routes).
 8. **Then**, and only then, use the new component from the dashboard that needed it.
 

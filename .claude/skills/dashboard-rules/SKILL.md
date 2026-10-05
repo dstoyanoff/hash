@@ -12,20 +12,20 @@ instead of working around it — see "When a rule is in the way" at the end.
 
 - A dashboard lives entirely under `example/dashboards/<id>/`. You may create and edit files
   there freely. It's a plain folder, not its own package — no `package.json`/`tsconfig.json`/
-  `vitest.config.ts` of its own; it's built as part of the one `@hash/example` project.
+  `vitest.config.ts` of its own; it's built as part of the one `@hashsome/example` project.
   **Don't write tests for it** — this repo's test suite covers `packages/*` only; verify a
   dashboard with `verify-dashboard` instead (typecheck + an actual look at it running).
 - **Never edit `packages/core`, `packages/ui`, or `packages/runtime`** while creating or changing a
   dashboard, even for a one-line fix, even if it seems trivial. If the design system is missing
   something, that's a separate, explicit task — see `add-ui-component`.
 - A dashboard's code (`example/dashboards/<id>/**`) is ordinary app code and may import
-  whatever it needs, including the project's own `example/shared/` files. Build with `@hash/ui`
+  whatever it needs, including the project's own `example/shared/` files. Build with `@hashsome/ui`
   components and hooks; prefer them to raw `fetch`/`WebSocket`, which would bypass the runtime's
   entity handling. Don't import from `packages/` by relative path.
 - `pnpm format` (write mode) reformats the _whole repo_, not just your dashboard — if another
   file happened to already be out of sync with oxfmt, running it can sweep in an unrelated
   change. After running it, check `git status`/`git diff` and make sure everything outside
-  `example/dashboards/<id>/` (and the expected `hash.config.ts`/registration changes) is
+  `example/dashboards/<id>/` (and the expected `hashsome.config.ts`/registration changes) is
   unchanged before committing.
 - Read `.claude/skills/ui-catalog/CATALOG.md` before writing dashboard code. It lists every
   component, its props and its doc comment, generated straight from `packages/ui/src` so it can't
@@ -52,11 +52,11 @@ example/dashboards/<id>/
 
 ## Layout and chrome
 
-A dashboard owns its whole layout. There is no runtime-rendered chrome: a page builds its own structure from `@hash/ui` components:
+A dashboard owns its whole layout. There is no runtime-rendered chrome: a page builds its own structure from `@hashsome/ui` components:
 
-- There is no page wrapper to write. The theme, spacing and density are global (`HashProvider`;
+- There is no page wrapper to write. The theme, spacing and density are global (`HashsomeProvider`;
   spacing follows density, so `gap={3}` is always one space on any display),
-  and the padded, scrolling page every dashboard renders into is `@hash/ui`'s `Page`, rendered by
+  and the padded, scrolling page every dashboard renders into is `@hashsome/ui`'s `Page`, rendered by
   the app's root layout (`example/app/root.tsx`) — the project's own code, free to swap for
   its own wrapper. A page just returns its rooms (see `dashboards/kitchen`).
 - The **top bar** and the **nav** (`NavRail`, which is fixed to the left, or `NavDock`) are ordinary
@@ -84,7 +84,7 @@ A dashboard owns its whole layout. There is no runtime-rendered chrome: a page b
   `MediaPlayerBar` talked to directly via Music Assistant instead of through Home Assistant — the
   id is the player's own `player_id` verbatim, not a `domain.name` pair. Use `entity-discovery` to
   find real ids instead of guessing them.
-- Every `@hash/ui` entity component already handles loading / not-found / unavailable / unknown
+- Every `@hashsome/ui` entity component already handles loading / not-found / unavailable / unknown
   states consistently (dims, disables, shows why). **Don't build your own state handling** —
   don't check `state === 'unavailable'` yourself or hide a tile when its entity is missing; pass
   the ref to the component and let it show the real state. A tile for a device that doesn't exist
@@ -95,7 +95,7 @@ A dashboard owns its whole layout. There is no runtime-rendered chrome: a page b
 Read `example/dashboards/home/pages/home.tsx` and
 `example/dashboards/second-floor/pages/home.tsx` as the reference layout (two separate
 dashboards, each a single page — see "Layout and chrome" above), and
-run `pnpm --filter @hash/ui docs` to see
+run `pnpm --filter @hashsome/ui docs` to see
 every component live, documented with its supported states. Concretely:
 
 - Group by room: a `<RoomHeader title="..." icon={...} readouts={...} />` followed by that room's
@@ -139,20 +139,20 @@ tabler.io/icons.
 
 ## Style
 
-- No custom CSS beyond what `@hash/ui` components already provide. If a layout genuinely can't be
+- No custom CSS beyond what `@hashsome/ui` components already provide. If a layout genuinely can't be
   built from `Grid` / `RoomHeader` / `Tile` plus the entity components, that
   points at a missing primitive — raise it (see `add-ui-component`), don't reach for inline styles
   as a workaround.
 - To change how everything looks (a color, a radius, a type size, the spacing), set `OVERRIDES` in
-  `example/app/root.tsx` (`HashProvider`'s `overrides`, partial, per light/dark for colors) —
+  `example/app/root.tsx` (`HashsomeProvider`'s `overrides`, partial, per light/dark for colors) —
   never edit `packages/ui` for that.
-- `e-prim` (`Box`, `Flex`, `Typography`) is part of the project's own install, like `@hash/ui`: use
-  it for structural layout the `@hash/ui` primitives don't cover, with its typed props or the `css`
+- `e-prim` (`Box`, `Flex`, `Typography`) is part of the project's own install, like `@hashsome/ui`: use
+  it for structural layout the `@hashsome/ui` primitives don't cover, with its typed props or the `css`
   prop (add `/** @jsxImportSource @emotion/react */` to the file), never a raw `style` object.
 - A dashboard folder has no `package.json` of its own — it never adds or changes a dependency.
   `example/package.json` (exact versions, no `^`/`~`, per the root `.npmrc`) covers the whole
   project; if a dashboard genuinely needs a new dependency, that's itself a sign the work belongs
-  in `@hash/ui` instead (see `add-ui-component`), not a reason to edit that `package.json`.
+  in `@hashsome/ui` instead (see `add-ui-component`), not a reason to edit that `package.json`.
 
 ## When a rule is in the way
 

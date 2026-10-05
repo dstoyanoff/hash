@@ -1,4 +1,4 @@
-import { mockAction, mockSwitch } from '@hash/core';
+import { mockAction, mockSwitch } from '@hashsome/core';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
 import { renderWithMock } from '../../test-utils.tsx';

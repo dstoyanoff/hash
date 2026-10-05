@@ -3,7 +3,7 @@ import type { ConnectionStatus } from './integration.ts';
 import type { Entity } from './model/index.ts';
 
 /** Where the runtime serves files an integration's entities point at (artwork, pictures). */
-export const ASSET_PATH = '/_hash/asset';
+export const ASSET_PATH = '/_hashsome/asset';
 
 /** The address a browser can load a backend's own file from: the runtime fetches it with the
  * integration's credentials, so the backend need not be reachable or trusted by the browser.

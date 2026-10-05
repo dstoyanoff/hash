@@ -1,4 +1,4 @@
-import type { EntityRef } from '@hash/core';
+import type { EntityRef } from '@hashsome/core';
 import { useEffect, useRef, useState } from 'react';
 import { fallbackName, type EntityHandle } from '../entity-handle.ts';
 import { useCommand, useEntity } from '../hooks.ts';

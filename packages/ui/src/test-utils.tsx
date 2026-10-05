@@ -1,9 +1,9 @@
-import { LocalClient, MockIntegration, type EntityInput, type MockLibrary } from '@hash/core';
+import { LocalClient, MockIntegration, type EntityInput, type MockLibrary } from '@hashsome/core';
 import { cleanup, render, type RenderResult } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { MemoryRouter } from 'react-router';
 import { afterEach } from 'vitest';
-import { HashProvider } from './provider.tsx';
+import { HashsomeProvider } from './provider.tsx';
 
 afterEach(cleanup);
 
@@ -20,9 +20,9 @@ export function renderWithMock(
 
   const client = new LocalClient([ha]);
   const tree = (
-    <HashProvider client={client}>
+    <HashsomeProvider client={client}>
       {options.router ? <MemoryRouter>{ui}</MemoryRouter> : ui}
-    </HashProvider>
+    </HashsomeProvider>
   );
 
   return { ha, client, ...render(tree) };

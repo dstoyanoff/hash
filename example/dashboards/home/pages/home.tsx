@@ -7,7 +7,7 @@ import {
   RoomHeader,
   SceneButton,
   SensorReadout,
-} from '@hash/ui';
+} from '@hashsome/ui';
 import { demoHistory } from '../demo-history.ts';
 
 const livingRoomTemperature = demoHistory(19, 2, 1.5);
@@ -18,7 +18,7 @@ export default function Home() {
   return (
     <>
       {/* Talked to directly via Music Assistant, not through Home Assistant — same component,
-          same hooks, no special-casing needed; see @hash/core's MusicAssistantIntegration. */}
+          same hooks, no special-casing needed; see @hashsome/core's MusicAssistantIntegration. */}
       <MediaPlayerBar entity="ma:living_room" />
 
       <RoomHeader

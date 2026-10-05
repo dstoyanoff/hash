@@ -21,7 +21,7 @@ export * from './sensor.ts';
 export * from './switch.ts';
 export * from './weather.ts';
 
-/** Every entity `@hash/core` knows how to model. */
+/** Every entity `@hashsome/core` knows how to model. */
 export type Entity =
   | MediaPlayerEntity
   | LightEntity

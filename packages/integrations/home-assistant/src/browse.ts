@@ -1,4 +1,4 @@
-import type { BrowseItem, BrowseKind } from '@hash/core';
+import type { BrowseItem, BrowseKind } from '@hashsome/core';
 import { fileUrl } from './mappers/common.ts';
 
 /** One entry of Home Assistant's `BrowseMedia` tree, as `media_player/browse_media` returns it. */

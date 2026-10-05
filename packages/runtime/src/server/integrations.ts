@@ -1,4 +1,4 @@
-import type { Integration } from '@hash/core';
+import type { Integration } from '@hashsome/core';
 
 export interface StartOptions {
   log?: (message: string) => void;

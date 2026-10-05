@@ -1,4 +1,4 @@
-import type { BrowseItem, EntityRef } from '@hash/core';
+import type { BrowseItem, EntityRef } from '@hashsome/core';
 import { useCallback, useEffect, useState } from 'react';
 import { useClient } from './provider.tsx';
 

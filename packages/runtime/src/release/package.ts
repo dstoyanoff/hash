@@ -96,7 +96,7 @@ export async function packageRelease(
 
   const client = join(root, 'build', 'client');
   if (!existsSync(join(client, 'index.html'))) {
-    throw new Error('No build found. Run `hash-dash build` first.');
+    throw new Error('No build found. Run `hashsome build` first.');
   }
 
   const pkg = existsSync(join(root, 'package.json'))
@@ -105,7 +105,7 @@ export async function packageRelease(
 
   const envFile = join(root, '.env.example');
   const info: ReleaseInfo = {
-    name: safeName(options.name ?? pkg.name ?? 'hash'),
+    name: safeName(options.name ?? pkg.name ?? 'hashsome'),
     tag: options.tag ?? timestamp(),
     platform: options.platform ?? hostPlatform(),
     port: options.port,
@@ -120,7 +120,7 @@ export async function packageRelease(
   // otherwise it is just the folder the image is built from.
   const keepPlain = targets.includes('plain');
   mkdirSync(out, { recursive: true });
-  const plain = keepPlain ? join(out, 'plain') : mkdtempSync(join(tmpdir(), 'hash-release-'));
+  const plain = keepPlain ? join(out, 'plain') : mkdtempSync(join(tmpdir(), 'hashsome-release-'));
   mkdirSync(plain, { recursive: true });
   cpSync(client, join(plain, 'client'), { recursive: true });
   await bundleServer({ root, outFile: join(plain, 'server.mjs') });

@@ -1,4 +1,4 @@
-import type { HistoryBucket, HistoryRange } from '@hash/core';
+import type { HistoryBucket, HistoryRange } from '@hashsome/core';
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;

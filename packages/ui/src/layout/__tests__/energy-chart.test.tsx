@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { LocalClient, MockIntegration, mockSensor, type HistoryQuery } from '@hash/core';
+import { LocalClient, MockIntegration, mockSensor, type HistoryQuery } from '@hashsome/core';
 import { act, render, screen } from '@testing-library/react';
 import { expect, test } from 'vitest';
-import { HashProvider } from '../../provider.tsx';
+import { HashsomeProvider } from '../../provider.tsx';
 import { renderWithMock } from '../../test-utils.tsx';
 import { EnergyChart } from '../energy-chart.tsx';
 
@@ -65,9 +65,9 @@ test('the usage tiles and the chart come from the backend history when none is p
 
   const ha = new WithHistory({ entities });
   render(
-    <HashProvider client={new LocalClient([ha])}>
+    <HashsomeProvider client={new LocalClient([ha])}>
       <EnergyChart power="ha:lamp_power" energy="ha:lamp_energy" />
-    </HashProvider>,
+    </HashsomeProvider>,
   );
 
   expect((await screen.findAllByText('250 Wh')).length).toBeGreaterThan(0);

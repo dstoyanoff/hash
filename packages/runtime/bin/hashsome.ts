@@ -15,7 +15,7 @@ const commands = {
 const command = process.argv[2] as keyof typeof commands | undefined;
 const run = command && commands[command];
 if (!run) {
-  console.error(`Usage: hash-dash <${Object.keys(commands).join('|')}>`);
+  console.error(`Usage: hashsome <${Object.keys(commands).join('|')}>`);
   process.exit(1);
 }
 

@@ -7,11 +7,11 @@ copied: every file here ends in `.template` (or, for this README, is ignored by 
 pnpm/tsc/oxlint never try to treat it as one.
 
 This folder becomes a plain subfolder under `example/dashboards/<id>/` — a dashboard is
-content inside the one `@hash/example` project, not its own package (no `package.json`,
+content inside the one `@hashsome/example` project, not its own package (no `package.json`,
 `tsconfig.json` or `vitest.config.ts` of its own).
 
 Styling: a dashboard can use `e-prim`'s `Box`/`Flex`/`Typography` directly — it's a dependency of the
-project (`example/package.json`), not just of `@hash/ui`.
+project (`example/package.json`), not just of `@hashsome/ui`.
 
 Placeholders (replaced by the skill, not by hand):
 

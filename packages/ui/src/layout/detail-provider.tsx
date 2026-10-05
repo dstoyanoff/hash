@@ -21,7 +21,7 @@ interface DetailContextValue {
 
 const DetailContext = createContext<DetailContextValue | null>(null);
 
-/** Backs the single shared `EntityDrawer`; instantiated once by `HashProvider`. */
+/** Backs the single shared `EntityDrawer`; instantiated once by `HashsomeProvider`. */
 export function DetailProvider({ children }: { children: ReactNode }) {
   const [detail, setDetail] = useState<DetailState | null>(null);
 

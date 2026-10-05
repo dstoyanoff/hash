@@ -1,5 +1,5 @@
 /** @jsxImportSource @emotion/react */
-import type { BrowseItem, BrowseKind, EntityRef } from '@hash/core';
+import type { BrowseItem, BrowseKind, EntityRef } from '@hashsome/core';
 import { Box, Flex, Typography } from 'e-prim';
 import type { IconName } from '../icon-data.ts';
 import { Icon } from '../icon.tsx';

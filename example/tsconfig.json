@@ -1,4 +1,4 @@
 {
   "extends": "../tsconfig.base.json",
-  "include": ["app", "dashboards", "hash.config.ts", "vite.config.ts", "react-router.config.ts"]
+  "include": ["app", "dashboards", "hashsome.config.ts", "vite.config.ts", "react-router.config.ts"]
 }

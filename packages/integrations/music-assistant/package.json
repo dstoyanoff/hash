@@ -1,5 +1,5 @@
 {
-  "name": "@hash/integration.music-assistant",
+  "name": "@hashsome/integration.music-assistant",
   "version": "0.0.0",
   "private": true,
   "description": "Music Assistant integration: direct WebSocket client, not via Home Assistant",
@@ -9,7 +9,7 @@
     "players": "node scripts/print-players.ts"
   },
   "dependencies": {
-    "@hash/core": "workspace:*"
+    "@hashsome/core": "workspace:*"
   },
   "exports": {
     ".": "./src/index.ts",

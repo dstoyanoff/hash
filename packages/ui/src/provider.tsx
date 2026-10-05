@@ -1,4 +1,4 @@
-import { RemoteClient, type Client, type RemoteClientOptions } from '@hash/core';
+import { RemoteClient, type Client, type RemoteClientOptions } from '@hashsome/core';
 import { Global, ThemeProvider as EmotionThemeProvider, type Theme } from '@emotion/react';
 import { ThemeProvider } from 'e-prim';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -15,11 +15,11 @@ import {
   withFontFamily,
 } from './theme/index.ts';
 
-const HashContext = createContext<Client | null>(null);
+const HashsomeContext = createContext<Client | null>(null);
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
-export interface HashProviderProps {
+export interface HashsomeProviderProps {
   /** Runtime WebSocket URL. Defaults to `/ws` on the current origin. */
   url?: string;
 
@@ -46,7 +46,7 @@ export interface HashProviderProps {
 }
 
 /** Loads a Google Fonts family at runtime via a single `<link>` this hook owns and reuses (keyed
- * by a `data-hash-font` marker, not the family, so switching fonts updates it in place instead of
+ * by a `data-hashsome-font` marker, not the family, so switching fonts updates it in place instead of
  * accumulating stale `<link>` tags). A no-op outside the browser (SSR has no `document`). */
 function useGoogleFont(family: string) {
   useEffect(() => {
@@ -54,11 +54,11 @@ function useGoogleFont(family: string) {
       return;
     }
 
-    let link = document.querySelector<HTMLLinkElement>('link[data-hash-font]');
+    let link = document.querySelector<HTMLLinkElement>('link[data-hashsome-font]');
     if (!link) {
       link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.dataset.hashFont = '';
+      link.dataset.hashsomeFont = '';
       document.head.appendChild(link);
     }
 
@@ -94,11 +94,11 @@ export interface ThemeModeState {
 const ThemeModeContext = createContext<ThemeModeState | null>(null);
 
 /** Reads the live light/dark state and a way to flip it — e.g. a dev-only toggle in `NavRail`.
- * Must be rendered inside `<HashProvider>`. */
+ * Must be rendered inside `<HashsomeProvider>`. */
 export function useThemeToggle(): ThemeModeState {
   const value = useContext(ThemeModeContext);
   if (!value) {
-    throw new Error('useThemeToggle() must be used inside <HashProvider>');
+    throw new Error('useThemeToggle() must be used inside <HashsomeProvider>');
   }
 
   return value;
@@ -131,7 +131,7 @@ function useThemeMode(mode: ThemeMode): ThemeModeState {
 }
 
 /** Connects the tree to the runtime proxy. Render only on the client. */
-export function HashProvider({
+export function HashsomeProvider({
   url,
   client,
   clientOptions,
@@ -140,7 +140,7 @@ export function HashProvider({
   density = 'comfortable',
   overrides,
   children,
-}: HashProviderProps) {
+}: HashsomeProviderProps) {
   const instance = useMemo<Client>(
     () => client ?? new RemoteClient({ url: url ?? defaultUrl(), ...clientOptions }),
     [client, url, clientOptions],
@@ -177,7 +177,7 @@ export function HashProvider({
   }, [instance]);
 
   return (
-    <HashContext.Provider value={instance}>
+    <HashsomeContext.Provider value={instance}>
       <ThemeModeContext.Provider value={themeMode}>
         <ThemeProvider theme={resolvedTheme}>
           <EmotionThemeProvider theme={withDensity}>
@@ -189,14 +189,14 @@ export function HashProvider({
           </EmotionThemeProvider>
         </ThemeProvider>
       </ThemeModeContext.Provider>
-    </HashContext.Provider>
+    </HashsomeContext.Provider>
   );
 }
 
 export function useClient(): Client {
-  const client = useContext(HashContext);
+  const client = useContext(HashsomeContext);
   if (!client) {
-    throw new Error('Hash hooks must be used inside <HashProvider>');
+    throw new Error('Hashsome hooks must be used inside <HashsomeProvider>');
   }
 
   return client;

@@ -1,4 +1,4 @@
-import type { Entity } from '@hash/core';
+import type { Entity } from '@hashsome/core';
 
 /** Uniform lifecycle of an entity as seen by components. */
 export type EntityStatus =

@@ -1,4 +1,4 @@
-import type { MediaPlayerEntity } from '@hash/core';
+import type { MediaPlayerEntity } from '@hashsome/core';
 import { useEffect, useState } from 'react';
 
 /** `m:ss`, or `h:mm:ss` from an hour up. */

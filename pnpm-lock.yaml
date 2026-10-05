@@ -199,19 +199,19 @@ importers:
       '@emotion/react':
         specifier: 11.14.0
         version: 11.14.0(@types/react@19.3.0)(react@19.3.0)
-      '@hash/core':
+      '@hashsome/core':
         specifier: workspace:*
         version: link:../packages/core
-      '@hash/integration.home-assistant':
+      '@hashsome/integration.home-assistant':
         specifier: workspace:*
         version: link:../packages/integrations/home-assistant
-      '@hash/integration.music-assistant':
+      '@hashsome/integration.music-assistant':
         specifier: workspace:*
         version: link:../packages/integrations/music-assistant
-      '@hash/runtime':
+      '@hashsome/runtime':
         specifier: workspace:*
         version: link:../packages/runtime
-      '@hash/ui':
+      '@hashsome/ui':
         specifier: workspace:*
         version: link:../packages/ui
       e-prim:
@@ -244,7 +244,7 @@ importers:
 
   packages/integrations/home-assistant:
     dependencies:
-      '@hash/core':
+      '@hashsome/core':
         specifier: workspace:*
         version: link:../../core
       home-assistant-js-websocket:
@@ -253,16 +253,16 @@ importers:
 
   packages/integrations/music-assistant:
     dependencies:
-      '@hash/core':
+      '@hashsome/core':
         specifier: workspace:*
         version: link:../../core
 
   packages/runtime:
     dependencies:
-      '@hash/core':
+      '@hashsome/core':
         specifier: workspace:*
         version: link:../core
-      '@hash/ui':
+      '@hashsome/ui':
         specifier: workspace:*
         version: link:../ui
       '@react-router/dev':
@@ -311,7 +311,7 @@ importers:
       '@emotion/react':
         specifier: 11.14.0
         version: 11.14.0(@types/react@19.3.0)(react@19.3.0)
-      '@hash/core':
+      '@hashsome/core':
         specifier: workspace:*
         version: link:../core
       e-prim:

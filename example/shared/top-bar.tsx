@@ -1,4 +1,4 @@
-import { TopBar, type TopBarProps } from '@hash/ui';
+import { TopBar, type TopBarProps } from '@hashsome/ui';
 import { switchableDashboards } from './dashboards.ts';
 
 /** This home's top bar: the same weather, presence, clock and dashboard switcher on every

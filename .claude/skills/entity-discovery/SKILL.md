@@ -12,14 +12,14 @@ renders as "Not found" (which is correct behaviour, but not what the user wants)
 ## List real entities from a live Home Assistant
 
 ```bash
-HA_URL=http://homeassistant.local:8123 HA_TOKEN=<long-lived token> pnpm --filter @hash/integration.home-assistant states
+HA_URL=http://homeassistant.local:8123 HA_TOKEN=<long-lived token> pnpm --filter @hashsome/integration.home-assistant states
 ```
 
 Prints every entity as `<ref>\t<state>`, e.g. `ha:light.kitchen_lamp\ton`. Grep it for the room or
 device the user described:
 
 ```bash
-HA_URL=... HA_TOKEN=... pnpm --filter @hash/integration.home-assistant states | grep -i kitchen
+HA_URL=... HA_TOKEN=... pnpm --filter @hashsome/integration.home-assistant states | grep -i kitchen
 ```
 
 **Never ask the user for their long-lived token in chat, and never put a real token in a file that
@@ -31,7 +31,7 @@ plausible ids and flag clearly in your reply that they're placeholders the user 
 ## Generate typed entity refs (optional but recommended)
 
 ```bash
-HA_URL=... HA_TOKEN=... pnpm --filter @hash/integration.home-assistant states --types > packages/core/src/entities.d.ts
+HA_URL=... HA_TOKEN=... pnpm --filter @hashsome/integration.home-assistant states --types > packages/core/src/entities.d.ts
 ```
 
 This augments `KnownEntities` (see `packages/core/src/entity.ts`) so entity refs autocomplete and
@@ -45,7 +45,7 @@ For a `MediaPlayerBar` backed directly by Music Assistant (not via Home Assistan
 see `packages/integrations/music-assistant`), not a `ha:` ref:
 
 ```bash
-MA_URL=http://mass.local:8095 MA_TOKEN=<token, from Settings → Profile> pnpm --filter @hash/integration.music-assistant players
+MA_URL=http://mass.local:8095 MA_TOKEN=<token, from Settings → Profile> pnpm --filter @hashsome/integration.music-assistant players
 ```
 
 Prints every player as `<ref>\t<state>\t<now-playing title>`, e.g.
@@ -55,9 +55,9 @@ verbatim — copy it as-is, it isn't `domain.name` like a Home Assistant entity 
 ## No live Home Assistant / Music Assistant available
 
 Mock data works everywhere without credentials — used by every dashboard in
-`example/dashboards/*`, the `@hash/ui` gallery (`pnpm --filter @hash/ui docs`, its own
-self-contained fixtures in `packages/ui/src/gallery/fixtures.ts`), and every `@hash/ui` test. See
-`MockIntegration` in `packages/core/src/mock.ts` and `example/hash.config.ts`'s `ha`/`ma`
+`example/dashboards/*`, the `@hashsome/ui` gallery (`pnpm --filter @hashsome/ui docs`, its own
+self-contained fixtures in `packages/ui/src/gallery/fixtures.ts`), and every `@hashsome/ui` test. See
+`MockIntegration` in `packages/core/src/mock.ts` and `example/hashsome.config.ts`'s `ha`/`ma`
 entries for the shape used by `pnpm dev` (state + attributes per entity id).
 Use realistic entity ids and attributes (`supported_color_modes`, `hvac_modes`,
 `device_class`/`unit_of_measurement`, ...) so the dashboard's states match what the components
@@ -74,10 +74,10 @@ it, and mention that you added it.
 
 ## A third integration
 
-Home Assistant and Music Assistant aren't special-cased anywhere — `@hash/core` only exports the
+Home Assistant and Music Assistant aren't special-cased anywhere — `@hashsome/core` only exports the
 generic `Integration`/`BaseIntegration` pieces. A new backend is a new package that extends
 `BaseIntegration`, picks a unique `id` (its entity-ref prefix), and gets constructed in
-`example/hash.config.ts` like any other — see `packages/integrations/home-assistant` or
+`example/hashsome.config.ts` like any other — see `packages/integrations/home-assistant` or
 `packages/integrations/music-assistant` as a template. The runtime enforces id uniqueness at
 startup, so a prefix collision with an existing integration fails fast with a clear error instead
 of silently misrouting entities.

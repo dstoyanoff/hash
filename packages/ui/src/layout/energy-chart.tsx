@@ -1,5 +1,5 @@
 /** @jsxImportSource @emotion/react */
-import type { EntityRef } from '@hash/core';
+import type { EntityRef } from '@hashsome/core';
 import { Flex, Typography } from 'e-prim';
 import { useState } from 'react';
 import { useEntityHandle } from '../hooks.ts';

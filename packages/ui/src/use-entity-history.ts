@@ -1,4 +1,4 @@
-import type { Client, EntityRef, HistoryQuery, HistoryResult } from '@hash/core';
+import type { Client, EntityRef, HistoryQuery, HistoryResult } from '@hashsome/core';
 import { useEffect, useState } from 'react';
 import { useClient } from './provider.tsx';
 

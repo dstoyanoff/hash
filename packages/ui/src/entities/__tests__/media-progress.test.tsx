@@ -1,4 +1,4 @@
-import { mockMediaPlayer, type MediaPlayerEntity } from '@hash/core';
+import { mockMediaPlayer, type MediaPlayerEntity } from '@hashsome/core';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { formatDuration, useMediaPosition } from '../media-progress.ts';

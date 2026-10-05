@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { LocalClient } from '@hash/core';
+import { LocalClient } from '@hashsome/core';
 import { afterEach, expect, test } from 'vitest';
-import { HashProvider } from '../../provider.tsx';
+import { HashsomeProvider } from '../../provider.tsx';
 import { FadeScroll } from '../fade-scroll.tsx';
 
 afterEach(() => {
@@ -64,11 +64,11 @@ test('scrolled, it fades on the left too, and only on the left at the far end', 
 test('it scrolls sideways and takes a Flex’s props', () => {
   metrics(200, 200);
   render(
-    <HashProvider client={new LocalClient([])}>
+    <HashsomeProvider client={new LocalClient([])}>
       <FadeScroll as="ul" gap={2} data-testid="row">
         <li>a</li>
       </FadeScroll>
-    </HashProvider>,
+    </HashsomeProvider>,
   );
 
   const row = screen.getByTestId('row');
