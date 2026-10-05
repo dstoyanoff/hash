@@ -142,7 +142,9 @@ function wsUrl(url: string): string {
 interface QueueState {
   shuffle?: boolean;
 
-  /** Seconds into the current item, and the UTC epoch in seconds that was measured at. */
+  /** Seconds into the current item as the queue counts them, and the UTC epoch in seconds that was
+   * received at. Not Music Assistant's own stamp: that is on its clock, and a position is only
+   * advanced correctly against the clock of whoever reads it. */
   elapsed?: number;
   elapsedAt?: number;
 
@@ -152,7 +154,33 @@ interface QueueState {
 
   /** Where Music Assistant will pick the item up again, kept while it is stopped. */
   resume?: number;
+
+  /** Where playback was when it was stopped: the last position plus the time since it was seen,
+   * since Music Assistant sends no updates while a track plays. Dropped once playing settles. */
+  held?: number;
+
+  /** When playing started again after a stop, to tell the stream starting over from a real seek. */
+  resumedAt?: number;
 }
+
+/**
+ * Where the player entity says playback is. Playing, that is the queue's counter. Stopped, the
+ * counter is back at the start, so it is where it was held: the later of that and the position
+ * Music Assistant says it will resume from. Taking the later of the two means a stop (or a resume)
+ * that reports its numbers in several steps never moves the position backwards.
+ */
+function positionOf(queue: QueueState): number | undefined {
+  if (queue.state !== 'idle') {
+    return queue.elapsed;
+  }
+
+  const spots = [queue.held, queue.resume].filter((spot): spot is number => spot !== undefined);
+  return spots.length > 0 ? Math.max(...spots) : queue.elapsed;
+}
+
+/** How long after resuming a position far behind where it was is taken as the stream starting
+ * over, to be seeked to the spot in a moment, and not as someone going back. */
+const RESUME_SETTLE_SECONDS = 4;
 
 /** Which item a queue is on, as something comparable: its id when it has one, else its place. */
 function itemOf(queue: Record<string, unknown>): string | undefined {
@@ -408,9 +436,7 @@ export class MusicAssistantIntegration extends BaseIntegration {
       return toMediaPlayer(player);
     }
 
-    // Stopped, a queue's counter is not where it left off; its own resume position is.
-    const stopped = queue.state === 'idle' && queue.resume !== undefined;
-    const position = stopped ? queue.resume : queue.elapsed;
+    const position = positionOf(queue);
     return toMediaPlayer({
       ...player,
       ...(queue.shuffle !== undefined ? { shuffle_enabled: queue.shuffle } : {}),
@@ -428,33 +454,67 @@ export class MusicAssistantIntegration extends BaseIntegration {
     const known = this.#queues.get(queue.queue_id) ?? {};
     const state = typeof queue.state === 'string' ? queue.state : undefined;
     const item = itemOf(queue);
-    // A player that cannot hold a stream open is stopped by a pause: Music Assistant then reports
-    // the queue as idle with its counter back at the start, and only brings the position back when
-    // playback resumes. Between the two the dashboard keeps showing where it was paused.
-    const held =
-      state === 'idle' && known.elapsed !== undefined && item !== undefined && item === known.item;
+    // A different item has nothing to do with where the last one was.
+    const sameItem = item === undefined || known.item === undefined || item === known.item;
+    const base: QueueState = sameItem
+      ? known
+      : known.shuffle !== undefined
+        ? { shuffle: known.shuffle }
+        : {};
 
     const next: QueueState = {
-      ...known,
+      ...base,
       ...(typeof queue.shuffle_enabled === 'boolean' ? { shuffle: queue.shuffle_enabled } : {}),
-      ...(typeof queue.elapsed_time === 'number' && !held
-        ? {
-            elapsed: queue.elapsed_time,
-            // When it was true; without a stamp, now is the best there is.
-            elapsedAt:
-              typeof queue.elapsed_time_last_updated === 'number'
-                ? queue.elapsed_time_last_updated
-                : Date.now() / 1000,
-          }
-        : {}),
       ...(state !== undefined ? { state } : {}),
       ...(item !== undefined ? { item } : {}),
       ...(typeof queue.resume_pos === 'number' ? { resume: queue.resume_pos } : {}),
     };
 
+    const now = Date.now() / 1000;
+    const stoppedBefore = known.state === 'idle';
+    if (state === 'idle' && !stoppedBefore && sameItem && known.elapsed !== undefined) {
+      // Just stopped: nothing was reported while it played, so work out how far it got.
+      const since =
+        known.state === 'playing' && known.elapsedAt !== undefined ? now - known.elapsedAt : 0;
+
+      next.held = known.elapsed + Math.max(0, since);
+    }
+
+    if (typeof queue.elapsed_time === 'number') {
+      if (state !== 'idle') {
+        let elapsed = queue.elapsed_time;
+        if (stoppedBefore && base.held !== undefined) {
+          next.resumedAt = now;
+        }
+
+        const resumedAt = next.resumedAt ?? base.resumedAt;
+        const starting =
+          base.held !== undefined &&
+          resumedAt !== undefined &&
+          now - resumedAt < RESUME_SETTLE_SECONDS &&
+          elapsed < base.held - 1;
+
+        if (starting) {
+          // The stream starting over before it seeks to where it was: stay where it was.
+          elapsed = base.held ?? elapsed;
+        } else {
+          delete next.held;
+          delete next.resumedAt;
+        }
+
+        next.elapsed = elapsed;
+        next.elapsedAt = now;
+      } else if (base.held === undefined && next.held === undefined) {
+        // Stopped, and nothing was played before: the queue's own number is all there is.
+        next.elapsed = queue.elapsed_time;
+        next.elapsedAt = now;
+      }
+    }
+
     if (
       next.shuffle === known.shuffle &&
       next.elapsed === known.elapsed &&
+      next.held === known.held &&
       next.state === known.state &&
       next.item === known.item &&
       next.resume === known.resume
