@@ -295,3 +295,90 @@ describe('HomeAssistantIntegration browse', () => {
     });
   });
 });
+
+describe('HomeAssistantIntegration history', () => {
+  const setup = async (meta: unknown, rows: unknown) => {
+    const sent: Record<string, unknown>[] = [];
+    const { client } = fakeClient({
+      'sensor.power': entity('sensor.power', '12', {}),
+    });
+
+    client.sendCommand = ((message: Record<string, unknown>) => {
+      sent.push(message);
+      return Promise.resolve(message.type === 'recorder/get_statistics_metadata' ? meta : rows);
+    }) as HaClient['sendCommand'];
+
+    const ha = new HomeAssistantIntegration({
+      url: 'x',
+      token: 'y',
+      createClient: () => Promise.resolve(client),
+    });
+
+    await ha.connect();
+    return { ha, sent };
+  };
+
+  test('a measurement is its mean per bucket, in the bucket the range suggests', async () => {
+    const { ha, sent } = await setup(
+      [
+        {
+          statistic_id: 'sensor.power',
+          has_mean: true,
+          has_sum: false,
+          statistics_unit_of_measurement: 'W',
+        },
+      ],
+      {
+        'sensor.power': [
+          { start: 1_000, mean: 3.5 },
+          { start: 2_000, mean: null },
+        ],
+      },
+    );
+
+    const result = await ha.history('sensor.power', { range: '1d' });
+    expect(result).toEqual({
+      kind: 'measurement',
+      unit: 'W',
+      points: [{ timestamp: '1970-01-01T00:00:01.000Z', value: 3.5 }],
+    });
+
+    expect(sent.at(-1)).toMatchObject({
+      type: 'recorder/statistics_during_period',
+      statistic_ids: ['sensor.power'],
+      period: '5minute',
+      types: ['mean'],
+    });
+  });
+
+  test('a running total is how much it grew per bucket, and the bucket can be chosen', async () => {
+    const { ha, sent } = await setup(
+      [
+        {
+          statistic_id: 'sensor.power',
+          has_mean: false,
+          has_sum: true,
+          statistics_unit_of_measurement: 'kWh',
+        },
+      ],
+      { 'sensor.power': [{ start: 86_400_000, change: 0.31 }] },
+    );
+
+    const result = await ha.history('sensor.power', { range: '1m', bucket: '1d' });
+    expect(result).toMatchObject({ kind: 'total', unit: 'kWh', points: [{ value: 0.31 }] });
+    expect(sent.at(-1)).toMatchObject({ period: 'day', types: ['change'] });
+  });
+
+  test('an entity without statistics has no points, and an unknown one is an error', async () => {
+    const { ha, sent } = await setup([], {});
+    expect(await ha.history('sensor.power', { range: '1h' })).toEqual({
+      kind: 'measurement',
+      points: [],
+    });
+
+    expect(sent).toHaveLength(1);
+    await expect(ha.history('sensor.nope', { range: '1h' })).rejects.toBeInstanceOf(
+      UnknownEntityError,
+    );
+  });
+});

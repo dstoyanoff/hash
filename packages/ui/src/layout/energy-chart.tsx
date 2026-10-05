@@ -3,6 +3,8 @@ import type { EntityRef } from '@hash/core';
 import { Flex, Typography } from 'e-prim';
 import { useState } from 'react';
 import { useEntityHandle } from '../hooks.ts';
+import { useEntityHistory } from '../use-entity-history.ts';
+import { usageFromDaily } from './energy-usage.ts';
 import { useDetail } from './detail-provider.tsx';
 import { RangeSwitcher, SeriesChart } from './series-chart.tsx';
 
@@ -37,10 +39,10 @@ export interface EnergyChartProps {
   /** Lifetime energy counter (kWh, e.g. `sensor.*_energy`). Shown as a quiet "Lifetime" line when expanded — per-period usage can't be derived from a counter without history, so pass `usage` for that. */
   energy?: EntityRef;
 
-  /** Usage per period in kWh. Needs history/statistics; no integration provides it yet — pass explicitly. */
+  /** Usage per period in kWh. Left out, it is worked out from `energy`'s history when the backend keeps one (Home Assistant's long-term statistics); pass it to use your own. */
   usage?: EnergyUsage;
 
-  /** Samples for each range the person can pick, e.g. only the currently-viewed one may be populated yet; `onRangeChange` fires on pick. */
+  /** Samples for each range the person can pick; `onRangeChange` fires on pick. Left out, they are loaded from `power`'s history when the backend keeps one, for the selected range; pass them to use your own. */
   seriesByRange?: Partial<Record<EnergyRange, EnergySample[]>>;
 
   /** Called when the person picks another range, so a real data source can load it. */
@@ -76,8 +78,30 @@ export function EnergyChart({
   const expanded = detail?.expanded ?? false;
   const [range, setRange] = useState<EnergyRange>('1d');
 
-  const samples = seriesByRange[range] ?? [];
-  if (!power && !usage && !energy && samples.length === 0) {
+  // Sparkline (collapsed) and chart (expanded) both show the selected range, 1D until picked.
+  const ownSamples = seriesByRange[range];
+  const powerHistory = useEntityHistory(
+    ownSamples ? undefined : power,
+    power ? { range } : undefined,
+  );
+
+  const energyHistory = useEntityHistory(
+    usage ? undefined : energy,
+    energy ? { range: '1m', bucket: '1d' } : undefined,
+  );
+
+  const samples =
+    ownSamples ??
+    (powerHistory.result?.points ?? []).map((point) => ({
+      timestamp: point.timestamp,
+      watts: point.value,
+    }));
+
+  const shownUsage =
+    usage ??
+    (energyHistory.result ? usageFromDaily(energyHistory.result.points, new Date()) : undefined);
+
+  if (!power && !shownUsage && !energy && samples.length === 0) {
     return null;
   }
 
@@ -105,7 +129,7 @@ export function EnergyChart({
           {fallbackCurrent} {unit}
         </Typography>
       )}
-      {usage ? <UsageTiles usage={usage} expanded={expanded} /> : null}
+      {shownUsage ? <UsageTiles usage={shownUsage} expanded={expanded} /> : null}
       {expanded && energy ? <LifetimeEnergy entity={energy} /> : null}
       {samples.length === 0 ? null : (
         <SeriesChart

@@ -187,13 +187,13 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'EntityRef',
       },
       {
-        doc: 'Usage per period in kWh. Needs history/statistics; no integration provides it yet — pass explicitly.',
+        doc: "Usage per period in kWh. Left out, it is worked out from `energy`'s history when the backend keeps one (Home Assistant's long-term statistics); pass it to use your own.",
         name: 'usage',
         optional: true,
         type: 'EnergyUsage',
       },
       {
-        doc: 'Samples for each range the person can pick, e.g. only the currently-viewed one may be populated yet; `onRangeChange` fires on pick.',
+        doc: "Samples for each range the person can pick; `onRangeChange` fires on pick. Left out, they are loaded from `power`'s history when the backend keeps one, for the selected range; pass them to use your own.",
         name: 'seriesByRange',
         optional: true,
         type: 'Partial<Record<EnergyRange, EnergySample[]>>',

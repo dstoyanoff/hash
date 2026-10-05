@@ -199,7 +199,8 @@ interface Integration {
   command(entityId: string, name: string, args?: Record<string, unknown>): Promise<void>;
 
   // ── optional capabilities ───────────────────────────────────────────────
-  history?(entityId: string, query: HistoryQuery): Promise<HistorySample[]>;
+  history?(entityId: string, query: HistoryQuery): Promise<HistoryResult>; // bucketed past values
+  fetchAsset?(path: string): Promise<Response>; // artwork etc., fetched with the integration's credentials
   logbook?(entityId: string, query: LogbookQuery): Promise<LogbookEntry[]>;
   browse?(entityId: string, query: { path?: string; search?: string }): Promise<BrowseResult>;
 

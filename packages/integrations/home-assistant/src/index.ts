@@ -13,9 +13,18 @@ import {
   type BrowseQuery,
   type BrowseResult,
   type EntityInput,
+  type HistoryQuery,
+  type HistoryResult,
   type Unsubscribe,
 } from '@hash/core';
 import { decodeItemId, toBrowseItem, type HaBrowseMedia } from './browse.ts';
+import {
+  DEFAULT_BUCKET,
+  PERIODS,
+  RANGE_MS,
+  type HaStatisticsMetadata,
+  type HaStatisticsRow,
+} from './history.ts';
 import { toServiceRequest } from './commands.ts';
 import { mapEntity } from './mappers/index.ts';
 
@@ -142,6 +151,48 @@ export class HomeAssistantIntegration extends BaseIntegration {
   }
 
   #assetUrl = (path: string): string => assetUrl(this.id, path);
+
+  /**
+   * A sensor's past values from Home Assistant's long-term statistics: the average per bucket for a
+   * measurement (temperature, power), or how much the counter grew per bucket for a running total
+   * (energy). An entity that has no statistics (not a sensor with a `state_class`) has no points.
+   */
+  async history(entityId: string, query: HistoryQuery): Promise<HistoryResult> {
+    const client = this.#requireClient();
+    if (!this.getEntity(entityId)) {
+      throw new UnknownEntityError(this.id, entityId);
+    }
+
+    const [meta] = await client.sendCommand<HaStatisticsMetadata[]>({
+      type: 'recorder/get_statistics_metadata',
+      statistic_ids: [entityId],
+    });
+
+    if (!meta || (!meta.has_sum && !meta.has_mean)) {
+      return { points: [], kind: 'measurement' };
+    }
+
+    const total = meta.has_sum;
+    const field = total ? 'change' : 'mean';
+    const bucket = query.bucket ?? DEFAULT_BUCKET[query.range];
+    const found = await client.sendCommand<Record<string, HaStatisticsRow[]>>({
+      type: 'recorder/statistics_during_period',
+      start_time: new Date(Date.now() - RANGE_MS[query.range]).toISOString(),
+      statistic_ids: [entityId],
+      period: PERIODS[bucket],
+      types: [field],
+    });
+
+    const points = (found[entityId] ?? []).flatMap((row) => {
+      const value = row[field];
+      return typeof value === 'number'
+        ? [{ timestamp: new Date(row.start).toISOString(), value }]
+        : [];
+    });
+
+    const unit = meta.statistics_unit_of_measurement;
+    return { points, kind: total ? 'total' : 'measurement', ...(unit ? { unit } : {}) };
+  }
 
   /** A file Home Assistant serves (artwork, a person's picture), fetched with the token. Only a
    * path on Home Assistant itself is accepted, never another address. */

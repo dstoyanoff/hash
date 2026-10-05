@@ -9,6 +9,7 @@ import type { SwitchCommands, SwitchEntity } from './switch.ts';
 
 export * from './base.ts';
 export * from './browse.ts';
+export * from './history.ts';
 export * from './action.ts';
 export * from './climate.ts';
 export * from './generic.ts';

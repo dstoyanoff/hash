@@ -145,6 +145,7 @@ export function SensorReadout({
             level={level}
             range={range}
             unit={unit}
+            {...(typeof entity === 'string' ? { entity } : {})}
             {...(history ? { history } : {})}
           />
         }
@@ -189,12 +190,14 @@ function SensorDetailBody({
   level,
   range,
   unit,
+  entity,
   history,
 }: {
   valueText: string;
   level: RangeLevel | undefined;
   range: SafeRange | undefined;
   unit: string;
+  entity?: EntityRef;
   history?: SensorSample[];
 }) {
   const warning = level === 'low' || level === 'high';
@@ -222,7 +225,7 @@ function SensorDetailBody({
           </Flex>
         ) : null}
       </Flex>
-      {history ? <SensorHistory samples={history} unit={unit} /> : null}
+      <SensorHistory {...(history ? { samples: history } : entity ? { entity } : {})} unit={unit} />
     </Flex>
   );
 }

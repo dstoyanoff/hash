@@ -1,6 +1,8 @@
 /** @jsxImportSource @emotion/react */
 import { Flex, Typography } from 'e-prim';
+import type { EntityRef } from '@hash/core';
 import { useState } from 'react';
+import { useEntityHistory } from '../use-entity-history.ts';
 import { DateTimeField } from './date-time-field.tsx';
 import { useDetail } from './detail-provider.tsx';
 import {
@@ -31,6 +33,18 @@ const RANGES: { value: SeriesRange; label: string }[] = [
   { value: 'custom', label: 'Custom' },
 ];
 
+/** The month's hourly points up to where the week's finer points begin, then those. */
+function mergeHistory(
+  coarse: SeriesSample[] | undefined,
+  fine: SeriesSample[] | undefined,
+): SeriesSample[] {
+  const from = fine?.[0]?.timestamp;
+  return [
+    ...(coarse ?? []).filter((sample) => from === undefined || sample.timestamp < from),
+    ...(fine ?? []),
+  ];
+}
+
 const WINDOW_MS: Record<Exclude<SeriesRange, 'custom'>, number> = {
   '1h': 60 * 60_000,
   '1d': DAY,
@@ -49,13 +63,20 @@ function formatNumber(value: number): string {
  * collapsed, today / last 7 / last 30 days expanded, plus the custom range when one is chosen.
  */
 export function SensorHistory({
-  samples,
+  samples: given,
+  entity,
   unit,
 }: {
-  /** Readings over time, oldest first; ideally covering at least the last 30 days. */
-  samples: SeriesSample[];
+  /** Readings over time, oldest first; ideally covering at least the last 30 days. Left out, they come from `entity`'s history when the backend keeps one. */
+  samples?: SeriesSample[];
+  entity?: EntityRef;
   unit: string;
 }) {
+  // Hourly averages for the month, with five-minute ones for the last week laid over them, so the
+  // 1H and 1D views have more than a point or two.
+  const month = useEntityHistory(given ? undefined : entity, { range: '1m', bucket: '1h' });
+  const week = useEntityHistory(given ? undefined : entity, { range: '1w', bucket: '5m' });
+  const samples = given ?? mergeHistory(month.result?.points, week.result?.points);
   const { detail } = useDetail();
   const expanded = detail?.expanded ?? false;
   const now = new Date();
