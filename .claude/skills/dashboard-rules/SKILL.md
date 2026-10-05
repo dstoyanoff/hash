@@ -23,7 +23,7 @@ instead of working around it — see "When a rule is in the way" at the end.
   components and hooks; prefer them to raw `fetch`/`WebSocket`, which would bypass the runtime's
   entity handling. Don't import from `packages/` by relative path.
 - `pnpm format` (write mode) reformats the _whole repo_, not just your dashboard — if another
-  file happened to already be out of sync with Prettier, running it can sweep in an unrelated
+  file happened to already be out of sync with oxfmt, running it can sweep in an unrelated
   change. After running it, check `git status`/`git diff` and make sure everything outside
   `example/dashboards/<id>/` (and the expected `hash.config.ts`/registration changes) is
   unchanged before committing.

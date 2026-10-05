@@ -14,8 +14,8 @@
     "@tabler/icons": "3.48.0",
     "@types/node": "24.13.6",
     "lucide": "1.49.0",
+    "oxfmt": "0.71.0",
     "oxlint": "1.85.0",
-    "prettier": "3.9.9",
     "typescript": "7.0.2",
     "vitest": "5.0.2"
   },
@@ -23,8 +23,8 @@
   "type": "module",
   "scripts": {
     "lint": "oxlint",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
     "typecheck": "pnpm -r --if-present typecheck",
     "build": "pnpm --filter @hash/example build",
     "test": "vitest run",

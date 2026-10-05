@@ -152,7 +152,7 @@ How the layers and the integration contract fit together: [ARCHITECTURE.md](ARCH
 
 ```bash
 pnpm lint             # oxlint
-pnpm format:check     # prettier (pnpm format to fix)
+pnpm format:check     # oxfmt (pnpm format to fix)
 pnpm typecheck
 pnpm test             # vitest, every package
 pnpm generate:catalog      # regenerate the UI catalog after changing a component
