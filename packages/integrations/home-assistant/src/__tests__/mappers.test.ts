@@ -274,3 +274,34 @@ describe('files Home Assistant serves itself', () => {
     ).toMatchObject({ pictureUrl: '//evil.test/a.png' });
   });
 });
+
+describe('weather', () => {
+  test('the state is the condition and the attributes are the readings', () => {
+    expect(
+      map(
+        hass('weather.home', 'partlycloudy', {
+          friendly_name: 'Forecast home',
+          temperature: 20.5,
+          temperature_unit: '°C',
+          humidity: 29,
+        }),
+      ),
+    ).toMatchObject({
+      kind: 'weather',
+      name: 'Forecast home',
+      availability: 'ready',
+      condition: 'partlycloudy',
+      temperature: 20.5,
+      unit: '°C',
+      humidity: 29,
+    });
+  });
+
+  test('a condition it does not know is unknown, and an unavailable entity says so', () => {
+    expect(map(hass('weather.home', 'volcanic-ash'))).toMatchObject({ condition: 'unknown' });
+    expect(map(hass('weather.home', 'unavailable'))).toMatchObject({
+      availability: 'unavailable',
+      condition: 'unknown',
+    });
+  });
+});

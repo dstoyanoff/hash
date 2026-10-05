@@ -1,12 +1,17 @@
 /** @jsxImportSource @emotion/react */
-import type { ConnectionStatus, EntityRef, LinkStatus } from '@hash/core';
+import type { ConnectionStatus, EntityRef, LinkStatus, WeatherCondition } from '@hash/core';
 import { Box, Flex, Typography } from 'e-prim';
 import { PlainButton } from '../layout/plain-button.tsx';
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import type { IconName } from '../icon-data.ts';
 import { fallbackName } from '../entity-handle.ts';
-import { useConnectionStatus, useEntityHandle, useIntegrationStatuses } from '../hooks.ts';
+import {
+  useConnectionStatus,
+  useEntity,
+  useEntityHandle,
+  useIntegrationStatuses,
+} from '../hooks.ts';
 import { Icon } from '../icon.tsx';
 import { statusLabels } from '../status.ts';
 import { SensorReadout } from './sensor-readout.tsx';
@@ -81,7 +86,7 @@ export interface TopBarProps {
   /** Compact circular buttons that fire `scene.turn_on` directly (not the `Tile`-based `SceneButton`); a bare entity ref uses the default icon and an auto-assigned color, or pass `{ entity, icon, color }` to pick either. */
   scenes?: (EntityRef | TopBarScene)[];
 
-  /** A sensor for current conditions, e.g. outdoor temperature. Shown with a weather-style sun icon and a rounded whole-degree reading, not a generic sensor readout. */
+  /** Current weather as a pill with an icon for the sky and a rounded whole-degree reading. A weather entity, like `ha:weather.forecast_home`, shows its real condition; a plain sensor, e.g. an outdoor temperature, gets a fixed sun. */
   weather?: EntityRef;
 
   /** Your own component(s) for the right-hand side, after the weather: a security mode picker, a custom status. Whatever it is, it sits in the bar's row and is yours to style. */
@@ -212,6 +217,7 @@ function DashboardSwitcher({
         px={4}
         radius="chrome"
       >
+        {current?.icon ? <Icon name={current.icon} size={20} /> : null}
         <Typography as="h1" variant="title">
           {title}
         </Typography>
@@ -423,10 +429,57 @@ function StatusChip({ children }: { children: ReactNode }) {
   );
 }
 
-/** A `sensor.*` current-conditions reading, styled like a weather app (sun glyph, bare rounded
- * degree) rather than `SensorReadout`'s generic icon-by-device-class + exact value + unit. No real
- * integration reports a weather *condition* yet, so the sun is fixed rather than picked from one. */
+/** What a condition looks like in the pill: an icon, and a color where the weather has one. */
+const CONDITION_LOOK: Record<WeatherCondition, { icon: IconName; color?: string }> = {
+  sunny: { icon: 'lu:sun', color: '#FBBF24' },
+  'clear-night': { icon: 'lu:moon', color: '#A5B4FC' },
+  partlycloudy: { icon: 'lu:cloud-sun', color: '#FBBF24' },
+  cloudy: { icon: 'lu:cloud' },
+  fog: { icon: 'lu:cloud-fog' },
+  rainy: { icon: 'lu:cloud-rain', color: '#60A5FA' },
+  pouring: { icon: 'lu:cloud-rain-wind', color: '#60A5FA' },
+  snowy: { icon: 'lu:cloud-snow', color: '#BAE6FD' },
+  'snowy-rainy': { icon: 'lu:cloud-snow', color: '#93C5FD' },
+  hail: { icon: 'lu:cloud-hail', color: '#93C5FD' },
+  lightning: { icon: 'lu:cloud-lightning', color: '#FBBF24' },
+  'lightning-rainy': { icon: 'lu:cloud-lightning', color: '#FBBF24' },
+  windy: { icon: 'lu:wind' },
+  exceptional: { icon: 'lu:triangle-alert', color: '#F2554A' },
+  unknown: { icon: 'lu:cloud' },
+};
+
+/** Current weather, as a pill: an icon for the sky and a rounded whole-degree reading. A `weather`
+ * entity gives the real condition; a plain `sensor.*` (an outdoor temperature) gets a fixed sun,
+ * since a sensor says nothing about the sky. */
 function WeatherChip({ entity }: { entity: EntityRef }) {
+  return useEntity(entity)?.kind === 'weather' ? (
+    <WeatherPill entity={entity} />
+  ) : (
+    <SensorWeather entity={entity} />
+  );
+}
+
+function WeatherPill({ entity }: { entity: EntityRef }) {
+  const handle = useEntityHandle('weather', entity);
+  const { status } = handle;
+  const weather = handle.entity;
+  const look = CONDITION_LOOK[weather?.condition ?? 'unknown'];
+  const ready = status === 'ready' && weather?.temperature !== undefined;
+  return (
+    <StatusChip>
+      <Flex as="span" css={look.color ? { color: look.color } : undefined}>
+        <Icon name={look.icon} size={14} />
+      </Flex>
+      <Typography as="span" variant="bodyStrong">
+        {ready
+          ? `${Math.round(weather.temperature ?? 0)}°`
+          : statusLabels[status as Exclude<typeof status, 'ready'>]}
+      </Typography>
+    </StatusChip>
+  );
+}
+
+function SensorWeather({ entity }: { entity: EntityRef }) {
   const handle = useEntityHandle('sensor', entity);
   const { status } = handle;
   const sensor = handle.entity;

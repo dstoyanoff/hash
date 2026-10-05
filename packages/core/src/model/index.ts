@@ -6,6 +6,7 @@ import type { MediaPlayerCommands, MediaPlayerEntity } from './media-player.ts';
 import type { PersonCommands, PersonEntity } from './person.ts';
 import type { SensorCommands, SensorEntity } from './sensor.ts';
 import type { SwitchCommands, SwitchEntity } from './switch.ts';
+import type { WeatherCommands, WeatherEntity } from './weather.ts';
 
 export * from './base.ts';
 export * from './browse.ts';
@@ -18,6 +19,7 @@ export * from './media-player.ts';
 export * from './person.ts';
 export * from './sensor.ts';
 export * from './switch.ts';
+export * from './weather.ts';
 
 /** Every entity `@hash/core` knows how to model. */
 export type Entity =
@@ -28,6 +30,7 @@ export type Entity =
   | SwitchEntity
   | ActionEntity
   | PersonEntity
+  | WeatherEntity
   | GenericEntity;
 
 export type EntityKind = Entity['kind'];
@@ -48,6 +51,7 @@ export interface KindCommands {
   switch: SwitchCommands;
   action: ActionCommands;
   person: PersonCommands;
+  weather: WeatherCommands;
   generic: GenericCommands;
 }
 
@@ -71,6 +75,7 @@ export const COMMAND_NAMES: Record<EntityKind, readonly string[]> = {
   switch: ['turnOn', 'turnOff', 'toggle'],
   action: ['trigger'],
   person: [],
+  weather: [],
   generic: [],
 };
 

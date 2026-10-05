@@ -4,6 +4,7 @@ import { domainOf } from './common.ts';
 import { mapClimate } from './climate.ts';
 import { mapLight } from './light.ts';
 import { mapMediaPlayer } from './media-player.ts';
+import { mapWeather } from './weather.ts';
 import { mapAction, mapGeneric, mapPerson, mapSensor, mapSwitch } from './simple.ts';
 
 export interface MapOptions {
@@ -35,6 +36,8 @@ export function mapEntity(entity: HassEntity, options: MapOptions): EntityInput 
       return mapSensor(entity);
     case 'person':
       return mapPerson(entity, options.assetUrl);
+    case 'weather':
+      return mapWeather(entity);
     default:
       if (SWITCH_DOMAINS.includes(domain)) {
         return mapSwitch(entity);

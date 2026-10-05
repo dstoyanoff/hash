@@ -1,7 +1,14 @@
-import { LocalClient, mockAction, mockPerson, mockSensor, MockIntegration } from '@hash/core';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import {
+  LocalClient,
+  mockAction,
+  mockPerson,
+  mockSensor,
+  mockWeather,
+  MockIntegration,
+} from '@hash/core';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import { HashProvider } from '../../provider.tsx';
 import { renderWithMock } from '../../test-utils.tsx';
 import { TopBar } from '../top-bar.tsx';
@@ -78,6 +85,18 @@ test('the dashboard being shown is marked, and cannot be picked again', () => {
   // Pressing it does nothing: the list stays as it is.
   fireEvent.click(here);
   expect(screen.getByRole('option', { name: 'Bedroom' })).toBeTruthy();
+  expect(container).toBeTruthy();
+});
+
+test('the closed switcher shows the current dashboard’s icon next to its title', () => {
+  const { container } = renderWithMock(
+    <MemoryRouter initialEntries={['/bedroom']}>
+      <TopBar title="Bedroom" dashboards={[...twoDashboards]} />
+    </MemoryRouter>,
+  );
+
+  const pill = screen.getByRole('button', { name: 'Bedroom' });
+  expect(pill.querySelectorAll('svg')).toHaveLength(2); // its icon and the chevron
   expect(container).toBeTruthy();
 });
 
@@ -237,4 +256,44 @@ test('your own component sits in the bar, between the weather and the people', (
   const dan = screen.getByRole('img', { name: /Dan/ });
   expect(weather.compareDocumentPosition(mine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(mine.compareDocumentPosition(dan) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
+describe('weather', () => {
+  const pill = (entity: ReturnType<typeof mockWeather>) => {
+    renderWithMock(<TopBar title="Home" weather="ha:sky" />, { sky: entity });
+    return screen.getByText(/°$/).parentElement as HTMLElement;
+  };
+
+  test('a weather entity shows a rounded temperature and an icon for its condition', () => {
+    const sunny = pill(mockWeather({ condition: 'sunny', temperature: 15.6 }));
+    expect(sunny.textContent).toBe('16°');
+    const sunIcon = sunny.querySelector('svg')?.innerHTML;
+    cleanup();
+
+    const rainy = pill(mockWeather({ condition: 'rainy', temperature: 9.2 }));
+    expect(rainy.textContent).toBe('9°');
+    expect(rainy.querySelector('svg')?.innerHTML).not.toBe(sunIcon);
+  });
+
+  test('a condition nobody knows still gets an icon, and no reading says what is wrong', () => {
+    expect(
+      pill(mockWeather({ condition: 'unknown', temperature: 3 })).querySelector('svg'),
+    ).toBeTruthy();
+
+    cleanup();
+
+    renderWithMock(<TopBar title="Home" weather="ha:sky" />, {
+      sky: mockWeather({ availability: 'unavailable' }),
+    });
+
+    expect(screen.getByText('Unavailable')).toBeTruthy();
+  });
+
+  test('a plain sensor still works, with a fixed sun', () => {
+    renderWithMock(<TopBar title="Home" weather="ha:out" />, {
+      out: mockSensor({ value: '12.3', unit: '°C' }),
+    });
+
+    expect(screen.getByText('12°')).toBeTruthy();
+  });
 });
