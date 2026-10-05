@@ -138,15 +138,25 @@ function wsUrl(url: string): string {
   return parsed.toString();
 }
 
+/** What a queue says that the player entity shows. */
+interface QueueState {
+  shuffle?: boolean;
+
+  /** Seconds into the current item, and the UTC epoch in seconds that was measured at. */
+  elapsed?: number;
+  elapsedAt?: number;
+}
+
 export class MusicAssistantIntegration extends BaseIntegration {
   readonly id: string;
   #options: MusicAssistantOptions;
   #socket: WebSocket | undefined;
   #nextMessageId = 1;
 
-  /** The last raw player and queue shuffle seen, so either can change without the other. */
+  /** The last raw player and what its queue says, so either can change without the other. A queue
+   * has the player's id. */
   #players = new Map<string, MaPlayer>();
-  #shuffle = new Map<string, boolean>();
+  #queues = new Map<string, QueueState>();
   #pending = new Map<
     string,
     { resolve: (result: unknown) => void; reject: (error: Error) => void }
@@ -371,10 +381,23 @@ export class MusicAssistantIntegration extends BaseIntegration {
     );
   }
 
-  /** What a player looks like with its queue's shuffle setting copied onto it. */
+  /** What a player looks like with its queue's shuffle setting and position copied onto it. The
+   * position is the queue's, not the player's: when playback is resumed Music Assistant starts a
+   * new stream at the saved spot, and the player's own counter then starts from 0 again, while
+   * the queue keeps counting through the track. */
   #entityFor(player: MaPlayer): EntityInput {
-    const shuffle = this.#shuffle.get(player.player_id);
-    return toMediaPlayer(shuffle === undefined ? player : { ...player, shuffle_enabled: shuffle });
+    const queue = this.#queues.get(player.player_id);
+    if (!queue) {
+      return toMediaPlayer(player);
+    }
+
+    return toMediaPlayer({
+      ...player,
+      ...(queue.shuffle !== undefined ? { shuffle_enabled: queue.shuffle } : {}),
+      ...(queue.elapsed !== undefined
+        ? { elapsed_time: queue.elapsed, elapsed_time_last_updated: queue.elapsedAt }
+        : {}),
+    });
   }
 
   #applyQueue(queue: unknown): void {
@@ -382,11 +405,27 @@ export class MusicAssistantIntegration extends BaseIntegration {
       return;
     }
 
-    if (typeof queue.shuffle_enabled !== 'boolean') {
+    const known = this.#queues.get(queue.queue_id) ?? {};
+    const next: QueueState = {
+      ...known,
+      ...(typeof queue.shuffle_enabled === 'boolean' ? { shuffle: queue.shuffle_enabled } : {}),
+      ...(typeof queue.elapsed_time === 'number'
+        ? {
+            elapsed: queue.elapsed_time,
+            // When it was true; without a stamp, now is the best there is.
+            elapsedAt:
+              typeof queue.elapsed_time_last_updated === 'number'
+                ? queue.elapsed_time_last_updated
+                : Date.now() / 1000,
+          }
+        : {}),
+    };
+
+    if (next.shuffle === known.shuffle && next.elapsed === known.elapsed) {
       return;
     }
 
-    this.#shuffle.set(queue.queue_id, queue.shuffle_enabled);
+    this.#queues.set(queue.queue_id, next);
     const player = this.#players.get(queue.queue_id);
     if (player) {
       this.setEntity(player.player_id, this.#entityFor(player));
@@ -463,7 +502,7 @@ export class MusicAssistantIntegration extends BaseIntegration {
       case 'player_removed':
         if (typeof objectId === 'string') {
           this.#players.delete(objectId);
-          this.#shuffle.delete(objectId);
+          this.#queues.delete(objectId);
           this.setEntity(objectId, undefined);
         }
 

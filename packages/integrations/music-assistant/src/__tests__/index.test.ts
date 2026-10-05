@@ -409,6 +409,79 @@ test('search asks Music Assistant once and lists albums, artists, tracks, playli
   expect((await found).items.map((item) => item.kind)).toEqual(['album', 'artist', 'track']);
 });
 
+test('the position is the queue’s, since a resumed stream starts the player’s own counter from 0', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket, [
+    player({
+      elapsed_time: 0.3,
+      elapsed_time_last_updated: 1_767_225_600,
+      playback_state: 'playing',
+    }),
+  ]);
+
+  // Before anything is known about the queue, the player's own counter is all there is.
+  expect(ma.getEntity('kitchen_speaker')).toMatchObject({ position: 0.3 });
+
+  // Music Assistant resumed the track at 23 s in a new stream: the player says 0, the queue 23.
+  socket().receive({
+    event: 'queue_updated',
+    object_id: 'kitchen_speaker',
+    data: {
+      queue_id: 'kitchen_speaker',
+      elapsed_time: 23,
+      elapsed_time_last_updated: 1_767_225_660,
+    },
+  });
+
+  expect(ma.getEntity('kitchen_speaker')).toMatchObject({
+    position: 23,
+    positionUpdatedAt: '2026-01-01T00:01:00.000Z',
+  });
+
+  // The player's next update, back at 0, does not take the position away from the queue.
+  socket().receive({
+    event: 'player_updated',
+    object_id: 'kitchen_speaker',
+    data: player({
+      elapsed_time: 0.4,
+      elapsed_time_last_updated: 1_767_225_661,
+      playback_state: 'playing',
+    }),
+  });
+
+  expect(ma.getEntity('kitchen_speaker')).toMatchObject({ position: 23 });
+
+  // And the queue counting on moves it.
+  socket().receive({
+    event: 'queue_updated',
+    object_id: 'kitchen_speaker',
+    data: {
+      queue_id: 'kitchen_speaker',
+      elapsed_time: 24,
+      elapsed_time_last_updated: 1_767_225_661,
+    },
+  });
+
+  expect(ma.getEntity('kitchen_speaker')).toMatchObject({ position: 24 });
+});
+
+test('a queue without a stamp for its elapsed time is taken as of when it arrived', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket);
+  const before = Date.now();
+  socket().receive({
+    event: 'queue_updated',
+    object_id: 'kitchen_speaker',
+    data: { queue_id: 'kitchen_speaker', elapsed_time: 10 },
+  });
+
+  const entity = ma.getEntity('kitchen_speaker');
+  expect(entity).toMatchObject({ position: 10 });
+  expect(
+    Date.parse((entity as { positionUpdatedAt: string }).positionUpdatedAt),
+  ).toBeGreaterThanOrEqual(before - 1000);
+});
+
 test('shuffle is read from the queues, kept up to date by queue events, and set on the queue', async () => {
   const { ma, socket } = make();
   await connect(ma, socket);
