@@ -141,14 +141,22 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
           {browser.searching ? 'Nothing found.' : 'Nothing here.'}
         </Typography>
       ) : theater ? (
-        // One row of large cards that scrolls sideways, with a thin quiet scrollbar.
+        // One row of large cards that scrolls sideways, with a thin quiet scrollbar. It is a size
+        // container that asks for room for full-size cards and gives way when there is less, and the
+        // cards then shrink to fit (see `CARD_SIZE`) instead of being cut off.
         <FadeScroll
           as="ul"
           gap={4}
           m={0}
           p={0}
           pb={2}
-          css={{ listStyle: 'none', scrollSnapType: 'x proximity' }}
+          css={{
+            listStyle: 'none',
+            scrollSnapType: 'x proximity',
+            containerType: 'size',
+            flex: `0 1 ${CARD + LABEL + 16}px`,
+            minHeight: MIN_CARD + LABEL + 16,
+          }}
         >
           {browser.items.map((item) => (
             <li key={item.id} css={{ flex: 'none', scrollSnapAlign: 'start' }}>
@@ -255,8 +263,17 @@ function BrowseRow({
   );
 }
 
-/** The width and height of a theater card's artwork. */
+/** The width and height of a theater card's artwork when there is room for it. */
 const CARD = 200;
+
+/** The smallest a theater card's artwork gets: when there is less room than that, the page scrolls instead. */
+const MIN_CARD = 120;
+
+/** What a theater card needs under its artwork for the title and subtitle. */
+const LABEL = 56;
+
+/** The artwork's side: `CARD`, or less when the row it sits in is shorter than the card and its labels (`cqh` is a percent of that row's height). */
+const CARD_SIZE = `min(${CARD}px, max(${MIN_CARD}px, calc(100cqh - ${LABEL}px)))`;
 
 /** An item as a large card for the theater layout: big artwork (round for an artist), then the
  * title and subtitle. It opens or plays like a row does, and an album or playlist gets its play
@@ -272,7 +289,7 @@ function BrowseCard({
 }) {
   const main = item.expandable ? onOpen : item.playable ? onPlay : undefined;
   return (
-    <Box position="relative" width={CARD}>
+    <Box position="relative" css={{ width: CARD_SIZE }}>
       <PlainButton
         direction="column"
         gap={2}
@@ -289,8 +306,7 @@ function BrowseCard({
           color="textMuted"
           radius={item.kind === 'artist' ? 'full' : 'card'}
           overflow="hidden"
-          width={CARD}
-          height={CARD}
+          css={{ width: CARD_SIZE, height: CARD_SIZE }}
         >
           {item.artworkUrl ? (
             <Cover src={item.artworkUrl} />
@@ -324,7 +340,7 @@ function BrowseCard({
       </PlainButton>
       {item.expandable && item.playable ? (
         // Over the artwork's lower right corner.
-        <Box position="absolute" css={{ right: 10, top: CARD - 54 }}>
+        <Box position="absolute" css={{ right: 10, top: `calc(${CARD_SIZE} - 54px)` }}>
           <IconButton icon="lu:play" label={`Play ${item.title}`} glyph={16} onClick={onPlay} />
         </Box>
       ) : null}
