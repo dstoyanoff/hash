@@ -1,12 +1,12 @@
 {
   "name": "@hashsome/integration.home-assistant",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "description": "Home Assistant integration: entities, services, area/entity registry",
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "states": "node scripts/print-states.ts"
+    "states": "node scripts/print-states.ts",
+    "build": "tsc -b tsconfig.build.json"
   },
   "dependencies": {
     "@hashsome/core": "workspace:*",
@@ -16,5 +16,31 @@
     ".": "./src/index.ts",
     "./mock": "./src/mock.ts",
     "./package.json": "./package.json"
+  },
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dstoyanoff/hashsome.git",
+    "directory": "packages/integrations/home-assistant"
+  },
+  "homepage": "https://github.com/dstoyanoff/hashsome#readme",
+  "bugs": "https://github.com/dstoyanoff/hashsome/issues",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./mock": {
+        "types": "./dist/mock.d.ts",
+        "default": "./dist/mock.js"
+      },
+      "./package.json": "./package.json"
+    }
   }
 }

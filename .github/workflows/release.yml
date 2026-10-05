@@ -1,0 +1,88 @@
+name: Release
+
+# Run by hand: Actions → Release → Run workflow. It reads the conventional commits since the last
+# `v*` tag, picks the version, publishes every package to npm, then commits the version bump and
+# changelog to main, tags it and creates the GitHub release.
+on:
+  workflow_dispatch:
+    inputs:
+      level:
+        description: Version bump. `auto` follows the commits (feat = minor, fix = patch).
+        type: choice
+        options: [auto, patch, minor, major]
+        default: auto
+      dry_run:
+        description: Work out the version and notes, publish nothing.
+        type: boolean
+        default: false
+
+concurrency: release
+
+permissions:
+  contents: read
+  id-token: write # npm trusted publishing and provenance
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          # A token that may push to main past its ruleset; the built-in one may not.
+          token: ${{ secrets.RELEASE_TOKEN }}
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+      - name: Work out the version
+        id: next
+        run: |
+          level=""
+          if [ "${{ inputs.level }}" != "auto" ]; then level="--level ${{ inputs.level }}"; fi
+          pnpm --silent release $level --notes "$RUNNER_TEMP/notes.md" ${{ inputs.dry_run && '--dry-run' || '' }} | tee -a "$GITHUB_OUTPUT"
+
+      - name: Release notes
+        if: steps.next.outputs.skip != 'true'
+        run: cat "$RUNNER_TEMP/notes.md" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Build the packages
+        if: steps.next.outputs.skip != 'true' && !inputs.dry_run
+        run: pnpm build:packages
+
+      # Commit and tag locally first, publish, and only then push: a failed publish leaves main alone.
+      - name: Commit and tag
+        if: steps.next.outputs.skip != 'true' && !inputs.dry_run
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(release): v${{ steps.next.outputs.version }}"
+          git tag -a "v${{ steps.next.outputs.version }}" -m "v${{ steps.next.outputs.version }}"
+
+      - name: Publish to npm
+        if: steps.next.outputs.skip != 'true' && !inputs.dry_run
+        run: |
+          mkdir "$RUNNER_TEMP/tarballs"
+          for dir in packages/core packages/ui packages/runtime packages/integrations/home-assistant packages/integrations/music-assistant; do
+            (cd "$dir" && pnpm pack --pack-destination "$RUNNER_TEMP/tarballs")
+          done
+          # `pnpm pack` has already swapped workspace:* and the dist exports in; npm publishes the tarball as is.
+          for tarball in "$RUNNER_TEMP"/tarballs/*.tgz; do
+            npm publish "$tarball" --access public --provenance
+          done
+
+      - name: Push and release
+        if: steps.next.outputs.skip != 'true' && !inputs.dry_run
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          git push origin HEAD:main "v${{ steps.next.outputs.version }}"
+          gh release create "v${{ steps.next.outputs.version }}" --title "v${{ steps.next.outputs.version }}" --notes-file "$RUNNER_TEMP/notes.md" --prerelease="${{ startsWith(steps.next.outputs.version, '0.') }}"

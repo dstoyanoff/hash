@@ -3,8 +3,10 @@ import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 
-/** The runtime's own entry for a packaged server, by path: it does not depend on how the project resolves `@hashsome/runtime`. */
-const SERVE = fileURLToPath(new URL('../serve.ts', import.meta.url));
+/** The runtime's own entry for a packaged server, by path: it does not depend on how the project resolves `@hashsome/runtime`. Next to this file, as source in the repo and as built JavaScript when installed. */
+const SERVE = fileURLToPath(
+  new URL(`../serve${import.meta.url.endsWith('.ts') ? '.ts' : '.js'}`, import.meta.url),
+);
 
 /**
  * Bundles a project's server into one file: the runtime, the project's `hashsome.config.ts` and every

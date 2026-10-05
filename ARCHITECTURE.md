@@ -648,6 +648,27 @@ Every card kind is on the generic model. HA-shaped `EntityState` and `callServic
   (reconnect, idempotent `connect`, timers) need a transport fake per integration and are not
   asserted yet.
 
+## Releasing
+
+Packages are published to npm by hand, from **Actions → Release → Run workflow** on `main`.
+
+- **What is published.** `@hashsome/core`, `ui`, `runtime` and the two integrations, all at one shared
+  version (0.x while alpha). The repo keeps `exports` pointing at `src/*.ts` so development needs no
+  build; each package's `publishConfig.exports` swaps them for the compiled `dist/` (ES modules plus
+  `.d.ts`, no CommonJS) when `pnpm pack` makes the tarball. `pnpm build:packages` builds them.
+- **The version** comes from the conventional commits since the last `v*` tag
+  (`scripts/release.ts`): `feat` is a minor, `fix`/`perf` a patch, nothing else releases. Below 1.0 a
+  breaking change is also a minor. The workflow's `level` input overrides it, and 1.0.0 is a manual
+  `major`. Tick **dry run** to see the version and notes without publishing.
+- **What a run does.** Checks (lint, typecheck, test), writes the version into every package and
+  `CHANGELOG.md`, commits and tags `vX.Y.Z` locally, publishes every tarball with provenance, and only
+  then pushes the commit and tag to `main` and creates the GitHub release with the notes. A failed
+  publish therefore leaves `main` untouched. Pushing to `main` uses the `RELEASE_TOKEN` secret (a
+  fine-grained token with Contents write), since `main` requires PRs and the built-in token cannot
+  bypass that.
+- **npm auth** is trusted publishing (OIDC), configured once per package on npmjs.com for this
+  repository and `release.yml`; there is no npm token in GitHub.
+
 ## Open questions
 
 - **Typed refs per kind.** Optional. Generating types so `<LightTile entity>` only accepts refs of

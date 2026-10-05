@@ -1,7 +1,6 @@
 {
   "name": "@hashsome/runtime",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "description": "Server + CLI that serves a project's own dashboards",
   "type": "module",
   "exports": {
@@ -13,7 +12,8 @@
     "./serve": "./src/serve.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -b tsconfig.build.json"
   },
   "devDependencies": {
     "@testing-library/react": "16.3.3",
@@ -36,5 +36,49 @@
   },
   "bin": {
     "hashsome": "./bin/hashsome.ts"
+  },
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dstoyanoff/hashsome.git",
+    "directory": "packages/runtime"
+  },
+  "homepage": "https://github.com/dstoyanoff/hashsome#readme",
+  "bugs": "https://github.com/dstoyanoff/hashsome/issues",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      ".": {
+        "types": "./dist/src/index.d.ts",
+        "default": "./dist/src/index.js"
+      },
+      "./app": {
+        "types": "./dist/app/index.d.ts",
+        "default": "./dist/app/index.js"
+      },
+      "./entry-client": {
+        "types": "./dist/app/entry.client.d.ts",
+        "default": "./dist/app/entry.client.js"
+      },
+      "./entry-server": {
+        "types": "./dist/app/entry.server.d.ts",
+        "default": "./dist/app/entry.server.js"
+      },
+      "./vite-config": {
+        "types": "./dist/src/vite-config.d.ts",
+        "default": "./dist/src/vite-config.js"
+      },
+      "./serve": {
+        "types": "./dist/src/serve.d.ts",
+        "default": "./dist/src/serve.js"
+      }
+    },
+    "bin": {
+      "hashsome": "./dist/bin/hashsome.js"
+    }
   }
 }
