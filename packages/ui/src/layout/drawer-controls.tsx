@@ -1,9 +1,10 @@
 /** @jsxImportSource @emotion/react */
 import { Box, Flex, Typography } from 'e-prim';
 import { motion } from 'motion/react';
-import { useEffect, useRef, type KeyboardEvent, type PointerEvent } from 'react';
+import { useEffect, useRef, type ElementType, type KeyboardEvent, type PointerEvent } from 'react';
 import type { IconName } from '../icon-data.ts';
 import { Icon } from '../icon.tsx';
+import { FadeScroll } from './fade-scroll.tsx';
 import { RoundButton } from './round-button.tsx';
 
 /** Fine adjustment: a press nudges by `delta` (1%); holding repeats in steps of 10 until released. */
@@ -232,17 +233,15 @@ export function ChipRow({
   onChange: (value: string) => void;
   tabs?: boolean;
 }) {
+  // Tabs scroll sideways when there are more than fit, and fade at the edge that has more.
+  const Wrap: ElementType = tabs ? FadeScroll : Flex;
   return (
-    <Flex
+    <Wrap
       gap={2}
       {...(tabs ? { role: 'tablist' } : {})}
       css={
         tabs
-          ? {
-              overflowX: 'auto',
-              scrollbarWidth: 'none',
-              '&::-webkit-scrollbar': { display: 'none' },
-            }
+          ? { flexShrink: 0, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }
           : { flexWrap: 'wrap' }
       }
     >
@@ -279,6 +278,6 @@ export function ChipRow({
           </Flex>
         );
       })}
-    </Flex>
+    </Wrap>
   );
 }

@@ -7,6 +7,7 @@ import { useEntityHandle } from '../hooks.ts';
 import { useDetail } from '../layout/detail-provider.tsx';
 import { Cover } from '../layout/cover.tsx';
 import { ChipRow } from '../layout/drawer-controls.tsx';
+import { FadeScroll } from '../layout/fade-scroll.tsx';
 import { PlainButton } from '../layout/plain-button.tsx';
 import { IconButton } from '../layout/tile.tsx';
 import { useMediaBrowser } from '../use-media-browser.ts';
@@ -139,7 +140,7 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
         </Typography>
       ) : theater ? (
         // One row of large cards that scrolls sideways, with a thin quiet scrollbar.
-        <Flex
+        <FadeScroll
           as="ul"
           gap={4}
           m={0}
@@ -147,7 +148,6 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
           pb={2}
           css={({ palette }) => ({
             listStyle: 'none',
-            overflowX: 'auto',
             scrollSnapType: 'x proximity',
             scrollbarWidth: 'thin',
             scrollbarColor: `${palette.border} transparent`,
@@ -158,11 +158,21 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
               <BrowseCard item={item} onOpen={() => browser.open(item)} onPlay={() => play(item)} />
             </li>
           ))}
-        </Flex>
+        </FadeScroll>
       ) : (
-        <Flex direction="column" gap={1} as="ul" m={0} p={0} css={{ listStyle: 'none' }}>
+        // Rows scroll within the library, so what is above them (search, tabs) stays in view when
+        // the room is short; with room to spare it is just as tall as its rows.
+        <Flex
+          direction="column"
+          gap={1}
+          as="ul"
+          m={0}
+          p={0}
+          minHeight={0}
+          css={{ listStyle: 'none', overflowY: 'auto' }}
+        >
           {browser.items.map((item) => (
-            <li key={item.id}>
+            <li key={item.id} css={{ flex: 'none' }}>
               <BrowseRow item={item} onOpen={() => browser.open(item)} onPlay={() => play(item)} />
             </li>
           ))}

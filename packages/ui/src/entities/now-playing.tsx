@@ -21,13 +21,14 @@ export function NowPlaying({
   extra,
   onOpenArtwork,
   size,
+  shuffle: shufflePlacement = 'transport',
 }: {
   handle: EntityHandle<'mediaPlayer'>;
 
   /** What to call the player before it reports a name. */
   fallback: string;
 
-  /** One more button, to the right of the transport (the browse button). */
+  /** One more button, to the right of the transport (the browse button). Shuffle takes the slot on the left, unless it sits by the title. */
   extra?: ReactNode;
 
   /** Makes the artwork a button that calls this (opens the library). */
@@ -35,6 +36,9 @@ export function NowPlaying({
 
   /** The artwork ring's diameter in px, for a roomier player. Default 168. */
   size?: number;
+
+  /** Where the shuffle button goes: `transport` is the left slot of the button row, `title` a small button beside the song title, which leaves previous, play and next centered on their own. Default `transport`. */
+  shuffle?: 'transport' | 'title';
 }) {
   const player = handle.entity;
   const { status } = handle;
@@ -62,7 +66,7 @@ export function NowPlaying({
         {...(size !== undefined ? { size } : {})}
       />
       <Flex direction="column" align="center" gap={0.5} color={ready ? 'text' : 'textMuted'}>
-        {/* Shuffle sits by the title, so the transport below is just previous, play and next. */}
+        {/* In the drawer, shuffle sits by the title, so the transport below is just previous, play and next. */}
         <Flex align="center" justify="center" gap={2} maxWidth="100%">
           <Typography
             as="h2"
@@ -77,7 +81,7 @@ export function NowPlaying({
               ? (player?.media?.title ?? 'Nothing playing')
               : statusLabels[status as Exclude<typeof status, 'ready'>]}
           </Typography>
-          {caps?.shuffle ? (
+          {caps?.shuffle && shufflePlacement === 'title' ? (
             <IconButton
               icon="lu:shuffle"
               label="Shuffle"
@@ -134,7 +138,19 @@ export function NowPlaying({
           justifyContent: 'center',
         })}
       >
-        <span />
+        {caps?.shuffle && shufflePlacement === 'transport' ? (
+          <IconButton
+            icon="lu:shuffle"
+            label="Shuffle"
+            glyph={18}
+            active={player?.shuffle === true}
+            pressed={player?.shuffle === true}
+            disabled={!ready}
+            onClick={() => void handle.command('setShuffle', { shuffle: player?.shuffle !== true })}
+          />
+        ) : (
+          <span />
+        )}
         <IconButton
           icon="lu:skip-back"
           label="Previous"

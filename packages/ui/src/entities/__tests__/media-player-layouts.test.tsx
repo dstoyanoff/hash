@@ -245,6 +245,40 @@ test('shuffle sits left of the transport and toggles, with play/pause kept in th
   expect(container).toBeTruthy();
 });
 
+test('in the drawer, shuffle sits by the title and the transport is only previous, play and next', () => {
+  renderWithMock(
+    <MediaPlayerColumn entity="ha:room" />,
+    {
+      room: mockMediaPlayer({
+        name: 'Room',
+        playback: 'playing',
+        media: { title: 'Dreams' },
+        shuffle: false,
+        capabilities: { browse: true, shuffle: true },
+      }),
+    },
+    library,
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open media browser' }));
+  const [, shuffle] = screen.getAllByRole('button', { name: 'Shuffle' }) as [
+    HTMLElement,
+    HTMLElement,
+  ];
+
+  const [, title] = screen.getAllByRole('heading', { name: 'Dreams' }) as [
+    HTMLElement,
+    HTMLElement,
+  ];
+
+  expect(shuffle.parentElement).toBe(title.parentElement);
+
+  const [, pause] = screen.getAllByRole('button', { name: 'Pause' }) as [HTMLElement, HTMLElement];
+  const transport = Array.from(pause.parentElement!.children);
+  expect(transport.filter((child) => child.getAttribute('aria-label') === 'Shuffle')).toEqual([]);
+  expect(transport[2]).toBe(pause);
+});
+
 test('play/pause stays in the middle with no shuffle and no browse button', () => {
   renderWithMock(<MediaPlayerColumn entity="ha:room" />, {
     room: mockMediaPlayer({ name: 'Room', playback: 'playing' }),
@@ -469,13 +503,18 @@ describe('long press on the vertical card, and what each way of opening the draw
       playerMaxWidth: '420px',
     });
 
-    // Expanded, the player is larger.
+    // The narrow drawer stacks from the top: nothing stretches to push the library to the bottom.
+    expect(roomAbove(screen.getAllByRole('slider', { name: 'Volume level' })[1]!)).toBe('0');
+
+    // Expanded, the player is larger, and the library is docked at the bottom.
     fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
     expect(screen.getByRole('button', { name: 'Collapse' })).toBeTruthy();
     expect(layoutOf(screen.getAllByRole('slider', { name: 'Volume level' })[1]!)).toEqual({
       ...SHAPE,
       playerMaxWidth: '560px',
     });
+
+    expect(roomAbove(screen.getAllByRole('slider', { name: 'Volume level' })[1]!)).toBe('1');
   });
 
   test('the full page is the same layout as the expanded drawer', () => {
@@ -493,6 +532,19 @@ const SHAPE = {
   playerCentered: true,
   libraryBelow: true,
 };
+
+/** How much of the room the library leaves the player takes (a flex-grow): 0 stacks from the top,
+ * 1 centers the player and docks the library to the bottom. */
+function roomAbove(volume: HTMLElement) {
+  const search = screen.getByRole('searchbox', { name: 'Search the library' });
+  let body = volume.parentElement as HTMLElement;
+  while (!body.contains(search)) {
+    body = body.parentElement as HTMLElement;
+  }
+
+  const area = Array.from(body.children).find((child) => child.contains(volume)) as HTMLElement;
+  return getComputedStyle(area).flexGrow;
+}
 
 /** How the player and the library are arranged around a volume slider inside the big player: the
  * player sits in a box that centers it in the room above the library. */
