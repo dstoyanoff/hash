@@ -93,6 +93,7 @@ export async function packageRelease(
   const { root, targets } = options;
   const needsImage =
     targets.includes('compose') || targets.includes('helm') || targets.includes('image');
+
   const client = join(root, 'build', 'client');
   if (!existsSync(join(client, 'index.html'))) {
     throw new Error('No build found. Run `hash-dash build` first.');
