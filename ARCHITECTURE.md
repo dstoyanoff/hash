@@ -199,7 +199,8 @@ interface Integration {
   command(entityId: string, name: string, args?: Record<string, unknown>): Promise<void>;
 
   // ── optional capabilities ───────────────────────────────────────────────
-  history?(entityId: string, query: HistoryQuery): Promise<HistorySample[]>;
+  history?(entityId: string, query: HistoryQuery): Promise<HistoryResult>; // bucketed past values
+  fetchAsset?(path: string): Promise<Response>; // artwork etc., fetched with the integration's credentials
   logbook?(entityId: string, query: LogbookQuery): Promise<LogbookEntry[]>;
   browse?(entityId: string, query: { path?: string; search?: string }): Promise<BrowseResult>;
 
@@ -497,6 +498,110 @@ usePlayer(ref)            entity + its commands bound         Player (state + me
 **Status:** built. `useEntity`, `useCommand` and `useEntityHandle` are in `packages/ui/src/hooks.ts`;
 cards take `EntityRef | EntityHandle<K>` (`entity-handle.ts`). Kind hooks such as `usePlayer` were
 replaced by the handle.
+
+## Repository layout
+
+```
+packages/
+  core/                      @hash/core             entity model, integration contract, wire protocol
+  integrations/
+    home-assistant/          @hash/integration.home-assistant
+    music-assistant/         @hash/integration.music-assistant
+  ui/                        @hash/ui               design system, hooks, entity components, the gallery
+  runtime/                   @hash/runtime          the hash-dash CLI and the server it hosts
+example/                     @hash/example          a complete project: the reference for your own
+  hash.config.ts               which integrations, and how they are configured
+  app/                         a React Router app: root.tsx, routes.ts (every route in one file)
+  shared/                      conventions the dashboards reuse (top bar, the switcher's list)
+  dashboards/<id>/             one folder per dashboard: layout.tsx, pages/*.tsx
+templates/dashboard/         the scaffold a new dashboards/<id>/ folder is made from
+docs/screenshots/            the images the README shows
+```
+
+`packages/*` is the framework and knows nothing about a particular home. `example/` is an ordinary
+project that uses it, the same shape as a real user's own repository; this repository hosts both so
+the framework's tests and the dogfood dashboards live together. Dashboards are plain folders under a
+project, not packages, and the repository's tests cover `packages/*` only.
+
+## How a project is wired
+
+- **One routing file.** A dashboard is reachable because `app/routes.ts` has a `route('<id>', …)`
+  for it, at `/<id>` from the root. Nothing is discovered: there is no index of installed
+  dashboards, and no dashboard manifest. The tab title is the entry module's `meta` export.
+- **A dashboard owns its layout.** It renders the top bar, a navigation rail or dock itself, or
+  leaves them out. A multi-page dashboard is a layout route with child routes, and its navigation
+  takes an absolute `base` with items relative to it.
+- **Conventions are the project's.** `shared/` holds what several dashboards reuse (one top bar,
+  the dashboard switcher's list). `@hash` does not wire any of it; it is ordinary code.
+- **The dashboard code is ordinary app code**, not a sandbox: it can import any library, the
+  project's own files, or its own helpers. `@hash/ui` components are the building blocks, and
+  `@hash/ui` is styled only through e-prim props and theme tokens, never a `style` prop.
+- **Integrations are configured in one place.** `hash.config.ts` constructs them, usually from
+  environment variables. The server reads this file at startup only, so a change needs a restart.
+
+## Agent workflow
+
+The repository is set up so a coding agent can add a dashboard without touching the framework.
+The skills in `.claude/skills/` hold what an agent needs, and they read well for a person too:
+
+| Skill              | What it is for                                                                   |
+| ------------------ | -------------------------------------------------------------------------------- |
+| `create-dashboard` | The end-to-end process for a new dashboard                                       |
+| `dashboard-rules`  | The hard constraints, and the sharp edges found while building the real examples |
+| `entity-discovery` | Finding real entity ids instead of guessing them                                 |
+| `ui-catalog`       | Every component and its props, generated from source so it cannot go stale       |
+| `verify-dashboard` | How to check the result actually works before calling it done                    |
+| `add-ui-component` | The stricter, separate workflow for extending the design system itself           |
+
+The main rule is that creating a dashboard does not edit `packages/*`. A real gap in `@hash/ui` is
+a separate, explicit change (see `add-ui-component`), so "make me a dashboard" can never turn into
+"also changed the framework". `CATALOG.md` is generated (`pnpm generate:catalog`) and CI fails if
+it drifts from the source.
+
+## Packaging and deployment
+
+`hash-dash package <target…>` turns a project into something deployable. It is built where you
+build it and never where it runs.
+
+1. **Build the client.** `hash-dash build` produces the static client in `build/client`. (The shared
+   Vite config is a function so every load of it gets its own React Router plugin; the SPA build's
+   preview step loads the config a second time in the same process.)
+2. **Bundle the server.** Vite's own server build bundles the runtime, the project's
+   `hash.config.ts` and every integration it imports, with their dependencies, into one
+   `server.mjs`. It runs with plain Node 24 and no `node_modules`. The server needs its own file
+   because it holds the tokens, proxies `/ws`, and serves backend artwork through `/_hash/asset/*`;
+   the static client alone is not enough.
+3. **Write the targets.** Each target is written under `./release` from that bundle:
+
+   | Target    | Contents                                                                         |
+   | --------- | -------------------------------------------------------------------------------- |
+   | `plain`   | `server.mjs`, `client/`, a `Dockerfile`, a README                                |
+   | `compose` | `compose.yaml` (reads `.env`), the project's `.env.example`, a README            |
+   | `helm`    | a chart: Deployment (one replica, `Recreate`), Service, optional Ingress, probes |
+   | `image`   | only `image.tar`                                                                 |
+
+   `compose`, `helm` and `image` run a container image: a slim Node image with the bundle copied in
+   (`COPY`, no install, no compile), run as the non-root `node` user with a `/healthz` health check.
+   It is built for `--platform`, and saved as `image.tar` with a tag per release (the time, unless
+   `--tag`), so a node always picks up an update.
+
+**Secrets.** The bundle and the image hold none. The config reads its tokens and addresses from the
+environment when the server runs: an `.env` for compose, a Kubernetes Secret for helm. The chart
+takes the Secret's name (`existingSecret`) and never contains its values. A private certificate
+authority for a backend is a mounted file named by `NODE_EXTRA_CA_CERTS`, since Node does not use
+the system store by default.
+
+**Loading the image onto k3s.** There is no registry. `k3s ctr -n k8s.io images import image.tar`
+puts the image into a node's containerd, and the Deployment uses `imagePullPolicy: IfNotPresent`
+(or `Never`) with that tag. On a cluster of several nodes the image must be present on every node a
+pod can land on, or the pod pinned to one. k3s's embedded registry mirror (`embedded-registry`) can
+share images between nodes in principle, but it needs the flag on servers and agents, and in
+practice did not share an imported image on the cluster this was developed against. Importing on
+each node is the dependable path.
+
+**Hosting notes.** A pod on `hostNetwork` needs the `Recreate` strategy, at the Deployment's `spec`
+level and not in the pod spec, or a rollout deadlocks on the node's port. The Service port in a
+backend's URL is the Service's, not the container's.
 
 ## Adding things
 

@@ -1,7 +1,13 @@
 import type { Client, EntityListener, LinkStatus } from './client.ts';
 import { parseEntityRef, UnknownEntityError, type EntityRef } from './entity.ts';
 import type { ConnectionStatus, Integration, Unsubscribe } from './integration.ts';
-import type { BrowseQuery, BrowseResult, Entity } from './model/index.ts';
+import type {
+  BrowseQuery,
+  BrowseResult,
+  Entity,
+  HistoryQuery,
+  HistoryResult,
+} from './model/index.ts';
 
 /** In-process `Client` over integrations, with no runtime server. Used by the gallery and tests. */
 export class LocalClient implements Client {
@@ -114,6 +120,20 @@ export class LocalClient implements Client {
     }
 
     return source.browse(id, query);
+  }
+
+  history(ref: EntityRef, query: HistoryQuery): Promise<HistoryResult> {
+    const { integration, id } = parseEntityRef(ref);
+    const source = this.#integrations.get(integration);
+    if (!source) {
+      return Promise.reject(new Error(`Unknown integration "${integration}"`));
+    }
+
+    if (!source.history) {
+      return Promise.reject(new Error(`"${integration}" keeps no history`));
+    }
+
+    return source.history(id, query);
   }
 
   callRaw(integration: string, request: Record<string, unknown>): Promise<unknown> {

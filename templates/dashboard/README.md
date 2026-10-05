@@ -16,7 +16,7 @@ project (`example/package.json`), not just of `@hash/ui`.
 Placeholders (replaced by the skill, not by hand):
 
 - `__DASHBOARD_ID__` — kebab-case id; becomes the folder name under `example/dashboards/` and
-  the route `/dashboard/{id}`.
+  the route `/{id}`.
 - `__DASHBOARD_TITLE__` — human-readable title (page `<title>`, dashboard-switcher dropdown).
 
 Scaffolding `dashboards/<id>/` alone is not enough to reach it from `pnpm dev`: add one `route()`

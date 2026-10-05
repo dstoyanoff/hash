@@ -1,19 +1,24 @@
 /** @jsxImportSource @emotion/react */
-import type { ConnectionStatus, EntityRef, LinkStatus } from '@hash/core';
+import type { ConnectionStatus, EntityRef, LinkStatus, WeatherCondition } from '@hash/core';
 import { Box, Flex, Typography } from 'e-prim';
 import { PlainButton } from '../layout/plain-button.tsx';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import type { IconName } from '../icon-data.ts';
 import { fallbackName } from '../entity-handle.ts';
-import { useConnectionStatus, useEntityHandle, useIntegrationStatuses } from '../hooks.ts';
+import {
+  useConnectionStatus,
+  useEntity,
+  useEntityHandle,
+  useIntegrationStatuses,
+} from '../hooks.ts';
 import { Icon } from '../icon.tsx';
 import { statusLabels } from '../status.ts';
 import { SensorReadout } from './sensor-readout.tsx';
 
 /** One entry in the title's dashboard-switcher dropdown. */
 export interface DashboardOption {
-  /** Matches the dashboard route id — switching navigates to `/dashboard/{id}`, always its root. */
+  /** Matches the dashboard route id — switching navigates to `/{id}`, always its root. */
   id: string;
   title: string;
   icon?: IconName;
@@ -40,6 +45,37 @@ function colorForId(id: string, colors: readonly string[]): string {
   return colors[hash % colors.length]!;
 }
 
+/** Closes a popover (calls `close`) on a press outside `ref` or on Escape, while it is `open`. */
+function useDismiss(open: boolean, close: () => void, ref: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const onPointer = (event: PointerEvent) => {
+      if (!ref.current?.contains(event.target as Node)) {
+        close();
+      }
+    };
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        close();
+      }
+    };
+
+    document.addEventListener('pointerdown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+    // `close` is a fresh function each render but only ever sets state; re-subscribing for it would
+    // do nothing but churn listeners.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, ref]);
+}
+
 export interface TopBarProps {
   /** The dashboard's name. Becomes a dashboard switcher when `dashboards` has two or more entries. */
   title: string;
@@ -50,8 +86,11 @@ export interface TopBarProps {
   /** Compact circular buttons that fire `scene.turn_on` directly (not the `Tile`-based `SceneButton`); a bare entity ref uses the default icon and an auto-assigned color, or pass `{ entity, icon, color }` to pick either. */
   scenes?: (EntityRef | TopBarScene)[];
 
-  /** A sensor for current conditions, e.g. outdoor temperature. Shown with a weather-style sun icon and a rounded whole-degree reading, not a generic sensor readout. */
+  /** Current weather as a pill with an icon for the sky and a rounded whole-degree reading. A weather entity, like `ha:weather.forecast_home`, shows its real condition; a plain sensor, e.g. an outdoor temperature, gets a fixed sun. */
   weather?: EntityRef;
+
+  /** Your own component(s) for the right-hand side, after the weather: a security mode picker, a custom status. Whatever it is, it sits in the bar's row and is yours to style. */
+  extra?: ReactNode;
 
   /** A sensor reflecting overall home/away status (e.g. a binary presence sensor), shown as a chip. */
   presence?: EntityRef;
@@ -84,6 +123,7 @@ export function TopBar({
   dashboards,
   scenes,
   weather,
+  extra,
   presence,
   people,
   presenceColors,
@@ -121,6 +161,7 @@ export function TopBar({
       <Flex align="center" gap={3}>
         {showDate ? <DateChip /> : null}
         {weather ? <WeatherChip entity={weather} /> : null}
+        {extra}
         {presence ? (
           <StatusChip>
             <SensorReadout entity={presence} drawer={false} />
@@ -148,13 +189,22 @@ function DashboardSwitcher({
 }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const ref = useRef<HTMLDivElement>(null);
+  useDismiss(open, () => setOpen(false), ref);
+
+  // The dashboard being shown: the one whose route the address is under, else the one the title names.
+  const current =
+    dashboards.find((d) => pathname === `/${d.id}` || pathname.startsWith(`/${d.id}/`)) ??
+    dashboards.find((d) => d.title === title);
 
   return (
-    <Flex position="relative">
+    <Flex ref={ref} position="relative">
       <Flex
         as="button"
         type="button"
         onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
         aria-expanded={open}
         align="center"
         justify="center"
@@ -167,6 +217,7 @@ function DashboardSwitcher({
         px={4}
         radius="chrome"
       >
+        {current?.icon ? <Icon name={current.icon} size={20} /> : null}
         <Typography as="h1" variant="title">
           {title}
         </Typography>
@@ -175,6 +226,7 @@ function DashboardSwitcher({
       {open ? (
         <Flex
           as="ul"
+          role="listbox"
           direction="column"
           background="surfaceRaised"
           radius="row"
@@ -187,28 +239,41 @@ function DashboardSwitcher({
           minWidth="100%"
           css={{ top: '100%', left: 0, listStyle: 'none', whiteSpace: 'nowrap' }}
         >
-          {dashboards.map((d) => (
-            <li key={d.id}>
-              <PlainButton
-                onClick={() => {
-                  setOpen(false);
-                  navigate(`/dashboard/${d.id}`);
-                }}
-                align="center"
-                gap={2}
-                width="100%"
-                radius="small"
-                px={2}
-                py={1.5}
-                color="text"
-              >
-                {d.icon ? <Icon name={d.icon} size={16} /> : null}
-                <Typography as="span" variant="body">
-                  {d.title}
-                </Typography>
-              </PlainButton>
-            </li>
-          ))}
+          {dashboards.map((d) => {
+            const active = d.id === current?.id;
+            return (
+              <li key={d.id} role="none">
+                <Flex
+                  as="button"
+                  type="button"
+                  role="option"
+                  aria-selected={active}
+                  // Already here: marked, and nothing to switch to.
+                  disabled={active}
+                  onClick={() => {
+                    setOpen(false);
+                    navigate(`/${d.id}`);
+                  }}
+                  align="center"
+                  gap={2}
+                  width="100%"
+                  radius="small"
+                  px={2}
+                  py={1.5}
+                  color="text"
+                  background={active ? 'surface' : 'transparent'}
+                  cursor={active ? 'default' : 'pointer'}
+                  css={{ textAlign: 'left' }}
+                >
+                  {d.icon ? <Icon name={d.icon} size={16} /> : null}
+                  <Typography as="span" variant="body" grow={1}>
+                    {d.title}
+                  </Typography>
+                  {active ? <Icon name="lu:check" size={16} /> : null}
+                </Flex>
+              </li>
+            );
+          })}
         </Flex>
       ) : null}
     </Flex>
@@ -259,30 +324,7 @@ export function SystemStatus({
   const [open, setOpen] = useState(defaultOpen);
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    const onPointer = (event: PointerEvent) => {
-      if (!ref.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener('pointerdown', onPointer);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('pointerdown', onPointer);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
+  useDismiss(open, () => setOpen(false), ref);
 
   const rows: { name: string; health: Health; label: string }[] = [
     {
@@ -387,10 +429,57 @@ function StatusChip({ children }: { children: ReactNode }) {
   );
 }
 
-/** A `sensor.*` current-conditions reading, styled like a weather app (sun glyph, bare rounded
- * degree) rather than `SensorReadout`'s generic icon-by-device-class + exact value + unit. No real
- * integration reports a weather *condition* yet, so the sun is fixed rather than picked from one. */
+/** What a condition looks like in the pill: an icon, and a color where the weather has one. */
+const CONDITION_LOOK: Record<WeatherCondition, { icon: IconName; color?: string }> = {
+  sunny: { icon: 'lu:sun', color: '#FBBF24' },
+  'clear-night': { icon: 'lu:moon', color: '#A5B4FC' },
+  partlycloudy: { icon: 'lu:cloud-sun', color: '#FBBF24' },
+  cloudy: { icon: 'lu:cloud' },
+  fog: { icon: 'lu:cloud-fog' },
+  rainy: { icon: 'lu:cloud-rain', color: '#60A5FA' },
+  pouring: { icon: 'lu:cloud-rain-wind', color: '#60A5FA' },
+  snowy: { icon: 'lu:cloud-snow', color: '#BAE6FD' },
+  'snowy-rainy': { icon: 'lu:cloud-snow', color: '#93C5FD' },
+  hail: { icon: 'lu:cloud-hail', color: '#93C5FD' },
+  lightning: { icon: 'lu:cloud-lightning', color: '#FBBF24' },
+  'lightning-rainy': { icon: 'lu:cloud-lightning', color: '#FBBF24' },
+  windy: { icon: 'lu:wind' },
+  exceptional: { icon: 'lu:triangle-alert', color: '#F2554A' },
+  unknown: { icon: 'lu:cloud' },
+};
+
+/** Current weather, as a pill: an icon for the sky and a rounded whole-degree reading. A `weather`
+ * entity gives the real condition; a plain `sensor.*` (an outdoor temperature) gets a fixed sun,
+ * since a sensor says nothing about the sky. */
 function WeatherChip({ entity }: { entity: EntityRef }) {
+  return useEntity(entity)?.kind === 'weather' ? (
+    <WeatherPill entity={entity} />
+  ) : (
+    <SensorWeather entity={entity} />
+  );
+}
+
+function WeatherPill({ entity }: { entity: EntityRef }) {
+  const handle = useEntityHandle('weather', entity);
+  const { status } = handle;
+  const weather = handle.entity;
+  const look = CONDITION_LOOK[weather?.condition ?? 'unknown'];
+  const ready = status === 'ready' && weather?.temperature !== undefined;
+  return (
+    <StatusChip>
+      <Flex as="span" css={look.color ? { color: look.color } : undefined}>
+        <Icon name={look.icon} size={14} />
+      </Flex>
+      <Typography as="span" variant="label">
+        {ready
+          ? `${Math.round(weather.temperature ?? 0)}°`
+          : statusLabels[status as Exclude<typeof status, 'ready'>]}
+      </Typography>
+    </StatusChip>
+  );
+}
+
+function SensorWeather({ entity }: { entity: EntityRef }) {
   const handle = useEntityHandle('sensor', entity);
   const { status } = handle;
   const sensor = handle.entity;
@@ -400,7 +489,7 @@ function WeatherChip({ entity }: { entity: EntityRef }) {
       <Flex as="span" css={{ color: '#FBBF24' }}>
         <Icon name="lu:sun" size={14} />
       </Flex>
-      <Typography as="span" variant="bodyStrong">
+      <Typography as="span" variant="label">
         {status === 'ready' && sensor?.numeric !== undefined
           ? `${Math.round(sensor.numeric)}°`
           : statusLabels[status as Exclude<typeof status, 'ready'>]}

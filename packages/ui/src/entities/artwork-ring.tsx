@@ -5,7 +5,8 @@ import { Icon } from '../icon.tsx';
 import { Cover } from '../layout/cover.tsx';
 import type { SeekHold } from './media-seek.ts';
 
-const SIZE = 168;
+/** The ring's diameter when none is given. */
+const DEFAULT_SIZE = 168;
 
 /** The player's artwork in a circle, like the one in the bar but larger: an inner outline around
  * it, and an outer ring that shows how far along playback is. With `onSeek` the ring is a slider:
@@ -17,6 +18,7 @@ export function ArtworkRing({
   duration,
   seekable,
   onOpen,
+  size: SIZE = DEFAULT_SIZE,
 }: {
   artworkUrl?: string | undefined;
 
@@ -29,6 +31,9 @@ export function ArtworkRing({
 
   /** Makes the artwork itself a button, for opening something (the library). */
   onOpen?: (() => void) | undefined;
+
+  /** The ring's diameter in px. Default 168. */
+  size?: number;
 }) {
   const ring = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);

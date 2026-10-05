@@ -7,6 +7,7 @@ import { useEntityHandle } from '../hooks.ts';
 import { useDetail } from '../layout/detail-provider.tsx';
 import { Cover } from '../layout/cover.tsx';
 import { ChipRow } from '../layout/drawer-controls.tsx';
+import { FadeScroll } from '../layout/fade-scroll.tsx';
 import { PlainButton } from '../layout/plain-button.tsx';
 import { IconButton } from '../layout/tile.tsx';
 import { useMediaBrowser } from '../use-media-browser.ts';
@@ -50,7 +51,7 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
   /** Something is open inside the selected shelf (not a search): the tab shows the way back. */
   const inside = browser.canGoBack && !browser.searching;
   const header = (
-    <Flex align="center" gap={2}>
+    <Flex align="center" gap={2} css={{ flexShrink: 0 }}>
       {browser.canGoBack ? (
         <IconButton icon="lu:arrow-left" label="Back" glyph={16} onClick={browser.back} />
       ) : null}
@@ -69,6 +70,8 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
       px={3}
       height={36}
       color="textMuted"
+      // Fixed height: when the list takes all the room, the search keeps its size and the list scrolls.
+      css={{ flexShrink: 0 }}
     >
       <Icon name="lu:search" size={16} />
       <Box
@@ -139,30 +142,34 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
         </Typography>
       ) : theater ? (
         // One row of large cards that scrolls sideways, with a thin quiet scrollbar.
-        <Flex
+        <FadeScroll
           as="ul"
           gap={4}
           m={0}
           p={0}
           pb={2}
-          css={({ palette }) => ({
-            listStyle: 'none',
-            overflowX: 'auto',
-            scrollSnapType: 'x proximity',
-            scrollbarWidth: 'thin',
-            scrollbarColor: `${palette.border} transparent`,
-          })}
+          css={{ listStyle: 'none', scrollSnapType: 'x proximity' }}
         >
           {browser.items.map((item) => (
             <li key={item.id} css={{ flex: 'none', scrollSnapAlign: 'start' }}>
               <BrowseCard item={item} onOpen={() => browser.open(item)} onPlay={() => play(item)} />
             </li>
           ))}
-        </Flex>
+        </FadeScroll>
       ) : (
-        <Flex direction="column" gap={1} as="ul" m={0} p={0} css={{ listStyle: 'none' }}>
+        // Rows scroll within the library, so what is above them (search, tabs) stays in view when
+        // the room is short; with room to spare it is just as tall as its rows.
+        <Flex
+          direction="column"
+          gap={1}
+          as="ul"
+          m={0}
+          p={0}
+          minHeight={0}
+          css={{ listStyle: 'none', overflowY: 'auto' }}
+        >
           {browser.items.map((item) => (
-            <li key={item.id}>
+            <li key={item.id} css={{ flex: 'none' }}>
               <BrowseRow item={item} onOpen={() => browser.open(item)} onPlay={() => play(item)} />
             </li>
           ))}
@@ -218,7 +225,13 @@ function BrowseRow({
           )}
         </Flex>
         <Flex direction="column" minWidth={0}>
-          <Typography as="span" variant="bodyStrong" noWrap textOverflow="ellipsis">
+          <Typography
+            as="span"
+            variant="bodyStrong"
+            noWrap
+            textOverflow="ellipsis"
+            overflow="hidden"
+          >
             {item.title}
           </Typography>
           {item.subtitle ? (
@@ -228,6 +241,7 @@ function BrowseRow({
               color="textMuted"
               noWrap
               textOverflow="ellipsis"
+              overflow="hidden"
             >
               {item.subtitle}
             </Typography>
@@ -285,7 +299,13 @@ function BrowseCard({
           )}
         </Flex>
         <Flex direction="column" minWidth={0} px={1}>
-          <Typography as="span" variant="bodyStrong" noWrap textOverflow="ellipsis">
+          <Typography
+            as="span"
+            variant="bodyStrong"
+            noWrap
+            textOverflow="ellipsis"
+            overflow="hidden"
+          >
             {item.title}
           </Typography>
           {item.subtitle ? (
@@ -295,6 +315,7 @@ function BrowseCard({
               color="textMuted"
               noWrap
               textOverflow="ellipsis"
+              overflow="hidden"
             >
               {item.subtitle}
             </Typography>

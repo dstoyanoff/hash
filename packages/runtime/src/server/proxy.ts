@@ -5,6 +5,9 @@ import {
   type BrowseQuery,
   type ConnectionStatus,
   type EntityRef,
+  type HistoryBucket,
+  type HistoryQuery,
+  type HistoryRange,
   type Integration,
   type ServerMessage,
   type Unsubscribe,
@@ -20,6 +23,25 @@ export interface ProxySocket {
 }
 
 const OPEN = 1;
+
+const RANGES = ['1h', '1d', '1w', '1m'];
+const BUCKETS = ['5m', '1h', '1d'];
+
+/** A history query's fields, kept only when they are ones it has: the rest came from a browser. A
+ * missing or unknown range is a request that cannot be answered. */
+function historyArgs(args: Record<string, unknown> | undefined): HistoryQuery | undefined {
+  const { range, bucket } = args ?? {};
+  if (typeof range !== 'string' || !RANGES.includes(range)) {
+    return undefined;
+  }
+
+  return {
+    range: range as HistoryRange,
+    ...(typeof bucket === 'string' && BUCKETS.includes(bucket)
+      ? { bucket: bucket as HistoryBucket }
+      : {}),
+  };
+}
 
 /** The only fields a browse query has, kept only when they are strings: the rest came from a browser. */
 function browseArgs(args: Record<string, unknown> | undefined): BrowseQuery {
@@ -167,13 +189,20 @@ export class Proxy {
         case 'query': {
           const { integration: integrationId, id } = parseEntityRef(message.ref);
           const integration = this.#integrations.get(integrationId);
+          const history = message.query === 'history' ? historyArgs(message.args) : undefined;
           answer(
             message.id,
             !integration
               ? Promise.reject(new Error(`Unknown integration "${integrationId}"`))
-              : integration.browse
-                ? integration.browse(id, browseArgs(message.args))
-                : Promise.reject(new Error(`"${integrationId}" has no media library`)),
+              : message.query === 'history'
+                ? integration.history
+                  ? history
+                    ? integration.history(id, history)
+                    : Promise.reject(new Error('A history query needs a range'))
+                  : Promise.reject(new Error(`"${integrationId}" keeps no history`))
+                : integration.browse
+                  ? integration.browse(id, browseArgs(message.args))
+                  : Promise.reject(new Error(`"${integrationId}" has no media library`)),
           );
 
           return;

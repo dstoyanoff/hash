@@ -187,13 +187,13 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'EntityRef',
       },
       {
-        doc: 'Usage per period in kWh. Needs history/statistics; no integration provides it yet — pass explicitly.',
+        doc: "Usage per period in kWh. Left out, it is worked out from `energy`'s history when the backend keeps one (Home Assistant's long-term statistics); pass it to use your own.",
         name: 'usage',
         optional: true,
         type: 'EnergyUsage',
       },
       {
-        doc: 'Samples for each range the person can pick, e.g. only the currently-viewed one may be populated yet; `onRangeChange` fires on pick.',
+        doc: "Samples for each range the person can pick; `onRangeChange` fires on pick. Left out, they are loaded from `power`'s history when the backend keeps one, for the selected range; pass them to use your own.",
         name: 'seriesByRange',
         optional: true,
         type: 'Partial<Record<EnergyRange, EnergySample[]>>',
@@ -338,7 +338,13 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'string',
       },
       {
-        doc: 'Readings over time (oldest first). Adds a chart and min/max for today / this week / this month to the drawer, plus a custom date and time range when expanded. No default source yet — pass explicitly.',
+        doc: "The sensor's battery level, as a sensor ref like `ha:sensor.kitchen_t_h_sensor_battery` (a percentage). Shown in the drawer, in red when low.",
+        name: 'battery',
+        optional: true,
+        type: 'EntityRef',
+      },
+      {
+        doc: "Readings over time (oldest first). Adds a chart and min/max for today / this week / this month to the drawer, plus a custom date and time range when expanded. Left out, they come from the backend's own history when it keeps one (Home Assistant's long-term statistics).",
         name: 'history',
         optional: true,
         type: 'SensorSample[]',
@@ -425,6 +431,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: "EntityRef | EntityHandle<'mediaPlayer'>",
       },
       {
+        doc: "What to call the player: the drawer's title and the name shown when nothing is playing. Defaults to the player's own name.",
+        name: 'name',
+        optional: true,
+        type: 'string',
+      },
+      {
         doc: "Content for the media browser shown with the player in the drawer. Holding the card or pressing the artwork opens the drawer; the browse button opens it expanded. By default a `MediaBrowser` over the player's own library, shown only for a ref whose player has one; pass your own content to replace it, or `false` for no browse button.",
         name: 'browse',
         optional: true,
@@ -442,6 +454,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: "EntityRef | EntityHandle<'mediaPlayer'>",
       },
       {
+        doc: "What to call the player: the drawer's title and the name shown when nothing is playing. Defaults to the player's own name.",
+        name: 'name',
+        optional: true,
+        type: 'string',
+      },
+      {
         doc: "Content for the media browser shown with the player in the drawer. By default a `MediaBrowser` over the player's own library, shown only for a ref whose player has one; pass your own content to replace it, or `false` for no drawer.",
         name: 'browse',
         optional: true,
@@ -457,6 +475,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         name: 'entity',
         optional: false,
         type: 'EntityRef',
+      },
+      {
+        doc: "What to call the player: the drawer's title and the name shown when nothing is playing. Defaults to the player's own name.",
+        name: 'name',
+        optional: true,
+        type: 'string',
       },
     ],
   },
@@ -493,7 +517,7 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'NavItem[]',
       },
       {
-        doc: 'Base path items are resolved against, e.g. `/dashboard/home`.',
+        doc: 'Base path items are resolved against, e.g. `/home`.',
         name: 'base',
         optional: false,
         type: 'string',
@@ -516,7 +540,7 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'NavItem[]',
       },
       {
-        doc: 'Base path items are resolved against, e.g. `/dashboard/home`.',
+        doc: 'Base path items are resolved against, e.g. `/home`.',
         name: 'base',
         optional: false,
         type: 'string',
@@ -551,10 +575,16 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: '(EntityRef | TopBarScene)[]',
       },
       {
-        doc: 'A sensor for current conditions, e.g. outdoor temperature. Shown with a weather-style sun icon and a rounded whole-degree reading, not a generic sensor readout.',
+        doc: 'Current weather as a pill with an icon for the sky and a rounded whole-degree reading. A weather entity, like `ha:weather.forecast_home`, shows its real condition; a plain sensor, e.g. an outdoor temperature, gets a fixed sun.',
         name: 'weather',
         optional: true,
         type: 'EntityRef',
+      },
+      {
+        doc: "Your own component(s) for the right-hand side, after the weather: a security mode picker, a custom status. Whatever it is, it sits in the bar's row and is yours to style.",
+        name: 'extra',
+        optional: true,
+        type: 'ReactNode',
       },
       {
         doc: 'A sensor reflecting overall home/away status (e.g. a binary presence sensor), shown as a chip.',

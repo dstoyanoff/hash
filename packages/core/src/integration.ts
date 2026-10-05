@@ -1,5 +1,11 @@
 import type { EntityRef } from './entity.ts';
-import type { BrowseQuery, BrowseResult, Entity } from './model/index.ts';
+import type {
+  BrowseQuery,
+  BrowseResult,
+  Entity,
+  HistoryQuery,
+  HistoryResult,
+} from './model/index.ts';
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
@@ -52,6 +58,22 @@ export interface Integration {
    * Rejects with a displayable `Error` for an unknown entity or path. Arguments come from a browser.
    */
   browse?(entityId: string, query: BrowseQuery): Promise<BrowseResult>;
+
+  /**
+   * The entity's past values, from the backend's own record (Home Assistant's long-term
+   * statistics), bucketed. Optional: only for backends that keep history. Resolves with no points
+   * for an entity with none, and rejects with a displayable `Error` for an unknown entity.
+   * Arguments come from a browser: validate them.
+   */
+  history?(entityId: string, query: HistoryQuery): Promise<HistoryResult>;
+
+  /**
+   * Fetches a file the backend serves for its entities, such as artwork, with the integration's own
+   * credentials. `path` is the backend's own path and starts with `/`; it comes from a browser, so
+   * refuse anything else. The runtime serves only image responses. Optional: omit it when entities
+   * only carry addresses the browser can open itself.
+   */
+  fetchAsset?(path: string): Promise<Response>;
 
   /** Escape hatch: a backend-specific request no command covers. `@hash/ui` never calls it. */
   callRaw?(request: Record<string, unknown>): Promise<unknown>;

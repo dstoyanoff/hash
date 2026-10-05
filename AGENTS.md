@@ -16,7 +16,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before adding a component, a device kind
 ## Commands
 
 `pnpm install`, `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm test`,
-`pnpm generate:catalog`. `pnpm dev`/`build`/`start` at the root are thin
+`pnpm generate:catalog`. A project is deployed with `hash-dash package <plain|compose|helm|image>` (README "Deploying"; mechanics in ARCHITECTURE.md "Packaging and deployment"): the server is bundled into one file and shipped as an image you load onto the host, never built there, and secrets stay in the host's environment. `pnpm dev`/`build`/`start` at the root are thin
 `pnpm --filter @hash/example <script>` passthroughs — real work happens in that package, same
 as it would in a real consumer's own repo.
 
@@ -33,7 +33,7 @@ of relying on this summary alone.
 - Node is pinned via `devEngines.runtime` in package.json and managed by pnpm (`pnpm runtime`); do not use nvm.
 - A dashboard is ordinary app code, not a sandbox: it can import anything (other libraries, the project's own `shared/` files, its own helpers). `@hash/ui` components are the building blocks, and a dashboard owns its layout — it includes `TopBar`/`NavRail`/`NavDock` itself, or leaves them out.
 - Do not edit `packages/*` when creating a dashboard; propose a separate change instead (see `add-ui-component` for the one deliberate exception, for `packages/ui` only). Registering a new dashboard touches `example/app/routes.ts` (the one file listing every route; plus `example/shared/dashboards.ts` if it should appear in the top bar's switcher) — that's expected, not an exception to this rule, since all of them live inside `example`, not `packages/*`.
-- There is no dashboard manifest: a dashboard's URL is its `route('dashboard/<id>', …)` in `routes.ts`, and its tab title is the entry module's `meta` export.
+- There is no dashboard manifest: a dashboard's URL is its `route('<id>', …)` in `routes.ts`, and its tab title is the entry module's `meta` export.
 - Tests (`pnpm test`) cover `packages/*` only. Don't add tests under `example/dashboards/*` — verify a dashboard with `verify-dashboard` (typecheck plus an actual look at it running) instead.
 - `.claude/skills/ui-catalog/CATALOG.md` is generated (`pnpm generate:catalog`) from `packages/ui/src`; never hand-edit it, and regenerate after changing a component's doc comment or props — CI fails if it drifts.
 - Work on a feature branch and open a PR; milestones are tracked as GitHub issues.

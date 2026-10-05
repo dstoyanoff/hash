@@ -181,3 +181,40 @@ describe('with history', () => {
     expect(screen.getByText('Too high · safe range 30–60 %')).toBeTruthy();
   });
 });
+
+describe('battery', () => {
+  const open = (battery: Record<string, unknown>) => {
+    renderWithMock(<SensorReadout entity="ha:t" battery="ha:b" />, {
+      t: mockSensor({ value: '18', unit: '°C', measurement: 'temperature' }),
+      b: mockSensor({ value: '85', unit: '%', measurement: 'battery', ...battery }),
+    });
+
+    fireEvent.click(screen.getByText('18 °C'));
+  };
+
+  test('the drawer shows the battery percentage', () => {
+    open({});
+    expect(screen.getByText('Battery')).toBeTruthy();
+    expect(screen.getByText('85%')).toBeTruthy();
+  });
+
+  test('a low battery says so', () => {
+    open({ value: '12' });
+    expect(screen.getByText('Battery low')).toBeTruthy();
+    expect(screen.getByText('12%')).toBeTruthy();
+  });
+
+  test('an unavailable battery shows a dash, not a stale number', () => {
+    open({ availability: 'unavailable' });
+    expect(screen.getByText('—')).toBeTruthy();
+  });
+
+  test('without a battery the drawer has no battery line', () => {
+    renderWithMock(<SensorReadout entity="ha:t" />, {
+      t: mockSensor({ value: '18', unit: '°C', measurement: 'temperature' }),
+    });
+
+    fireEvent.click(screen.getByText('18 °C'));
+    expect(screen.queryByText('Battery')).toBeNull();
+  });
+});

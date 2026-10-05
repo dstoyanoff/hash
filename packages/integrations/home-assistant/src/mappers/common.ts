@@ -19,6 +19,13 @@ export function availabilityOf(entity: HassEntity): Availability {
   return 'ready';
 }
 
+/** A file address in an entity attribute. Home Assistant serves its own files from a path like
+ * `/api/media_player_proxy/…` that only makes sense on Home Assistant, so those go through
+ * `toAssetUrl`; a full address is kept as it is. */
+export function fileUrl(value: string, toAssetUrl: (path: string) => string): string {
+  return value.startsWith('/') && !value.startsWith('//') ? toAssetUrl(value) : value;
+}
+
 export function nameOf(entity: HassEntity): string {
   const name = entity.attributes.friendly_name;
   return typeof name === 'string' && name ? name : entity.entity_id;

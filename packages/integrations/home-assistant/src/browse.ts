@@ -1,4 +1,5 @@
 import type { BrowseItem, BrowseKind } from '@hash/core';
+import { fileUrl } from './mappers/common.ts';
 
 /** One entry of Home Assistant's `BrowseMedia` tree, as `media_player/browse_media` returns it. */
 export interface HaBrowseMedia {
@@ -46,11 +47,14 @@ const KINDS: Record<string, BrowseKind> = {
   directory: 'folder',
 };
 
-export function toBrowseItem(media: HaBrowseMedia): BrowseItem {
+export function toBrowseItem(
+  media: HaBrowseMedia,
+  toAssetUrl: (path: string) => string = (path) => path,
+): BrowseItem {
   const kind = KINDS[media.media_class] ?? (media.can_expand ? 'folder' : 'other');
-  // Thumbnails Home Assistant serves itself are relative and need its login, so only addresses
-  // the browser can open on its own are passed on.
-  const artwork = media.thumbnail && /^https?:\/\//.test(media.thumbnail) ? media.thumbnail : '';
+  // Thumbnails Home Assistant serves itself are relative and need its login, so they go through
+  // the runtime; full addresses are passed on as they are.
+  const artwork = media.thumbnail ? fileUrl(media.thumbnail, toAssetUrl) : '';
   return {
     id: encodeItemId(media.media_content_type, media.media_content_id),
     title: media.title,

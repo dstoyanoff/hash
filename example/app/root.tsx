@@ -4,7 +4,7 @@ import { Outlet } from 'react-router';
 
 // App-wide look. `THEME` is `'light' | 'dark' | 'system'` (follows the OS and updates live);
 // `FONT` is any Google Fonts family name (`'Inter'`, `'Roboto'`, `'Poppins'`, ...), loaded for you.
-const THEME = 'light';
+const THEME = 'system';
 const FONT = 'Inter';
 
 // Change any built-in token without touching `@hash/ui`; name only what differs. For example:

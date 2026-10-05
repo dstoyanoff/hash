@@ -18,19 +18,31 @@ import { ArtworkRing } from './artwork-ring.tsx';
 export function NowPlaying({
   handle,
   fallback,
+  name,
   extra,
   onOpenArtwork,
+  size,
+  shuffle: shufflePlacement = 'transport',
 }: {
   handle: EntityHandle<'mediaPlayer'>;
 
   /** What to call the player before it reports a name. */
   fallback: string;
 
-  /** One more button, to the right of the transport (the browse button). Shuffle takes the slot on the left. */
+  /** Calls the player this instead of the name it reports. */
+  name?: string;
+
+  /** One more button, to the right of the transport (the browse button). Shuffle takes the slot on the left, unless it sits by the title. */
   extra?: ReactNode;
 
   /** Makes the artwork a button that calls this (opens the library). */
   onOpenArtwork?: () => void;
+
+  /** The artwork ring's diameter in px, for a roomier player. Default 168. */
+  size?: number;
+
+  /** Where the shuffle button goes: `transport` is the left slot of the button row, `title` a small button beside the song title, which leaves previous, play and next centered on their own. Default `transport`. */
+  shuffle?: 'transport' | 'title';
 }) {
   const player = handle.entity;
   const { status } = handle;
@@ -55,20 +67,59 @@ export function NowPlaying({
         duration={duration}
         seekable={caps?.seek === true}
         onOpen={onOpenArtwork}
+        {...(size !== undefined ? { size } : {})}
       />
       <Flex direction="column" align="center" gap={0.5} color={ready ? 'text' : 'textMuted'}>
-        <Typography as="h2" variant="title" noWrap textOverflow="ellipsis" m={0} maxWidth="100%">
-          {ready
-            ? (player?.media?.title ?? 'Nothing playing')
-            : statusLabels[status as Exclude<typeof status, 'ready'>]}
-        </Typography>
+        {/* In the drawer, shuffle sits by the title, so the transport below is just previous, play and next. */}
+        <Flex align="center" justify="center" gap={2} maxWidth="100%">
+          <Typography
+            as="h2"
+            variant="title"
+            noWrap
+            textOverflow="ellipsis"
+            overflow="hidden"
+            m={0}
+            minWidth={0}
+          >
+            {ready
+              ? (player?.media?.title ?? 'Nothing playing')
+              : statusLabels[status as Exclude<typeof status, 'ready'>]}
+          </Typography>
+          {caps?.shuffle && shufflePlacement === 'title' ? (
+            <IconButton
+              icon="lu:shuffle"
+              label="Shuffle"
+              size={14}
+              active={player?.shuffle === true}
+              pressed={player?.shuffle === true}
+              disabled={!ready}
+              onClick={() =>
+                void handle.command('setShuffle', { shuffle: player?.shuffle !== true })
+              }
+            />
+          ) : null}
+        </Flex>
         {ready && player?.media?.artist ? (
-          <Typography as="span" variant="body" color="textMuted" noWrap textOverflow="ellipsis">
+          <Typography
+            as="span"
+            variant="body"
+            color="textMuted"
+            noWrap
+            textOverflow="ellipsis"
+            overflow="hidden"
+          >
             {[player.media.artist, player.media.album].filter(Boolean).join(' · ')}
           </Typography>
         ) : (
-          <Typography as="span" variant="body" color="textMuted" noWrap textOverflow="ellipsis">
-            {player?.name ?? fallback}
+          <Typography
+            as="span"
+            variant="body"
+            color="textMuted"
+            noWrap
+            textOverflow="ellipsis"
+            overflow="hidden"
+          >
+            {name ?? player?.name ?? fallback}
           </Typography>
         )}
       </Flex>
@@ -91,7 +142,7 @@ export function NowPlaying({
           justifyContent: 'center',
         })}
       >
-        {caps?.shuffle ? (
+        {caps?.shuffle && shufflePlacement === 'transport' ? (
           <IconButton
             icon="lu:shuffle"
             label="Shuffle"

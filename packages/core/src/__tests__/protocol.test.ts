@@ -26,6 +26,15 @@ describe('protocol', () => {
     };
 
     expect(parseClientMessage(encodeMessage(query))).toEqual(query);
+    const history: ClientMessage = {
+      type: 'query',
+      id: 4,
+      ref: 'ha:sensor.power',
+      query: 'history',
+      args: { range: '1d' },
+    };
+
+    expect(parseClientMessage(encodeMessage(history))).toEqual(history);
     const raw: ClientMessage = { type: 'raw', id: 2, integration: 'ha', request: { x: 1 } };
     expect(parseClientMessage(encodeMessage(raw))).toEqual(raw);
     expect(parseClientMessage('{"type":"subscribe","ref":"ha:light.a"}')).toEqual({
@@ -42,7 +51,7 @@ describe('protocol', () => {
     '{"type":"command","id":1,"ref":"nocolon","command":"b"}',
     '{"type":"command","id":1,"ref":"ha:a","command":"b","args":[1]}',
     '{"type":"raw","id":1,"integration":"ha"}',
-    '{"type":"query","id":1,"ref":"ma:a","query":"history"}',
+    '{"type":"query","id":1,"ref":"ma:a","query":"nope"}',
     '{"type":"query","id":"x","ref":"ma:a","query":"browse"}',
     '{"type":"query","id":1,"ref":"ma:a","query":"browse","args":[1]}',
     '{"type":"call","id":1,"integration":"ha","domain":"a","service":"b"}',

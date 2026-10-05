@@ -8,6 +8,8 @@ const commands = {
   dev: async () => (await import('../src/cli/dev.ts')).dev(),
   build: async () => (await import('../src/cli/build.ts')).build(),
   start: async () => (await import('../src/cli/start.ts')).start(),
+  package: async () =>
+    (await import('../src/cli/package.ts')).packageCommand(process.argv.slice(3)),
 } as const;
 
 const command = process.argv[2] as keyof typeof commands | undefined;

@@ -27,7 +27,10 @@ export interface SensorReadoutProps {
   /** Drawer title. Defaults to the sensor's name. */
   name?: string;
 
-  /** Readings over time (oldest first). Adds a chart and min/max for today / this week / this month to the drawer, plus a custom date and time range when expanded. No default source yet — pass explicitly. */
+  /** The sensor's battery level, as a sensor ref like `ha:sensor.kitchen_t_h_sensor_battery` (a percentage). Shown in the drawer, in red when low. */
+  battery?: EntityRef;
+
+  /** Readings over time (oldest first). Adds a chart and min/max for today / this week / this month to the drawer, plus a custom date and time range when expanded. Left out, they come from the backend's own history when it keeps one (Home Assistant's long-term statistics). */
   history?: SensorSample[];
 
   /** Flags readings outside `{ min, max }` with a warning. Humidity defaults to 30–60 %; pass `false` to turn a default off. */
@@ -94,6 +97,7 @@ export function SensorReadout({
   entity,
   icon,
   name,
+  battery,
   history,
   safeRange,
   drawer = true,
@@ -145,6 +149,8 @@ export function SensorReadout({
             level={level}
             range={range}
             unit={unit}
+            {...(battery ? { battery } : {})}
+            {...(typeof entity === 'string' ? { entity } : {})}
             {...(history ? { history } : {})}
           />
         }
@@ -189,12 +195,16 @@ function SensorDetailBody({
   level,
   range,
   unit,
+  entity,
+  battery,
   history,
 }: {
   valueText: string;
   level: RangeLevel | undefined;
   range: SafeRange | undefined;
   unit: string;
+  entity?: EntityRef;
+  battery?: EntityRef;
   history?: SensorSample[];
 }) {
   const warning = level === 'low' || level === 'high';
@@ -222,7 +232,44 @@ function SensorDetailBody({
           </Flex>
         ) : null}
       </Flex>
-      {history ? <SensorHistory samples={history} unit={unit} /> : null}
+      {battery ? <BatteryLevel entity={battery} /> : null}
+      <SensorHistory {...(history ? { samples: history } : entity ? { entity } : {})} unit={unit} />
+    </Flex>
+  );
+}
+
+/** Below this a battery is shown as low. */
+const LOW_BATTERY = 20;
+
+const batteryIcon = (percent: number): IconName =>
+  percent <= LOW_BATTERY
+    ? 'lu:battery-low'
+    : percent <= 60
+      ? 'lu:battery-medium'
+      : 'lu:battery-full';
+
+/** A sensor's battery, in its drawer: the level, red and with a warning once it is low. */
+function BatteryLevel({ entity }: { entity: EntityRef }) {
+  const handle = useEntityHandle('sensor', entity);
+  const level = handle.status === 'ready' ? handle.entity?.numeric : undefined;
+  const low = level !== undefined && level <= LOW_BATTERY;
+  return (
+    <Flex
+      align="center"
+      gap={2}
+      background="surfaceRaised"
+      radius="row"
+      py={2.5}
+      px={4}
+      color={low ? 'danger' : 'textMuted'}
+    >
+      <Icon name={level === undefined ? 'lu:battery' : batteryIcon(level)} size={16} />
+      <Typography as="span" variant="secondary" grow={1}>
+        {low ? 'Battery low' : 'Battery'}
+      </Typography>
+      <Typography as="span" variant="bodyStrong" color={low ? 'danger' : 'text'}>
+        {level === undefined ? '—' : `${Math.round(level)}%`}
+      </Typography>
     </Flex>
   );
 }

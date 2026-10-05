@@ -1,5 +1,9 @@
 import type { Interpolation, Theme } from '@emotion/react';
 
+/** The scrollbar's width (its track) and how much of that is the visible thumb. */
+const SCROLLBAR = 14;
+const THUMB = 4;
+
 function isDark(hex: string): boolean {
   const n = parseInt(hex.replace('#', '').slice(0, 6), 16);
   return Number.isFinite(n) && ((n >> 16) & 255) + ((n >> 8) & 255) + (n & 255) < 384;
@@ -23,5 +27,22 @@ export function globalStyles({ palette, typography }: Theme): Interpolation<Them
     button: { font: 'inherit', color: 'inherit' },
     // Buttons and inputs start borderless; one that wants a border asks for it with the `border` prop.
     'button, input': { border: 0 },
+    // Scrollbars: thin, no track, in the theme's colors. The track is wider than the thumb and the
+    // thumb has a transparent border around it, so there is air between the bar and the content.
+    // (Chrome and Safari take the `::-webkit-scrollbar` rules; Firefox, which has no equivalent for
+    // the gap, gets a thin bar from the standard properties. Setting those in Chrome would turn the
+    // webkit rules off, hence the `@supports`.)
+    '::-webkit-scrollbar': { width: SCROLLBAR, height: SCROLLBAR },
+    '::-webkit-scrollbar-track, ::-webkit-scrollbar-corner': { background: 'transparent' },
+    '::-webkit-scrollbar-thumb': {
+      background: palette.border,
+      backgroundClip: 'padding-box',
+      border: `${(SCROLLBAR - THUMB) / 2}px solid transparent`,
+      borderRadius: 999,
+    },
+    '::-webkit-scrollbar-thumb:hover': { background: palette.line, backgroundClip: 'padding-box' },
+    '@supports not selector(::-webkit-scrollbar)': {
+      '*': { scrollbarWidth: 'thin', scrollbarColor: `${palette.border} transparent` },
+    },
   };
 }

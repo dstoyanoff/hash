@@ -2,6 +2,7 @@ import {
   mockLibrary,
   mockLight,
   mockMediaPlayer,
+  mockSensor,
   MockIntegration,
   type ServerMessage,
 } from '@hash/core';
@@ -170,5 +171,70 @@ describe('browse queries', () => {
     socket.receive({ type: 'query', id: 4, ref: 'ha:lamp', query: 'browse' });
     await settle();
     expect(socket.sent.at(-1)).toMatchObject({ id: 4, ok: false });
+  });
+});
+
+describe('history queries', () => {
+  async function withHistory() {
+    class WithHistory extends MockIntegration {
+      readonly asked: unknown[] = [];
+
+      history(entityId: string, query: unknown) {
+        this.asked.push([entityId, query]);
+        return Promise.resolve({ kind: 'measurement' as const, points: [] });
+      }
+    }
+
+    const ha = new WithHistory({ entities: { power: mockSensor({ value: '1' }) } });
+    await ha.connect();
+    const socket = new FakeSocket();
+    new Proxy([ha]).handleConnection(socket);
+    return { ha, socket };
+  }
+
+  test('a known range and bucket reach the integration, and nothing else does', async () => {
+    const { ha, socket } = await withHistory();
+    socket.receive({
+      type: 'query',
+      id: 1,
+      ref: 'ha:power',
+      query: 'history',
+      args: { range: '1w', bucket: '1h', evil: 'dropped' },
+    });
+
+    await settle();
+    expect(ha.asked).toEqual([['power', { range: '1w', bucket: '1h' }]]);
+    expect(socket.sent.at(-1)).toMatchObject({ id: 1, ok: true, data: { points: [] } });
+  });
+
+  test('a missing or unknown range, or an integration that keeps no history, is an error', async () => {
+    const { ha, socket } = await withHistory();
+    socket.receive({
+      type: 'query',
+      id: 2,
+      ref: 'ha:power',
+      query: 'history',
+      args: { range: '5y' },
+    });
+
+    socket.receive({ type: 'query', id: 3, ref: 'ha:power', query: 'history' });
+    await settle();
+    expect(ha.asked).toEqual([]);
+    expect(socket.sent.slice(-2)).toMatchObject([
+      { id: 2, ok: false },
+      { id: 3, ok: false },
+    ]);
+
+    const { socket: plain } = await setup();
+    plain.receive({
+      type: 'query',
+      id: 4,
+      ref: 'ha:lamp',
+      query: 'history',
+      args: { range: '1d' },
+    });
+
+    await settle();
+    expect(plain.sent.at(-1)).toMatchObject({ id: 4, ok: false });
   });
 });

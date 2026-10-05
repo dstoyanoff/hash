@@ -1,5 +1,5 @@
 import { mockLibrary, mockMediaPlayer } from '@hash/core';
-import { act, fireEvent, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { renderWithMock } from '../../test-utils.tsx';
 import { MediaPlayerBar } from '../media-player-bar.tsx';
@@ -245,6 +245,69 @@ test('shuffle sits left of the transport and toggles, with play/pause kept in th
   expect(container).toBeTruthy();
 });
 
+test('in the drawer, shuffle sits by the title and the transport is only previous, play and next', () => {
+  renderWithMock(
+    <MediaPlayerColumn entity="ha:room" />,
+    {
+      room: mockMediaPlayer({
+        name: 'Room',
+        playback: 'playing',
+        media: { title: 'Dreams' },
+        shuffle: false,
+        capabilities: { browse: true, shuffle: true },
+      }),
+    },
+    library,
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open media browser' }));
+  const [, shuffle] = screen.getAllByRole('button', { name: 'Shuffle' }) as [
+    HTMLElement,
+    HTMLElement,
+  ];
+
+  const [, title] = screen.getAllByRole('heading', { name: 'Dreams' }) as [
+    HTMLElement,
+    HTMLElement,
+  ];
+
+  expect(shuffle.parentElement).toBe(title.parentElement);
+
+  const [, pause] = screen.getAllByRole('button', { name: 'Pause' }) as [HTMLElement, HTMLElement];
+  const transport = Array.from(pause.parentElement!.children);
+  expect(transport.filter((child) => child.getAttribute('aria-label') === 'Shuffle')).toEqual([]);
+  expect(transport[2]).toBe(pause);
+});
+
+describe('name', () => {
+  const idle = () => ({
+    room: mockMediaPlayer({ name: 'Room', playback: 'paused', capabilities: { browse: true } }),
+  });
+
+  test('the column calls the player what it is told, on the card and as the drawer title', () => {
+    renderWithMock(<MediaPlayerColumn entity="ha:room" name="Kitchen speaker" />, idle(), library);
+    expect(screen.getByText('Kitchen speaker')).toBeTruthy();
+    expect(screen.queryByText('Room')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Open media browser' }));
+    expect(screen.getAllByText('Kitchen speaker').length).toBeGreaterThan(1);
+  });
+
+  test('without one it uses the name the player reports', () => {
+    renderWithMock(<MediaPlayerColumn entity="ha:room" />, idle(), library);
+    expect(screen.getByText('Room')).toBeTruthy();
+  });
+
+  test('the bar names the drawer, and the page shows the name', () => {
+    renderWithMock(<MediaPlayerBar entity="ha:room" name="Kitchen speaker" />, idle(), library);
+    fireEvent.click(screen.getByRole('button', { name: 'Browse media' }));
+    expect(screen.getAllByText('Kitchen speaker').length).toBeGreaterThan(0);
+    cleanup();
+
+    renderWithMock(<MediaPlayerPage entity="ha:room" name="Kitchen speaker" />, idle(), library);
+    expect(screen.getByText('Kitchen speaker')).toBeTruthy();
+  });
+});
+
 test('play/pause stays in the middle with no shuffle and no browse button', () => {
   renderWithMock(<MediaPlayerColumn entity="ha:room" />, {
     room: mockMediaPlayer({ name: 'Room', playback: 'playing' }),
@@ -464,27 +527,56 @@ describe('long press on the vertical card, and what each way of opening the draw
   test('the drawer stacks the player and the library at every width, with the player centered', () => {
     renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing(), library);
     fireEvent.click(screen.getByRole('button', { name: 'Open media browser' }));
-    expect(layoutOf(screen.getAllByRole('slider', { name: 'Volume level' })[1]!)).toEqual(SHAPE);
+    expect(layoutOf(screen.getAllByRole('slider', { name: 'Volume level' })[1]!)).toEqual({
+      ...SHAPE,
+      playerMaxWidth: '420px',
+    });
+
+    // The narrow drawer stacks from the top: nothing stretches to push the library to the bottom.
+    expect(roomAbove(screen.getAllByRole('slider', { name: 'Volume level' })[1]!)).toBe('0');
+
+    // Expanded, the player is larger, and the library is docked at the bottom.
     fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
     expect(screen.getByRole('button', { name: 'Collapse' })).toBeTruthy();
-    expect(layoutOf(screen.getAllByRole('slider', { name: 'Volume level' })[1]!)).toEqual(SHAPE);
+    expect(layoutOf(screen.getAllByRole('slider', { name: 'Volume level' })[1]!)).toEqual({
+      ...SHAPE,
+      playerMaxWidth: '560px',
+    });
+
+    expect(roomAbove(screen.getAllByRole('slider', { name: 'Volume level' })[1]!)).toBe('1');
   });
 
   test('the full page is the same layout as the expanded drawer', () => {
     renderWithMock(<MediaPlayerPage entity="ha:room" />, playing(), library);
-    expect(layoutOf(screen.getByRole('slider', { name: 'Volume level' }))).toEqual(SHAPE);
+    expect(layoutOf(screen.getByRole('slider', { name: 'Volume level' }))).toEqual({
+      ...SHAPE,
+      playerMaxWidth: '560px',
+    });
   });
 });
 
 /** What `layoutOf` reports for the big player, in the drawer and on the page alike. */
 const SHAPE = {
   direction: 'column',
-  playerMargin: 'auto',
-  playerMaxWidth: '420px',
+  playerCentered: true,
   libraryBelow: true,
 };
 
-/** How the player and the library are arranged around a volume slider inside the big player. */
+/** How much of the room the library leaves the player takes (a flex-grow): 0 stacks from the top,
+ * 1 centers the player and docks the library to the bottom. */
+function roomAbove(volume: HTMLElement) {
+  const search = screen.getByRole('searchbox', { name: 'Search the library' });
+  let body = volume.parentElement as HTMLElement;
+  while (!body.contains(search)) {
+    body = body.parentElement as HTMLElement;
+  }
+
+  const area = Array.from(body.children).find((child) => child.contains(volume)) as HTMLElement;
+  return getComputedStyle(area).flexGrow;
+}
+
+/** How the player and the library are arranged around a volume slider inside the big player: the
+ * player sits in a box that centers it in the room above the library. */
 function layoutOf(volume: HTMLElement) {
   const search = screen.getByRole('searchbox', { name: 'Search the library' });
   let body = volume.parentElement as HTMLElement;
@@ -492,14 +584,15 @@ function layoutOf(volume: HTMLElement) {
     body = body.parentElement as HTMLElement;
   }
 
-  const player = Array.from(body.children).find((child) => child.contains(volume)) as HTMLElement;
+  const area = Array.from(body.children).find((child) => child.contains(volume)) as HTMLElement;
+  const player = area.firstElementChild as HTMLElement;
   return {
     direction: getComputedStyle(body).flexDirection,
-    playerMargin: getComputedStyle(player).marginLeft,
+    playerCentered:
+      getComputedStyle(area).justifyContent === 'center' &&
+      getComputedStyle(area).alignItems === 'center',
     playerMaxWidth: getComputedStyle(player).maxWidth,
-    libraryBelow: Boolean(
-      player.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ),
+    libraryBelow: Boolean(area.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING),
   };
 }
 

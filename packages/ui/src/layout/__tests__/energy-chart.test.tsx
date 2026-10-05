@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
-import { mockSensor } from '@hash/core';
-import { act, screen } from '@testing-library/react';
+import { LocalClient, MockIntegration, mockSensor, type HistoryQuery } from '@hash/core';
+import { act, render, screen } from '@testing-library/react';
 import { expect, test } from 'vitest';
+import { HashProvider } from '../../provider.tsx';
 import { renderWithMock } from '../../test-utils.tsx';
 import { EnergyChart } from '../energy-chart.tsx';
 
@@ -39,4 +40,44 @@ test('collapsed usage tiles are today / this week / this month, in Wh below 1 kW
 test('the lifetime counter is not shown collapsed', () => {
   renderWithMock(<EnergyChart energy="ha:lamp_energy" power="ha:lamp_power" />, entities);
   expect(screen.queryByText(/Lifetime/)).toBeNull();
+});
+
+test('the usage tiles and the chart come from the backend history when none is passed', async () => {
+  const asked: unknown[] = [];
+  class WithHistory extends MockIntegration {
+    history(entityId: string, query: HistoryQuery) {
+      asked.push([entityId, query]);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return Promise.resolve(
+        entityId === 'lamp_energy'
+          ? { kind: 'total' as const, points: [{ timestamp: today.toISOString(), value: 0.25 }] }
+          : {
+              kind: 'measurement' as const,
+              points: [
+                { timestamp: today.toISOString(), value: 5 },
+                { timestamp: new Date(today.getTime() + 3_600_000).toISOString(), value: 7 },
+              ],
+            },
+      );
+    }
+  }
+
+  const ha = new WithHistory({ entities });
+  render(
+    <HashProvider client={new LocalClient([ha])}>
+      <EnergyChart power="ha:lamp_power" energy="ha:lamp_energy" />
+    </HashProvider>,
+  );
+
+  expect((await screen.findAllByText('250 Wh')).length).toBeGreaterThan(0);
+  expect(asked).toContainEqual(['lamp_power', { range: '1d' }]);
+  expect(asked).toContainEqual(['lamp_energy', { range: '1m', bucket: '1d' }]);
+});
+
+test('a backend that keeps no history just shows the live reading', async () => {
+  renderWithMock(<EnergyChart power="ha:lamp_power" energy="ha:lamp_energy" />, entities);
+  await act(async () => {});
+  expect(screen.getByText('9 W')).toBeTruthy();
+  expect(screen.queryByText('Today')).toBeNull();
 });

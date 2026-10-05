@@ -16,7 +16,7 @@ plain folder inside it (`example/dashboards/<id>/`), not its own package.
 
 1. **Confirm the id, title and devices.** The id is a kebab-case slug
    (`kitchen`, `master-bedroom`) that becomes the folder name and the URL
-   (`/dashboard/<id>`) — it must be filesystem- and URL-safe. Layouts are responsive, so there is no
+   (`/<id>`) — it must be filesystem- and URL-safe. Layouts are responsive, so there is no
    viewport to pick.
 2. **Find the real entities** using `entity-discovery` — don't guess ids.
 3. **Scaffold from the template.** Copy every file in `templates/dashboard/` (not `templates/dashboard/README.md`)
@@ -27,11 +27,11 @@ plain folder inside it (`example/dashboards/<id>/`), not its own package.
    and adjust the layout — don't leave sample ids behind.
 4. **Register it with the project** — a scaffolded `dashboards/<id>/` folder is not reachable from
    `pnpm dev` on its own:
-   - Add `route('dashboard/<id>', '../dashboards/<id>/layout.tsx', [index('../dashboards/<id>/pages/home.tsx')])`
+   - Add `route('<id>', '../dashboards/<id>/layout.tsx', [index('../dashboards/<id>/pages/home.tsx')])`
      to `example/app/routes.ts`, the one file that lists every route.
    - To list it in the top bar's dashboard switcher, add `{ id, title }` to
      `example/shared/dashboards.ts` (a project convention, not wiring). Leave it out for a
-     chrome-less kiosk panel; it stays reachable at `/dashboard/<id>`.
+     chrome-less kiosk panel; it stays reachable at `/<id>`.
    - Nothing is configured globally: a dashboard owns its layout (see `dashboard-rules`'s "Layout
      and chrome" section). The template's page already includes the project's shared `HomeTopBar`.
 5. **Build the page(s).** Read `.claude/skills/ui-catalog/CATALOG.md` for what's available, and

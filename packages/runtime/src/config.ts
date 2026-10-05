@@ -3,6 +3,21 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+/** How a project is packaged for deployment: what `hash-dash package` does without being told. */
+export interface PackageConfig {
+  /** What to write: `plain` (the server bundle and client, runs with Node), `compose` (Docker Compose), `helm` (a Helm chart for k3s), `image` (just the container image, for your own manifests). Command-line targets win over this. */
+  targets?: ('plain' | 'compose' | 'helm' | 'image')[];
+
+  /** What the image runs on, e.g. `linux/amd64`. Default: the machine that builds it. */
+  platform?: string;
+
+  /** The image, service and chart name. Default: the package name. */
+  name?: string;
+
+  /** Where the server listens in the image. Default 3000. */
+  port?: number;
+}
+
 export interface HashConfig {
   /** Backends the runtime proxies to the browser. `@hash/runtime` ships no integrations of its
    * own — install whichever you need (e.g. `@hash/integration.home-assistant`) and construct them
@@ -10,6 +25,9 @@ export interface HashConfig {
   integrations?: Integration[];
   port?: number;
   host?: string;
+
+  /** Defaults for `hash-dash package`, so deploying is `pnpm package` with no flags. */
+  package?: PackageConfig;
 }
 
 export interface ResolvedConfig {
@@ -17,6 +35,7 @@ export interface ResolvedConfig {
   integrations: Integration[];
   port: number;
   host: string;
+  package: PackageConfig;
 }
 
 export function defineConfig(config: HashConfig): HashConfig {
@@ -45,6 +64,20 @@ function assertUniqueIds(integrations: Integration[]): void {
   }
 }
 
+/** Applies defaults to a config (and checks it). `PORT` and `HOST` in the environment win over the
+ * file, so a container can be told where to listen without rebuilding. */
+export function resolveConfig(root: string, user: HashConfig): ResolvedConfig {
+  const integrations = user.integrations ?? [];
+  assertUniqueIds(integrations);
+  return {
+    root,
+    integrations,
+    port: Number(process.env.PORT ?? user.port ?? 3000),
+    host: process.env.HOST ?? user.host ?? '0.0.0.0',
+    package: user.package ?? {},
+  };
+}
+
 /** Loads `<root>/hash.config.ts` (if present) and applies defaults. */
 export async function loadConfig(root: string): Promise<ResolvedConfig> {
   const file = join(root, CONFIG_FILE);
@@ -57,12 +90,5 @@ export async function loadConfig(root: string): Promise<ResolvedConfig> {
     user = mod.default ?? {};
   }
 
-  const integrations = user.integrations ?? [];
-  assertUniqueIds(integrations);
-  return {
-    root,
-    integrations,
-    port: Number(process.env.PORT ?? user.port ?? 3000),
-    host: process.env.HOST ?? user.host ?? '0.0.0.0',
-  };
+  return resolveConfig(root, user);
 }

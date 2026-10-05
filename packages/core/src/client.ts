@@ -1,6 +1,12 @@
 import type { EntityRef } from './entity.ts';
 import type { ConnectionStatus, Unsubscribe } from './integration.ts';
-import type { BrowseQuery, BrowseResult, Entity } from './model/index.ts';
+import type {
+  BrowseQuery,
+  BrowseResult,
+  Entity,
+  HistoryQuery,
+  HistoryResult,
+} from './model/index.ts';
 import { encodeMessage, parseServerMessage, type ClientMessage } from './protocol.ts';
 
 export type LinkStatus = 'connecting' | 'open' | 'closed';
@@ -44,6 +50,9 @@ export interface Client {
 
   /** Lists one level of the entity's media library, or searches it. */
   browse(ref: EntityRef, query: BrowseQuery): Promise<BrowseResult>;
+
+  /** The entity's past values, bucketed, from the backend's own record. */
+  history(ref: EntityRef, query: HistoryQuery): Promise<HistoryResult>;
 
   /** Escape hatch: a backend-specific request, answered with whatever the integration returns. */
   callRaw(integration: string, request: Record<string, unknown>): Promise<unknown>;
@@ -158,6 +167,16 @@ export class RemoteClient implements Client {
       query: 'browse',
       args: { ...query },
     }))) as BrowseResult;
+  }
+
+  async history(ref: EntityRef, query: HistoryQuery): Promise<HistoryResult> {
+    return (await this.#request((id) => ({
+      type: 'query',
+      id,
+      ref,
+      query: 'history',
+      args: { ...query },
+    }))) as HistoryResult;
   }
 
   callRaw(integration: string, request: Record<string, unknown>): Promise<unknown> {

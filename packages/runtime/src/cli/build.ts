@@ -3,7 +3,8 @@ import { createBuilder } from 'vite';
 import { loadConfig } from '../config.ts';
 import { createViteConfig } from '../vite.ts';
 
-export async function build() {
+/** Builds the client into `build/client`. Exits when done, unless `exit` is false (a caller that has more to do). */
+export async function build({ exit = true }: { exit?: boolean } = {}) {
   const config = await loadConfig(resolve(process.cwd()));
   const inline = createViteConfig(config);
   // React Router's SPA prerender step starts a Vite preview server that resolves the
@@ -12,5 +13,7 @@ export async function build() {
   const builder = await createBuilder(inline);
   await builder.buildApp();
   // Vite/React Router leave handles open after the SPA prerender; nothing else to wait for.
-  process.exit(0);
+  if (exit) {
+    process.exit(0);
+  }
 }

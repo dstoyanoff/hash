@@ -1,6 +1,14 @@
-import { LocalClient, mockAction, mockPerson, mockSensor, MockIntegration } from '@hash/core';
-import { act, fireEvent, render, screen } from '@testing-library/react';
-import { expect, test } from 'vitest';
+import {
+  LocalClient,
+  mockAction,
+  mockPerson,
+  mockSensor,
+  mockWeather,
+  MockIntegration,
+} from '@hash/core';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
+import { describe, expect, test } from 'vitest';
 import { HashProvider } from '../../provider.tsx';
 import { renderWithMock } from '../../test-utils.tsx';
 import { TopBar } from '../top-bar.tsx';
@@ -40,24 +48,92 @@ test('a scene can override its default icon', () => {
   expect(ha.calls).toHaveLength(1);
 });
 
+const twoDashboards = [
+  { id: 'living-room', title: 'Living Room', icon: 'lu:sofa' },
+  { id: 'bedroom', title: 'Bedroom', icon: 'lu:bed' },
+] as const;
+
 test('a title with 2+ dashboards opens a switcher and closes it on pick', () => {
   renderWithMock(
-    <TopBar
-      title="Living Room"
-      dashboards={[
-        { id: 'living-room', title: 'Living Room', icon: 'lu:sofa' },
-        { id: 'bedroom', title: 'Bedroom', icon: 'lu:bed' },
-      ]}
-    />,
+    <TopBar title="Living Room" dashboards={[...twoDashboards]} />,
     {},
     { router: true },
   );
 
-  expect(screen.queryByRole('button', { name: 'Bedroom' })).toBeNull();
+  expect(screen.queryByRole('option', { name: 'Bedroom' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Living Room' }));
-  expect(screen.getByRole('button', { name: 'Bedroom' })).toBeTruthy();
-  fireEvent.click(screen.getByRole('button', { name: 'Bedroom' }));
-  expect(screen.queryByRole('button', { name: 'Bedroom' })).toBeNull();
+  expect(screen.getByRole('option', { name: 'Bedroom' })).toBeTruthy();
+  fireEvent.click(screen.getByRole('option', { name: 'Bedroom' }));
+  expect(screen.queryByRole('option', { name: 'Bedroom' })).toBeNull();
+});
+
+test('the dashboard being shown is marked, and cannot be picked again', () => {
+  const { container } = renderWithMock(
+    <TopBar title="Living Room" dashboards={[...twoDashboards]} />,
+    {},
+    { router: true },
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Living Room' }));
+  const here = screen.getByRole('option', { name: 'Living Room' });
+  expect(here.getAttribute('aria-selected')).toBe('true');
+  expect((here as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.getByRole('option', { name: 'Bedroom' }).getAttribute('aria-selected')).toBe(
+    'false',
+  );
+
+  // Pressing it does nothing: the list stays as it is.
+  fireEvent.click(here);
+  expect(screen.getByRole('option', { name: 'Bedroom' })).toBeTruthy();
+  expect(container).toBeTruthy();
+});
+
+test('the closed switcher shows the current dashboard’s icon next to its title', () => {
+  const { container } = renderWithMock(
+    <MemoryRouter initialEntries={['/bedroom']}>
+      <TopBar title="Bedroom" dashboards={[...twoDashboards]} />
+    </MemoryRouter>,
+  );
+
+  const pill = screen.getByRole('button', { name: 'Bedroom' });
+  expect(pill.querySelectorAll('svg')).toHaveLength(2); // its icon and the chevron
+  expect(container).toBeTruthy();
+});
+
+test('which one is current follows the address', () => {
+  renderWithMock(
+    <MemoryRouter initialEntries={['/bedroom/lights']}>
+      <TopBar title="Whatever" dashboards={[...twoDashboards]} />
+    </MemoryRouter>,
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Whatever' }));
+  expect(screen.getByRole('option', { name: 'Bedroom' }).getAttribute('aria-selected')).toBe(
+    'true',
+  );
+});
+
+test('a press elsewhere, or Escape, closes the switcher', () => {
+  renderWithMock(
+    <TopBar title="Living Room" dashboards={[...twoDashboards]} />,
+    {},
+    { router: true },
+  );
+
+  const open = () => fireEvent.click(screen.getByRole('button', { name: 'Living Room' }));
+  open();
+  expect(screen.getByRole('listbox')).toBeTruthy();
+  fireEvent.pointerDown(document.body);
+  expect(screen.queryByRole('listbox')).toBeNull();
+
+  open();
+  fireEvent.keyDown(document, { key: 'Escape' });
+  expect(screen.queryByRole('listbox')).toBeNull();
+
+  // A press inside it is not "elsewhere".
+  open();
+  fireEvent.pointerDown(screen.getByRole('option', { name: 'Bedroom' }));
+  expect(screen.getByRole('listbox')).toBeTruthy();
 });
 
 test('a title with 0-1 dashboards is plain, non-interactive text', () => {
@@ -159,4 +235,76 @@ test('presence shows who is home normally, and dims anyone who is away', () => {
   // the one it overlaps) and never recolored.
   expect(getComputedStyle(alex).opacity).not.toBe('0.4');
   expect(getComputedStyle(alex).filter).not.toBe('grayscale(1)');
+});
+
+test('your own component sits in the bar, between the weather and the people', () => {
+  renderWithMock(
+    <TopBar
+      title="Home"
+      weather="ha:outdoor_temperature"
+      people={['ha:dan']}
+      extra={<span data-testid="mine">Guard</span>}
+    />,
+    {
+      outdoor_temperature: mockSensor({ value: '16', unit: '°C', measurement: 'temperature' }),
+      dan: mockPerson({ name: 'Dan', home: true }),
+    },
+  );
+
+  const mine = screen.getByTestId('mine');
+  const weather = screen.getByText('16°');
+  const dan = screen.getByRole('img', { name: /Dan/ });
+  expect(weather.compareDocumentPosition(mine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(mine.compareDocumentPosition(dan) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
+describe('weather', () => {
+  const pill = (entity: ReturnType<typeof mockWeather>) => {
+    renderWithMock(<TopBar title="Home" weather="ha:sky" />, { sky: entity });
+    return screen.getByText(/°$/).parentElement as HTMLElement;
+  };
+
+  test('a weather entity shows a rounded temperature and an icon for its condition', () => {
+    const sunny = pill(mockWeather({ condition: 'sunny', temperature: 15.6 }));
+    expect(sunny.textContent).toBe('16°');
+    const sunIcon = sunny.querySelector('svg')?.innerHTML;
+    cleanup();
+
+    const rainy = pill(mockWeather({ condition: 'rainy', temperature: 9.2 }));
+    expect(rainy.textContent).toBe('9°');
+    expect(rainy.querySelector('svg')?.innerHTML).not.toBe(sunIcon);
+  });
+
+  test('a condition nobody knows still gets an icon, and no reading says what is wrong', () => {
+    expect(
+      pill(mockWeather({ condition: 'unknown', temperature: 3 })).querySelector('svg'),
+    ).toBeTruthy();
+
+    cleanup();
+
+    renderWithMock(<TopBar title="Home" weather="ha:sky" />, {
+      sky: mockWeather({ availability: 'unavailable' }),
+    });
+
+    expect(screen.getByText('Unavailable')).toBeTruthy();
+  });
+
+  test('the weather reading is in the same type as the date beside it', () => {
+    renderWithMock(<TopBar title="Home" weather="ha:sky" />, {
+      sky: mockWeather({ condition: 'sunny', temperature: 15 }),
+    });
+
+    const date = screen.getByText(/·/);
+    const reading = screen.getByText('15°');
+    expect(getComputedStyle(reading).fontSize).toBe(getComputedStyle(date).fontSize);
+    expect(getComputedStyle(reading).fontWeight).toBe(getComputedStyle(date).fontWeight);
+  });
+
+  test('a plain sensor still works, with a fixed sun', () => {
+    renderWithMock(<TopBar title="Home" weather="ha:out" />, {
+      out: mockSensor({ value: '12.3', unit: '°C' }),
+    });
+
+    expect(screen.getByText('12°')).toBeTruthy();
+  });
 });

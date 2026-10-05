@@ -15,6 +15,7 @@ import {
   type PersonEntity,
   type SensorEntity,
   type SwitchEntity,
+  type WeatherEntity,
 } from './model/index.ts';
 
 // ── builders ───────────────────────────────────────────────────────────────────────────────────
@@ -126,6 +127,18 @@ export function mockPerson(init: Init<PersonEntity> = {}): EntityInput {
     availability: 'ready',
     home: location === 'home',
     location,
+    ...init,
+  };
+}
+
+export function mockWeather(init: Init<WeatherEntity> = {}): EntityInput {
+  return {
+    kind: 'weather',
+    name: 'Weather',
+    availability: 'ready',
+    condition: 'sunny',
+    temperature: 20,
+    unit: '°C',
     ...init,
   };
 }

@@ -237,7 +237,7 @@ describe('HomeAssistantIntegration browse', () => {
     });
   });
 
-  test('only thumbnails the browser can open itself are passed on', async () => {
+  test('thumbnails Home Assistant serves itself go through the runtime, full ones stay', async () => {
     const { ha } = await setup({
       children: [
         folder('Public', 'a', { thumbnail: 'https://cdn.example/a.jpg' }),
@@ -247,12 +247,138 @@ describe('HomeAssistantIntegration browse', () => {
 
     const [open, closed] = (await ha.browse('media_player.room', {})).items;
     expect(open).toHaveProperty('artworkUrl', 'https://cdn.example/a.jpg');
-    expect(closed).not.toHaveProperty('artworkUrl');
+    expect(closed).toHaveProperty(
+      'artworkUrl',
+      `/_hash/asset/ha?path=${encodeURIComponent('/api/media_player_proxy/x?token=secret')}`,
+    );
   });
 
   test('search is refused, and an unknown player is an error', async () => {
     const { ha } = await setup({ children: [] });
     await expect(ha.browse('media_player.room', { search: 'x' })).rejects.toThrow(/searched/);
     await expect(ha.browse('media_player.nope', {})).rejects.toBeInstanceOf(UnknownEntityError);
+  });
+
+  describe('files', () => {
+    const withFetch = async (response: Response) => {
+      const spy = vi.fn<typeof fetch>(async () => response);
+      vi.stubGlobal('fetch', spy);
+      const ha = new HomeAssistantIntegration({
+        url: 'https://ha.test:8123',
+        token: 'secret',
+        createClient: async () => fakeClient().client,
+      });
+
+      return { ha, spy };
+    };
+
+    test('artwork is addressed through the runtime and fetched with the token', async () => {
+      const { ha, spy } = await withFetch(new Response('img'));
+      await ha.connect();
+      await ha.fetchAsset('/api/media_player_proxy/media_player.a?token=1');
+      expect(String(spy.mock.calls[0]?.[0])).toBe(
+        'https://ha.test:8123/api/media_player_proxy/media_player.a?token=1',
+      );
+
+      expect(spy.mock.calls[0]?.[1]?.headers).toEqual({ Authorization: 'Bearer secret' });
+      vi.unstubAllGlobals();
+    });
+
+    test('refuses an address that is not a path on Home Assistant', async () => {
+      const { ha, spy } = await withFetch(new Response('img'));
+      for (const path of ['https://evil.test/a', '//evil.test/a', 'api/x']) {
+        await expect(ha.fetchAsset(path)).rejects.toThrow('Not a path on Home Assistant');
+      }
+
+      expect(spy).not.toHaveBeenCalled();
+      vi.unstubAllGlobals();
+    });
+  });
+});
+
+describe('HomeAssistantIntegration history', () => {
+  const setup = async (meta: unknown, rows: unknown) => {
+    const sent: Record<string, unknown>[] = [];
+    const { client } = fakeClient({
+      'sensor.power': entity('sensor.power', '12', {}),
+    });
+
+    client.sendCommand = ((message: Record<string, unknown>) => {
+      sent.push(message);
+      return Promise.resolve(message.type === 'recorder/get_statistics_metadata' ? meta : rows);
+    }) as HaClient['sendCommand'];
+
+    const ha = new HomeAssistantIntegration({
+      url: 'x',
+      token: 'y',
+      createClient: () => Promise.resolve(client),
+    });
+
+    await ha.connect();
+    return { ha, sent };
+  };
+
+  test('a measurement is its mean per bucket, in the bucket the range suggests', async () => {
+    const { ha, sent } = await setup(
+      [
+        {
+          statistic_id: 'sensor.power',
+          has_mean: true,
+          has_sum: false,
+          statistics_unit_of_measurement: 'W',
+        },
+      ],
+      {
+        'sensor.power': [
+          { start: 1_000, mean: 3.5 },
+          { start: 2_000, mean: null },
+        ],
+      },
+    );
+
+    const result = await ha.history('sensor.power', { range: '1d' });
+    expect(result).toEqual({
+      kind: 'measurement',
+      unit: 'W',
+      points: [{ timestamp: '1970-01-01T00:00:01.000Z', value: 3.5 }],
+    });
+
+    expect(sent.at(-1)).toMatchObject({
+      type: 'recorder/statistics_during_period',
+      statistic_ids: ['sensor.power'],
+      period: '5minute',
+      types: ['mean'],
+    });
+  });
+
+  test('a running total is how much it grew per bucket, and the bucket can be chosen', async () => {
+    const { ha, sent } = await setup(
+      [
+        {
+          statistic_id: 'sensor.power',
+          has_mean: false,
+          has_sum: true,
+          statistics_unit_of_measurement: 'kWh',
+        },
+      ],
+      { 'sensor.power': [{ start: 86_400_000, change: 0.31 }] },
+    );
+
+    const result = await ha.history('sensor.power', { range: '1m', bucket: '1d' });
+    expect(result).toMatchObject({ kind: 'total', unit: 'kWh', points: [{ value: 0.31 }] });
+    expect(sent.at(-1)).toMatchObject({ period: 'day', types: ['change'] });
+  });
+
+  test('an entity without statistics has no points, and an unknown one is an error', async () => {
+    const { ha, sent } = await setup([], {});
+    expect(await ha.history('sensor.power', { range: '1h' })).toEqual({
+      kind: 'measurement',
+      points: [],
+    });
+
+    expect(sent).toHaveLength(1);
+    await expect(ha.history('sensor.nope', { range: '1h' })).rejects.toBeInstanceOf(
+      UnknownEntityError,
+    );
   });
 });

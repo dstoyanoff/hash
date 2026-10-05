@@ -249,3 +249,59 @@ describe('media player shuffle', () => {
     expect(player({})).not.toHaveProperty('shuffle');
   });
 });
+
+describe('files Home Assistant serves itself', () => {
+  const viaAssets = (path: string) => `/assets?path=${path}`;
+  const mapAssets = (e: HassEntity) => mapEntity(e, { temperatureUnit: '°C', assetUrl: viaAssets });
+
+  test('relative artwork and pictures go through the asset route, full addresses stay', () => {
+    expect(
+      mapAssets(hass('media_player.a', 'playing', { entity_picture: '/api/media_player_proxy/x' })),
+    ).toMatchObject({ media: { artworkUrl: '/assets?path=/api/media_player_proxy/x' } });
+
+    expect(
+      mapAssets(hass('media_player.a', 'playing', { entity_picture: 'https://cdn.test/a.jpg' })),
+    ).toMatchObject({ media: { artworkUrl: 'https://cdn.test/a.jpg' } });
+
+    expect(
+      mapAssets(hass('person.a', 'home', { entity_picture: '/api/image/serve/1/512x512' })),
+    ).toMatchObject({ pictureUrl: '/assets?path=/api/image/serve/1/512x512' });
+  });
+
+  test('a protocol-relative address is not treated as a path on Home Assistant', () => {
+    expect(
+      mapAssets(hass('person.a', 'home', { entity_picture: '//evil.test/a.png' })),
+    ).toMatchObject({ pictureUrl: '//evil.test/a.png' });
+  });
+});
+
+describe('weather', () => {
+  test('the state is the condition and the attributes are the readings', () => {
+    expect(
+      map(
+        hass('weather.home', 'partlycloudy', {
+          friendly_name: 'Forecast home',
+          temperature: 20.5,
+          temperature_unit: '°C',
+          humidity: 29,
+        }),
+      ),
+    ).toMatchObject({
+      kind: 'weather',
+      name: 'Forecast home',
+      availability: 'ready',
+      condition: 'partlycloudy',
+      temperature: 20.5,
+      unit: '°C',
+      humidity: 29,
+    });
+  });
+
+  test('a condition it does not know is unknown, and an unavailable entity says so', () => {
+    expect(map(hass('weather.home', 'volcanic-ash'))).toMatchObject({ condition: 'unknown' });
+    expect(map(hass('weather.home', 'unavailable'))).toMatchObject({
+      availability: 'unavailable',
+      condition: 'unknown',
+    });
+  });
+});

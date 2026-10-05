@@ -10,7 +10,7 @@ export interface NavDockProps {
   /** The pages to link to; `to` is relative to `base`. */
   items: NavItem[];
 
-  /** Base path items are resolved against, e.g. `/dashboard/home`. */
+  /** Base path items are resolved against, e.g. `/home`. */
   base: string;
 
   /** Adds a light/dark toggle at the end of the dock. Off by default — meant for development or a project that deliberately exposes it, not every kiosk install. */

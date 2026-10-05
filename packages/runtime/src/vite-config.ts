@@ -5,8 +5,13 @@ import { defineConfig } from 'vite';
  * Sensible default, re-exported by the project's own `vite.config.ts` (the React Router plugin
  * requires a config file at the project root). Server settings and the dev proxy are supplied
  * inline by the CLI.
+ *
+ * A function, so every load of the config gets its own React Router plugin. The SPA build starts a
+ * preview server that loads this config again in the same process; a plugin created once at import
+ * would be shared, and the preview's `serve` would overwrite the build's state in it
+ * ("Expected build manifest").
  */
-export default defineConfig({
+export default defineConfig(() => ({
   plugins: [reactRouter()],
   // React Router's SPA prerender starts a private preview server; pin it to IPv4 so it is
   // reachable in containers where `localhost` resolves to ::1.
@@ -28,4 +33,4 @@ export default defineConfig({
     // server startup instead.
     entries: ['app/root.tsx', 'dashboards/**/*.{ts,tsx}'],
   },
-});
+}));

@@ -5,4 +5,4 @@
 // lives under the `@hash/runtime/app` subpath instead: importing *anything* from this file pulls
 // in the whole module, and `config.ts`'s `node:fs` import throws immediately if that ever reaches
 // a browser bundle (Vite externalizes Node builtins client-side as throwing stubs).
-export { defineConfig, type HashConfig } from './config.ts';
+export { defineConfig, type HashConfig, type PackageConfig } from './config.ts';
