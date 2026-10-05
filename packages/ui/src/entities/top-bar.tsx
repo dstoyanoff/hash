@@ -53,6 +53,9 @@ export interface TopBarProps {
   /** A sensor for current conditions, e.g. outdoor temperature. Shown with a weather-style sun icon and a rounded whole-degree reading, not a generic sensor readout. */
   weather?: EntityRef;
 
+  /** Your own component(s) for the right-hand side, after the weather: a security mode picker, a custom status. Whatever it is, it sits in the bar's row and is yours to style. */
+  extra?: ReactNode;
+
   /** A sensor reflecting overall home/away status (e.g. a binary presence sensor), shown as a chip. */
   presence?: EntityRef;
 
@@ -84,6 +87,7 @@ export function TopBar({
   dashboards,
   scenes,
   weather,
+  extra,
   presence,
   people,
   presenceColors,
@@ -121,6 +125,7 @@ export function TopBar({
       <Flex align="center" gap={3}>
         {showDate ? <DateChip /> : null}
         {weather ? <WeatherChip entity={weather} /> : null}
+        {extra}
         {presence ? (
           <StatusChip>
             <SensorReadout entity={presence} drawer={false} />

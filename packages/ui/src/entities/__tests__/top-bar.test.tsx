@@ -160,3 +160,24 @@ test('presence shows who is home normally, and dims anyone who is away', () => {
   expect(getComputedStyle(alex).opacity).not.toBe('0.4');
   expect(getComputedStyle(alex).filter).not.toBe('grayscale(1)');
 });
+
+test('your own component sits in the bar, between the weather and the people', () => {
+  renderWithMock(
+    <TopBar
+      title="Home"
+      weather="ha:outdoor_temperature"
+      people={['ha:dan']}
+      extra={<span data-testid="mine">Guard</span>}
+    />,
+    {
+      outdoor_temperature: mockSensor({ value: '16', unit: '°C', measurement: 'temperature' }),
+      dan: mockPerson({ name: 'Dan', home: true }),
+    },
+  );
+
+  const mine = screen.getByTestId('mine');
+  const weather = screen.getByText('16°');
+  const dan = screen.getByRole('img', { name: /Dan/ });
+  expect(weather.compareDocumentPosition(mine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(mine.compareDocumentPosition(dan) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});

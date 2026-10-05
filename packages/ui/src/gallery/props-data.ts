@@ -581,6 +581,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'EntityRef',
       },
       {
+        doc: "Your own component(s) for the right-hand side, after the weather: a security mode picker, a custom status. Whatever it is, it sits in the bar's row and is yours to style.",
+        name: 'extra',
+        optional: true,
+        type: 'ReactNode',
+      },
+      {
         doc: 'A sensor reflecting overall home/away status (e.g. a binary presence sensor), shown as a chip.',
         name: 'presence',
         optional: true,
