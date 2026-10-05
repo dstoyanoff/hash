@@ -470,7 +470,7 @@ function WeatherPill({ entity }: { entity: EntityRef }) {
       <Flex as="span" css={look.color ? { color: look.color } : undefined}>
         <Icon name={look.icon} size={14} />
       </Flex>
-      <Typography as="span" variant="bodyStrong">
+      <Typography as="span" variant="label">
         {ready
           ? `${Math.round(weather.temperature ?? 0)}°`
           : statusLabels[status as Exclude<typeof status, 'ready'>]}
@@ -489,7 +489,7 @@ function SensorWeather({ entity }: { entity: EntityRef }) {
       <Flex as="span" css={{ color: '#FBBF24' }}>
         <Icon name="lu:sun" size={14} />
       </Flex>
-      <Typography as="span" variant="bodyStrong">
+      <Typography as="span" variant="label">
         {status === 'ready' && sensor?.numeric !== undefined
           ? `${Math.round(sensor.numeric)}°`
           : statusLabels[status as Exclude<typeof status, 'ready'>]}

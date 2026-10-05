@@ -11,7 +11,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "docs": "vite"
+    "docs": "vite",
+    "docs:build": "vite build"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

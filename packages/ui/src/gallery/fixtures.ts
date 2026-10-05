@@ -12,7 +12,8 @@ import {
 } from '@hash/core';
 
 /** Album art for the gallery's playing demo, served by the docs dev server from `docs/public/`. */
-const DEMO_ARTWORK = '/artwork.jpg';
+// Under the base path the site is served from (`/hash/` on GitHub Pages), not the domain's root.
+const DEMO_ARTWORK = `${import.meta.env.BASE_URL}artwork.jpg`;
 
 const power = (watts: string): EntityInput =>
   mockSensor({ name: 'Power', value: watts, unit: 'W', measurement: 'power' });

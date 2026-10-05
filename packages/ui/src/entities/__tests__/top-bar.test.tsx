@@ -289,6 +289,17 @@ describe('weather', () => {
     expect(screen.getByText('Unavailable')).toBeTruthy();
   });
 
+  test('the weather reading is in the same type as the date beside it', () => {
+    renderWithMock(<TopBar title="Home" weather="ha:sky" />, {
+      sky: mockWeather({ condition: 'sunny', temperature: 15 }),
+    });
+
+    const date = screen.getByText(/·/);
+    const reading = screen.getByText('15°');
+    expect(getComputedStyle(reading).fontSize).toBe(getComputedStyle(date).fontSize);
+    expect(getComputedStyle(reading).fontWeight).toBe(getComputedStyle(date).fontWeight);
+  });
+
   test('a plain sensor still works, with a fixed sun', () => {
     renderWithMock(<TopBar title="Home" weather="ha:out" />, {
       out: mockSensor({ value: '12.3', unit: '°C' }),
