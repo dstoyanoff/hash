@@ -499,6 +499,44 @@ test('a pause that stops the stream keeps showing where it was paused, until pla
   expect(ma.getEntity('kitchen_speaker')).toMatchObject({ position: 24 });
 });
 
+test('a stopped queue shows its resume position, which is where playback will pick up', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket);
+  const queue = (data: Record<string, unknown>) =>
+    socket().receive({
+      event: 'queue_updated',
+      object_id: 'kitchen_speaker',
+      data: { queue_id: 'kitchen_speaker', current_item: { queue_item_id: 't1' }, ...data },
+    });
+
+  queue({
+    state: 'playing',
+    elapsed_time: 23,
+    elapsed_time_last_updated: 1_767_225_600,
+    resume_pos: 0,
+  });
+
+  // Paused by a stop: the counter is back at 3, and Music Assistant says where it will resume.
+  queue({
+    state: 'idle',
+    elapsed_time: 3,
+    elapsed_time_last_updated: 1_767_225_610,
+    resume_pos: 23,
+  });
+
+  expect(ma.getEntity('kitchen_speaker')).toMatchObject({ position: 23 });
+
+  // Playing again, the queue's own counter is followed.
+  queue({
+    state: 'playing',
+    elapsed_time: 24,
+    elapsed_time_last_updated: 1_767_225_620,
+    resume_pos: 23,
+  });
+
+  expect(ma.getEntity('kitchen_speaker')).toMatchObject({ position: 24 });
+});
+
 test('an idle queue on another track shows that track’s position, not the one paused on', async () => {
   const { ma, socket } = make();
   await connect(ma, socket);

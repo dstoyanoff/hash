@@ -149,6 +149,9 @@ interface QueueState {
   /** What the queue was doing and which item it was on, to tell a pause from a new track. */
   state?: string;
   item?: string;
+
+  /** Where Music Assistant will pick the item up again, kept while it is stopped. */
+  resume?: number;
 }
 
 /** Which item a queue is on, as something comparable: its id when it has one, else its place. */
@@ -405,11 +408,14 @@ export class MusicAssistantIntegration extends BaseIntegration {
       return toMediaPlayer(player);
     }
 
+    // Stopped, a queue's counter is not where it left off; its own resume position is.
+    const stopped = queue.state === 'idle' && queue.resume !== undefined;
+    const position = stopped ? queue.resume : queue.elapsed;
     return toMediaPlayer({
       ...player,
       ...(queue.shuffle !== undefined ? { shuffle_enabled: queue.shuffle } : {}),
-      ...(queue.elapsed !== undefined
-        ? { elapsed_time: queue.elapsed, elapsed_time_last_updated: queue.elapsedAt }
+      ...(position !== undefined
+        ? { elapsed_time: position, elapsed_time_last_updated: queue.elapsedAt }
         : {}),
     });
   }
@@ -443,13 +449,15 @@ export class MusicAssistantIntegration extends BaseIntegration {
         : {}),
       ...(state !== undefined ? { state } : {}),
       ...(item !== undefined ? { item } : {}),
+      ...(typeof queue.resume_pos === 'number' ? { resume: queue.resume_pos } : {}),
     };
 
     if (
       next.shuffle === known.shuffle &&
       next.elapsed === known.elapsed &&
       next.state === known.state &&
-      next.item === known.item
+      next.item === known.item &&
+      next.resume === known.resume
     ) {
       return;
     }
