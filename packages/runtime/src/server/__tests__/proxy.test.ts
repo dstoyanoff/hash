@@ -179,7 +179,7 @@ describe('history queries', () => {
     class WithHistory extends MockIntegration {
       readonly asked: unknown[] = [];
 
-      history(entityId: string, query: unknown) {
+      override history(entityId: string, query: unknown) {
         this.asked.push([entityId, query]);
         return Promise.resolve({ kind: 'measurement' as const, points: [] });
       }
@@ -225,7 +225,9 @@ describe('history queries', () => {
       { id: 3, ok: false },
     ]);
 
-    const { socket: plain } = await setup();
+    const { ha: plainHa, socket: plain } = await setup();
+    // The mock invents a history; this one keeps none.
+    (plainHa as unknown as { history?: undefined }).history = undefined;
     plain.receive({
       type: 'query',
       id: 4,

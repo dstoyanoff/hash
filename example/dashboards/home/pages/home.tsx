@@ -35,11 +35,39 @@ export default function Home() {
         }
       />
       <Grid columns={3}>
-        <LightTile entity="ha:light.living_room_lamp" name="Lamp" />
-        <LightTile entity="ha:light.living_room_wall" name="Wall Lights" />
-        <LightTile entity="ha:light.living_room_accent" name="Accent" />
+        <LightTile
+          entity="ha:light.living_room_lamp"
+          name="Lamp"
+          energy={{
+            power: 'ha:sensor.living_room_lamp_power',
+            energy: 'ha:sensor.living_room_lamp_energy',
+          }}
+        />
+        <LightTile
+          entity="ha:light.living_room_wall"
+          name="Wall Lights"
+          energy={{
+            power: 'ha:sensor.living_room_wall_power',
+            energy: 'ha:sensor.living_room_wall_energy',
+          }}
+        />
+        <LightTile
+          entity="ha:light.living_room_accent"
+          name="Accent"
+          energy={{
+            power: 'ha:sensor.living_room_accent_power',
+            energy: 'ha:sensor.living_room_accent_energy',
+          }}
+        />
       </Grid>
-      <ClimateTile entity="ha:climate.living_room" name="Heater" />
+      <ClimateTile
+        entity="ha:climate.living_room"
+        name="Heater"
+        energy={{
+          power: 'ha:sensor.living_room_heater_power',
+          energy: 'ha:sensor.living_room_heater_energy',
+        }}
+      />
       <Grid columns={2}>
         <SceneButton entity="ha:scene.movie_night" name="Movie Night" />
         <ActionButton label="Vacuum" icon="lu:robot-vacuum" entity="ha:vacuum.robot" />
@@ -53,8 +81,19 @@ export default function Home() {
         }
       />
       <Grid columns={3}>
-        <LightTile entity="ha:light.kitchen_ceiling" name="Ceiling" />
-        <LightTile entity="ha:light.kitchen_led" name="LED Strip" />
+        <LightTile
+          entity="ha:light.kitchen_ceiling"
+          name="Ceiling"
+          energy={{
+            power: 'ha:sensor.kitchen_ceiling_power',
+            energy: 'ha:sensor.kitchen_ceiling_energy',
+          }}
+        />
+        <LightTile
+          entity="ha:light.kitchen_led"
+          name="LED Strip"
+          energy={{ power: 'ha:sensor.kitchen_led_power', energy: 'ha:sensor.kitchen_led_energy' }}
+        />
         <SceneButton entity="ha:scene.cooking_time" name="Cooking Time" />
       </Grid>
 
@@ -70,7 +109,14 @@ export default function Home() {
       />
       <Grid columns={3}>
         <LightTile entity="ha:light.porch_lamp" name="Porch Lamp" />
-        <LightTile entity="ha:light.porch_ambient" name="Ambient" />
+        <LightTile
+          entity="ha:light.porch_ambient"
+          name="Ambient"
+          energy={{
+            power: 'ha:sensor.porch_ambient_power',
+            energy: 'ha:sensor.porch_ambient_energy',
+          }}
+        />
         <ActionButton label="Front Door" icon="lu:lock" entity="ha:lock.front_door" />
       </Grid>
     </>
