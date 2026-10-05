@@ -1,0 +1,21 @@
+name: Feature or device type
+description: Suggest a component, a device type or an integration
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What would you like to be able to do?
+    validations:
+      required: true
+  - type: textarea
+    id: device
+    attributes:
+      label: Which device or backend?
+      description: For a new device type, the entity (for example a Home Assistant `cover.*`) and what you would control on it.
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Can you help?
+      options:
+        - label: I would be willing to send a pull request

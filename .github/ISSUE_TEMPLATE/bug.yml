@@ -1,0 +1,30 @@
+name: Bug report
+description: Something does not work as it should
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can it be reproduced?
+      description: The dashboard code, the entity involved, and what you clicked. Mock data if you can.
+  - type: input
+    id: version
+    attributes:
+      label: Hashsome version
+      placeholder: 0.1.0
+  - type: input
+    id: backend
+    attributes:
+      label: Backend and version
+      placeholder: Home Assistant 2026.10, Music Assistant 2.7
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or a screenshot
+      description: Remove tokens and addresses you do not want public.
