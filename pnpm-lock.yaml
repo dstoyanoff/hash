@@ -194,6 +194,52 @@ importers:
         specifier: 5.0.2
         version: 5.0.2(@types/node@24.13.6)(jsdom@30.1.1)(vite@8.3.1(@types/node@24.13.6))
 
+  demo:
+    dependencies:
+      '@emotion/react':
+        specifier: 11.14.0
+        version: 11.14.0(@types/react@19.3.0)(react@19.3.0)
+      '@hashsome/core':
+        specifier: workspace:*
+        version: link:../packages/core
+      '@hashsome/integration.home-assistant':
+        specifier: workspace:*
+        version: link:../packages/integrations/home-assistant
+      '@hashsome/integration.music-assistant':
+        specifier: workspace:*
+        version: link:../packages/integrations/music-assistant
+      '@hashsome/runtime':
+        specifier: workspace:*
+        version: link:../packages/runtime
+      '@hashsome/ui':
+        specifier: workspace:*
+        version: link:../packages/ui
+      e-prim:
+        specifier: 2.0.1
+        version: 2.0.1(@emotion/react@11.14.0(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)
+      react:
+        specifier: 19.3.0
+        version: 19.3.0
+      react-dom:
+        specifier: 19.3.0
+        version: 19.3.0(react@19.3.0)
+      react-router:
+        specifier: 8.4.0
+        version: 8.4.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+    devDependencies:
+      '@react-router/dev':
+        specifier: 8.4.0
+        version: 8.4.0(babel-plugin-macros@3.1.0)(react-router@8.4.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(typescript@7.0.2)(vite@8.3.1(@types/node@24.13.6))
+      '@types/react':
+        specifier: 19.3.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: 19.3.0
+        version: 19.3.0(@types/react@19.3.0)
+      vite:
+        specifier: 8.3.1
+        version: 8.3.1(@types/node@24.13.6)
+
   example:
     dependencies:
       '@emotion/react':
