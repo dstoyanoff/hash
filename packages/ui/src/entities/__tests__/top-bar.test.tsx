@@ -361,3 +361,27 @@ describe('weather', () => {
     expect(screen.getByText('12°')).toBeTruthy();
   });
 });
+
+describe('dashboard switcher', () => {
+  test('each entry is as tall as the button that opens the list, for a touch screen', () => {
+    renderWithMock(
+      <TopBar
+        title="Home"
+        dashboards={[
+          { id: 'home', title: 'Home' },
+          { id: 'kitchen', title: 'Kitchen' },
+        ]}
+      />,
+      {},
+      { router: true },
+    );
+
+    const trigger = screen.getByRole('button', { name: /Home/ });
+    fireEvent.click(trigger);
+    const entries = screen.getAllByRole('option');
+    expect(entries).toHaveLength(2);
+    for (const entry of entries) {
+      expect(getComputedStyle(entry).height).toBe(getComputedStyle(trigger).height);
+    }
+  });
+});
