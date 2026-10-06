@@ -6,7 +6,8 @@ import { Icon } from '../icon.tsx';
 import { useDetail } from '../layout/detail-provider.tsx';
 import { SeriesChart } from '../layout/series-chart.tsx';
 import { useWeatherForecast } from '../use-weather-forecast.ts';
-import { compass, CONDITION_LABEL, CONDITION_LOOK } from './weather-look.ts';
+import { WeatherIcon } from './weather-icon.tsx';
+import { compass, CONDITION_LABEL } from './weather-look.ts';
 
 /** How many hours the chart covers. */
 const HOURS = 24;
@@ -37,10 +38,9 @@ function ConditionIcon({
   condition: ForecastPoint['condition'];
   size: number;
 }) {
-  const look = CONDITION_LOOK[condition];
   return (
-    <Flex as="span" css={look.color ? { color: look.color } : undefined}>
-      <Icon name={look.icon} size={size} />
+    <Flex as="span">
+      <WeatherIcon condition={condition} size={size} />
     </Flex>
   );
 }
@@ -124,12 +124,25 @@ export function WeatherForecast({ entity }: { entity: EntityRef }) {
           <SeriesChart
             samples={hours.flatMap((hour) =>
               hour.temperature !== undefined
-                ? [{ timestamp: hour.timestamp, value: hour.temperature }]
+                ? [
+                    {
+                      timestamp: hour.timestamp,
+                      value: hour.temperature,
+                      notes: [
+                        CONDITION_LABEL[hour.condition],
+                        ...(hour.windSpeed !== undefined
+                          ? [
+                              `Wind ${Math.round(hour.windSpeed)}${hourly.result?.windUnit ? ` ${hourly.result.windUnit}` : ''}${hour.windBearing !== undefined ? ` from ${compass(hour.windBearing)}` : ''}`,
+                            ]
+                          : []),
+                      ],
+                    },
+                  ]
                 : [],
             )}
             range="1d"
             expanded={expanded}
-            unit="°"
+            unit={hourly.result?.unit ?? '°'}
             fitDomain
             height={expanded ? 180 : 88}
           />

@@ -16,6 +16,9 @@ export interface SeriesSample {
   /** ISO 8601. */
   timestamp: string;
   value: number;
+
+  /** Extra lines the tooltip shows under the value, e.g. the sky and the wind at that hour. */
+  notes?: string[];
 }
 
 /** The window a chart covers; `custom` is a from/to pair the caller has already applied to the samples. */
@@ -181,6 +184,11 @@ function ChartTooltip({
         <Typography as="span" variant="bodyStrong">
           {Math.round(sample.value * 10) / 10} {unit}
         </Typography>
+        {sample.notes?.map((note) => (
+          <Typography key={note} as="span" variant="secondary" color="textMuted">
+            {note}
+          </Typography>
+        ))}
       </Flex>
     </Box>
   );

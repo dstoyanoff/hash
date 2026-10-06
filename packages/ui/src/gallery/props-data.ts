@@ -238,6 +238,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         optional: true,
         type: 'number',
       },
+      {
+        doc: 'For an icon drawn in more than one color: part `i` of the icon (its `i`th shape) is drawn in `colors[i]`, and any part without one, in the surrounding text color. Only for outline icons.',
+        name: 'colors',
+        optional: true,
+        type: 'readonly (string | undefined)[]',
+      },
     ],
   },
   LightTile: {

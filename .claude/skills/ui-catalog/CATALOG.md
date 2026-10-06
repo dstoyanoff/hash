@@ -121,10 +121,11 @@ A short activity list for an entity's detail drawer. Generic — any entity type
 
 An inline SVG icon, from a plain prefixed id (`lu:` Lucide, `tb:` Tabler outline). Takes the surrounding text color.
 
-| Prop   | Type       | Required |                                                             |
-| ------ | ---------- | -------- | ----------------------------------------------------------- |
-| `name` | `IconName` | yes      | Prefixed icon id, e.g. `lu:lightbulb`, `tb:vacuum-cleaner`. |
-| `size` | `number`   | no       | Overrides the density's icon size, in px.                   |
+| Prop     | Type                               | Required |                                                                                                                                                                                            |
+| -------- | ---------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `name`   | `IconName`                         | yes      | Prefixed icon id, e.g. `lu:lightbulb`, `tb:vacuum-cleaner`.                                                                                                                                |
+| `size`   | `number`                           | no       | Overrides the density's icon size, in px.                                                                                                                                                  |
+| `colors` | `readonly (string \| undefined)[]` | no       | For an icon drawn in more than one color: part `i` of the icon (its `i`th shape) is drawn in `colors[i]`, and any part without one, in the surrounding text color. Only for outline icons. |
 
 ## Entity components
 

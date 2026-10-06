@@ -18,6 +18,7 @@ import { DrawerTrigger } from '../layout/use-drawer.tsx';
 import { useWeatherForecast } from '../use-weather-forecast.ts';
 import { SensorReadout } from './sensor-readout.tsx';
 import { WeatherForecast } from './weather-forecast.tsx';
+import { WeatherIcon } from './weather-icon.tsx';
 import { CONDITION_LOOK } from './weather-look.ts';
 
 /** One entry in the title's dashboard-switcher dropdown. */
@@ -471,8 +472,8 @@ function WeatherPill({ entity }: { entity: EntityRef }) {
 
   const chip = (
     <StatusChip>
-      <Flex as="span" css={look.color ? { color: look.color } : undefined}>
-        <Icon name={look.icon} size={14} />
+      <Flex as="span">
+        <WeatherIcon condition={condition} size={14} />
       </Flex>
       <Typography as="span" variant="label">
         {ready
