@@ -59,9 +59,17 @@ export function MediaPlayerFull({ entity, browser, queue, wide, name }: MediaPla
           </Box>
         </Flex>
         {full && queue !== undefined && handle.entity?.capabilities.queue === true ? (
-          // Beside the player, as tall as it is and no taller: a long queue scrolls inside.
-          <Flex direction="column" width={400} minHeight={0} css={{ flex: 'none', maxHeight: 560 }}>
-            {queue}
+          // Beside the player, the whole height of the room it has, with a quiet line between them. The
+          // queue is laid over that room rather than in it, so a long one scrolls inside it and never
+          // makes the room taller.
+          <Flex
+            position="relative"
+            width={400}
+            css={({ palette }) => ({ flex: 'none', borderLeft: `1px solid ${palette.border}` })}
+          >
+            <Flex direction="column" position="absolute" pl={5} css={{ inset: 0 }}>
+              {queue}
+            </Flex>
           </Flex>
         ) : null}
       </Flex>

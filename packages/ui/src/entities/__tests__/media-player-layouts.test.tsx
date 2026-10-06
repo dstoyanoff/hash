@@ -736,10 +736,17 @@ describe('the queue beside the player', () => {
 
     const beside = screen.getByText('the queue');
     const volume = screen.getByRole('slider', { name: 'Volume level' });
-    // Both are in the same row at the top: the queue's box and the player's are siblings.
-    const row = beside.parentElement!.parentElement!;
-    expect(row.contains(volume)).toBe(true);
+    // Both are in the same row at the top: the closest thing that holds both is a row.
+    let row = beside;
+    while (!row.contains(volume)) {
+      row = row.parentElement!;
+    }
+
     expect(getComputedStyle(row).flexDirection).not.toBe('column');
+    // The queue's own column is as tall as the row, with a line on its left.
+    const column = beside.parentElement!.parentElement!;
+    expect(getComputedStyle(column).borderLeftWidth).toBe('1px');
+    expect(getComputedStyle(column).flexShrink).toBe('0');
   });
 
   test('a narrow one has no room for it', () => {
