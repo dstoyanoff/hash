@@ -9,7 +9,7 @@ import { IconButton } from '../layout/tile.tsx';
 import { DrawerTrigger } from '../layout/use-drawer.tsx';
 import { useHold } from '../layout/use-hold.ts';
 import { MediaBrowser } from './media-browser.tsx';
-import { MediaPlayerBody } from './media-player-body.tsx';
+import { MediaPlayerFull } from './media-player-full.tsx';
 import { NowPlaying } from './now-playing.tsx';
 
 export interface MediaPlayerColumnProps {
@@ -48,7 +48,7 @@ export function MediaPlayerColumn({ entity, name, browse }: MediaPlayerColumnPro
       label={name ?? player?.name ?? fallback}
       kind="Media"
       body={
-        <MediaPlayerBody
+        <MediaPlayerFull
           entity={entity}
           browser={browser}
           {...(name !== undefined ? { name } : {})}

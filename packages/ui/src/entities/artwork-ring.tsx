@@ -11,7 +11,7 @@ const DEFAULT_SIZE = 168;
 /** The player's artwork in a circle, like the one in the bar but larger: an inner outline around
  * it, and an outer ring that shows how far along playback is. With `onSeek` the ring is a slider:
  * drag around it, or use the arrow keys. Not exported from the package: `MediaPlayerColumn` and
- * `MediaPlayerPage` draw it. */
+ * `MediaPlayerFull` draw it. */
 export function ArtworkRing({
   artworkUrl,
   seek,
