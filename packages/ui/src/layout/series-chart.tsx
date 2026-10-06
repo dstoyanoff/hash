@@ -1,4 +1,5 @@
 /** @jsxImportSource @emotion/react */
+import type { ComponentProps } from 'react';
 import { Box, Flex, Typography, useColorByKey } from 'e-prim';
 import { useTypographySize } from '../theme/use-typography.ts';
 import {
@@ -37,6 +38,34 @@ export function formatTick(range: SeriesRange, iso: string): string {
   return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
+/** The grid's dashed lines, but not one along the chart's bottom edge: that is the solid axis line. */
+const dashedExceptBottom =
+  (stroke: string): NonNullable<ComponentProps<typeof CartesianGrid>['horizontal']> =>
+  ({
+    x1,
+    x2,
+    y1,
+    offset,
+  }: {
+    x1: number;
+    x2: number;
+    y1: number;
+    offset: { top: number; height: number };
+  }) =>
+    y1 >= offset.top + offset.height - 1 ? (
+      <g />
+    ) : (
+      <line
+        x1={x1}
+        x2={x2}
+        y1={y1}
+        y2={y1}
+        stroke={stroke}
+        strokeOpacity={0.3}
+        strokeDasharray="3 3"
+      />
+    );
+
 /** A bare sparkline, or — when `expanded` — the full chart with axes, grid and a tooltip. Shared by the power and sensor drawers. */
 export function SeriesChart({
   samples,
@@ -66,13 +95,23 @@ export function SeriesChart({
     <Box height={height ?? (expanded ? 220 : 48)} mt={3}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={samples} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
-          {expanded ? <CartesianGrid stroke={line} strokeDasharray="3 3" vertical={false} /> : null}
+          {expanded ? (
+            <CartesianGrid
+              stroke={line}
+              strokeOpacity={0.3}
+              strokeDasharray="3 3"
+              vertical={false}
+              // The chart's bottom edge is the solid axis line, so no dashed line goes under it.
+              horizontal={dashedExceptBottom(line)}
+            />
+          ) : null}
           {expanded ? (
             <XAxis
               dataKey="timestamp"
               tickFormatter={(value: string) => formatTick(range, value)}
               tick={{ fontSize: tickSize, fill: textMuted }}
-              axisLine={false}
+              // The bottom of the chart is a solid line; the grid above it is dashed and lighter.
+              axisLine={{ stroke: line, strokeOpacity: 0.5, strokeWidth: 0.5 }}
               tickLine={false}
               minTickGap={24}
             />
