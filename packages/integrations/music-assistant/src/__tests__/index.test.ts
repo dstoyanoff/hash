@@ -720,7 +720,7 @@ test('playMedia with a context queues the whole album or playlist and starts at 
   ).rejects.toThrow(/shuffle/);
 });
 
-test('the queue commands jump to an item, take it out, or empty the queue', async () => {
+test('the queue commands jump to an item or take one out', async () => {
   const { ma, socket } = make();
   await connect(ma, socket);
   void ma.command('kitchen_speaker', 'playQueueItem', { item: 'qi-9' });
@@ -735,14 +735,6 @@ test('the queue commands jump to an item, take it out, or empty the queue', asyn
   expect(socket().sent.at(-1)).toMatchObject({
     command: 'player_queues/delete_item',
     args: { queue_id: 'kitchen_speaker', item_id_or_index: 'qi-9' },
-  });
-
-  void ma.command('kitchen_speaker', 'clearQueue');
-  await flush();
-  // Without the stop Music Assistant sends by default: what plays is left to finish.
-  expect(socket().sent.at(-1)).toMatchObject({
-    command: 'player_queues/clear',
-    args: { queue_id: 'kitchen_speaker', skip_stop: true },
   });
 
   await expect(ma.command('kitchen_speaker', 'playQueueItem', {})).rejects.toThrow(/queue item/);
@@ -800,4 +792,120 @@ test('a player with no queue has no items', async () => {
   const queue = ma.queue('kitchen_speaker', {});
   await answer(socket, null);
   expect(await queue).toEqual({ items: [], total: 0, offset: 0 });
+});
+
+const alreadyAnswered = new WeakMap<FakeSocket, Set<string>>();
+
+/** Answers every request of a kind that has not been answered yet, the way the server would. */
+function answerAll(
+  socket: () => FakeSocket,
+  command: string,
+  reply: (message: {
+    message_id: string;
+    args?: Record<string, unknown>;
+  }) => Record<string, unknown>,
+) {
+  const answered = alreadyAnswered.get(socket()) ?? new Set<string>();
+  alreadyAnswered.set(socket(), answered);
+  for (const message of socket().sent.filter((sent) => sent.command === command)) {
+    if (!answered.has(message.message_id)) {
+      answered.add(message.message_id);
+      socket().receive({ message_id: message.message_id, ...reply(message) });
+    }
+  }
+}
+
+const deletions = (socket: () => FakeSocket) =>
+  socket()
+    .sent.filter((sent) => sent.command === 'player_queues/delete_item')
+    .map((sent) => sent.args?.item_id_or_index);
+
+test('Clear while something plays takes out only what follows it, last first, and never the track playing', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket);
+  const clearing = ma.command('kitchen_speaker', 'clearQueue');
+  await flush();
+  expect(socket().sent.at(-1)).toMatchObject({
+    command: 'player_queues/get',
+    args: { queue_id: 'kitchen_speaker' },
+  });
+
+  await answer(socket, { state: 'playing', current_index: 5, items: 9 });
+  // What comes after the sixth track: from the seventh on.
+  expect(socket().sent.at(-1)).toMatchObject({
+    command: 'player_queues/items',
+    args: { queue_id: 'kitchen_speaker', offset: 6 },
+  });
+
+  await answer(socket, [{ queue_item_id: 'q6' }, { queue_item_id: 'q7' }, { queue_item_id: 'q8' }]);
+  expect(deletions(socket)).toEqual(['q8', 'q7', 'q6']);
+  answerAll(socket, 'player_queues/delete_item', () => ({ result: null }));
+  await flush();
+  await clearing;
+  // The track playing and what came before it were not touched, and Music Assistant's own clear
+  // (which would take the playing track out too) was not used.
+  expect(deletions(socket)).not.toContain('q5');
+  expect(socket().sent.some((sent) => sent.command === 'player_queues/clear')).toBe(false);
+});
+
+test('Clear takes them out a batch at a time, not all at once', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket);
+  const clearing = ma.command('kitchen_speaker', 'clearQueue');
+  await flush();
+  await answer(socket, { state: 'playing', current_index: 0, items: 121 });
+  await answer(
+    socket,
+    Array.from({ length: 120 }, (_, index) => ({ queue_item_id: `q${index + 1}` })),
+  );
+
+  expect(deletions(socket)).toHaveLength(50);
+  answerAll(socket, 'player_queues/delete_item', () => ({ result: null }));
+  await flush();
+  expect(deletions(socket)).toHaveLength(100);
+  answerAll(socket, 'player_queues/delete_item', () => ({ result: null }));
+  await flush();
+  expect(deletions(socket)).toHaveLength(120);
+  answerAll(socket, 'player_queues/delete_item', () => ({ result: null }));
+  await flush();
+  await clearing;
+  // Last first.
+  expect(deletions(socket)[0]).toBe('q120');
+  expect(deletions(socket).at(-1)).toBe('q1');
+});
+
+test('a track that cannot be taken out (already loaded in the player) does not stop the rest', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket);
+  const clearing = ma.command('kitchen_speaker', 'clearQueue');
+  await flush();
+  await answer(socket, { state: 'playing', current_index: 1, items: 5 });
+  await answer(socket, [{ queue_item_id: 'a' }, { queue_item_id: 'b' }, { queue_item_id: 'c' }]);
+  answerAll(socket, 'player_queues/delete_item', (message) =>
+    message.args?.item_id_or_index === 'a'
+      ? { error_code: 999, details: 'already loaded' }
+      : { result: null },
+  );
+
+  await flush();
+  // It carries on, and finishes without failing.
+  await expect(clearing).resolves.toBeUndefined();
+  expect(deletions(socket)).toEqual(['c', 'b', 'a']);
+});
+
+test('Clear with nothing playing empties the whole queue, since there is nothing to keep', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket);
+  const clearing = ma.command('kitchen_speaker', 'clearQueue');
+  await flush();
+  await answer(socket, { state: 'idle', current_index: 49, items: 1322 });
+  expect(socket().sent.at(-1)).toMatchObject({
+    command: 'player_queues/clear',
+    args: { queue_id: 'kitchen_speaker' },
+  });
+
+  expect(socket().sent.at(-1)!.args).not.toHaveProperty('skip_stop');
+  await answer(socket, null);
+  await clearing;
+  expect(deletions(socket)).toEqual([]);
 });

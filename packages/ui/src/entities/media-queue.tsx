@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import type { EntityRef, QueueItem } from '@hashsome/core';
 import { Flex, Typography } from 'e-prim';
+import { useState } from 'react';
 import { useEntityHandle } from '../hooks.ts';
 import { Icon } from '../icon.tsx';
 import { Cover } from '../layout/cover.tsx';
@@ -19,12 +20,14 @@ const ROW = 56;
 
 /**
  * A player's queue: the tracks that have just played (dimmed), the one playing, and what comes next,
- * as a list that scrolls. Tap a track to jump to it, the cross takes it out, and Clear empties the
- * queue and lets what is playing finish. It is made to sit beside the player in a wide space (see `MediaPlayerFull`'s `queue`).
+ * as a list that scrolls. Tap a track to jump to it, the cross takes it out, and Clear takes out everything
+ * after the track that is playing, which carries on. It is made to sit beside the player in a wide space (see `MediaPlayerFull`'s `queue`).
  */
 export function MediaQueue({ entity }: MediaQueueProps) {
   const handle = useEntityHandle('mediaPlayer', entity);
   const { queue, refresh } = useMediaQueue(entity);
+  // Clearing a long queue takes a moment: the button waits, and the list is dimmed meanwhile.
+  const [clearing, setClearing] = useState(false);
   if (!queue || handle.entity?.capabilities.queue !== true) {
     return null;
   }
@@ -36,7 +39,14 @@ export function MediaQueue({ entity }: MediaQueueProps) {
         ? handle.command('clearQueue')
         : handle.command(command, { item: item!.id });
 
-    void sent.then(() => setTimeout(refresh, 400)).catch(() => undefined);
+    if (command === 'clearQueue') {
+      setClearing(true);
+    }
+
+    void sent
+      .then(() => setTimeout(refresh, 400))
+      .catch(() => undefined)
+      .finally(() => setClearing(false));
   };
 
   const hidden = Math.max(0, queue.total - queue.offset - queue.items.length);
@@ -53,7 +63,8 @@ export function MediaQueue({ entity }: MediaQueueProps) {
         {queue.total > 0 ? (
           <PlainButton
             aria-label="Clear the queue"
-            title="Clear the queue; the track playing finishes"
+            title="Clear what comes next; the track playing carries on"
+            disabled={clearing}
             onClick={() => run('clearQueue')}
             align="center"
             gap={1}
@@ -83,7 +94,7 @@ export function MediaQueue({ entity }: MediaQueueProps) {
           m={0}
           p={0}
           minHeight={0}
-          css={{ listStyle: 'none', overflowY: 'auto' }}
+          css={{ listStyle: 'none', overflowY: 'auto', opacity: clearing ? 0.5 : 1 }}
         >
           {queue.items.map((item, index) => {
             const played = !item.current && index < queue.items.findIndex((x) => x.current);

@@ -49,6 +49,10 @@ export interface MusicAssistantOptions {
   reconnectMaxMs?: number;
 }
 
+/** The most tracks Clear looks for after the one that plays, and how many it takes out at once. */
+const UPCOMING_LIMIT = 5000;
+const DELETE_BATCH = 50;
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
@@ -161,10 +165,10 @@ function commandFor(
     }
 
     case 'clearQueue':
-      // Music Assistant's clear without the stop it sends by default: the queue is emptied and what
-      // plays is left to finish, with nothing after it. Depending on the state of the queue, the
-      // playing track may also leave the queue (and so the queue panel) while it plays on.
-      return { command: 'player_queues/clear', args: { skip_stop: true }, idKey: 'queue_id' };
+      // Not reached through `command()` while something plays: that takes out only what follows the
+      // playing track, one by one (`#clearUpcoming`). This is for a player with nothing playing,
+      // where the whole queue goes (and Music Assistant's own clear stops what is left).
+      return { command: 'player_queues/clear', idKey: 'queue_id' };
 
     default:
       throw new Error(`A media player has no "${name}" command`);
@@ -274,8 +278,53 @@ export class MusicAssistantIntegration extends BaseIntegration {
       throw new UnknownEntityError(this.id, entityId);
     }
 
+    if (name === 'clearQueue') {
+      await this.#clearUpcoming(entityId);
+      return;
+    }
+
     const { command, args: commandArgs, idKey = 'player_id' } = commandFor(name, args);
     await this.#send(command, { [idKey]: entityId, ...commandArgs });
+  }
+
+  /**
+   * Empties the queue after the track that plays, which stays where it is (in the queue and on the
+   * player) and plays to its end. Music Assistant has no command for that: its `clear` takes the
+   * playing track out of the queue too, and either stops it or, with `skip_stop`, leaves the player
+   * playing what it had buffered for a few seconds. So the tracks after it are taken out by id,
+   * last first, several at a time. A track Music Assistant has already loaded into the player's
+   * buffer cannot be taken out and stays, so one more may follow. With nothing playing there is
+   * nothing to keep, and the whole queue goes.
+   */
+  async #clearUpcoming(entityId: string): Promise<void> {
+    const queue = await this.#send('player_queues/get', { queue_id: entityId });
+    const playing = isRecord(queue) ? queue.current_index : undefined;
+    const active = isRecord(queue) && (queue.state === 'playing' || queue.state === 'paused');
+    if (!active || typeof playing !== 'number') {
+      await this.#send('player_queues/clear', { queue_id: entityId });
+      return;
+    }
+
+    const after = await this.#send('player_queues/items', {
+      queue_id: entityId,
+      offset: playing + 1,
+      limit: UPCOMING_LIMIT,
+    });
+
+    const ids = (Array.isArray(after) ? (after as MaQueueItem[]) : [])
+      .flatMap((item) => (typeof item.queue_item_id === 'string' ? [item.queue_item_id] : []))
+      .toReversed();
+
+    // By id, so they do not disturb one another, and one that cannot be taken out leaves the rest.
+    for (let from = 0; from < ids.length; from += DELETE_BATCH) {
+      await Promise.allSettled(
+        ids
+          .slice(from, from + DELETE_BATCH)
+          .map((id) =>
+            this.#send('player_queues/delete_item', { queue_id: entityId, item_id_or_index: id }),
+          ),
+      );
+    }
   }
 
   /**
