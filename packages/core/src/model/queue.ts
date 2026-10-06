@@ -1,6 +1,6 @@
 /** One track in a player's queue. */
 export interface QueueItem {
-  /** Stable for the item, whatever its place: pass it to the `playQueueItem` and `removeQueueItem` commands. */
+  /** Stable for the item, whatever its place: pass it to the `playQueueItem`, `removeQueueItem` and `moveQueueItem` commands. */
   id: string;
   title: string;
   artist?: string;

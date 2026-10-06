@@ -40,7 +40,7 @@ export interface MediaPlayerEntity extends EntityBase<'mediaPlayer'> {
     /** Shuffle can be turned on and off (`setShuffle`). */
     shuffle: boolean;
 
-    /** Has a queue that can be read (`Integration.queue`) and changed (`playQueueItem`, `removeQueueItem`, `clearQueue`). */
+    /** Has a queue that can be read (`Integration.queue`) and changed (`playQueueItem`, `removeQueueItem`, `moveQueueItem`, `clearQueue`). */
     queue: boolean;
 
     /** Playback can be moved to another player. */
@@ -83,6 +83,10 @@ export interface MediaPlayerCommands {
 
   /** Takes a track out of the queue: `item` is a `QueueItem`'s `id`. */
   removeQueueItem: { item: string };
+
+  /** Moves a track in the queue: `item` is a `QueueItem`'s `id`, `shift` is by how many places, later
+   * when positive and earlier when negative (never 0). */
+  moveQueueItem: { item: string; shift: number };
 
   /** Empties the queue after the track playing, which stays in the queue and on the player and plays
    * to its end. A track the player has already loaded cannot be taken out and may follow. With nothing

@@ -164,6 +164,23 @@ function commandFor(
           };
     }
 
+    case 'moveQueueItem': {
+      if (typeof args?.item !== 'string' || args.item === '') {
+        throw new Error('moveQueueItem needs the id of a queue item');
+      }
+
+      // Music Assistant reads a shift of 0 as "play it next", which is not a move: ask for a real one.
+      if (!Number.isInteger(args.shift) || args.shift === 0) {
+        throw new Error('"shift" must be a whole number of places, not 0');
+      }
+
+      return {
+        command: 'player_queues/move_item',
+        args: { queue_item_id: args.item, pos_shift: args.shift },
+        idKey: 'queue_id',
+      };
+    }
+
     case 'clearQueue':
       // Not reached through `command()` while something plays: that takes out only what follows the
       // playing track, one by one (`#clearUpcoming`). This is for a player with nothing playing,

@@ -1,6 +1,6 @@
-import { mockLibrary, mockMediaPlayer } from '@hashsome/core';
+import { mockLibrary, mockMediaPlayer, MockIntegration } from '@hashsome/core';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { renderWithMock } from '../../test-utils.tsx';
 import { MediaQueue } from '../media-queue.tsx';
 
@@ -67,6 +67,50 @@ describe('MediaQueue', () => {
 
     await waitFor(() => expect(Number(next.style.opacity)).toBeLessThan(1));
     expect(Number(playing.style.opacity || 1)).toBe(1);
+  });
+
+  test('a track coming up can be moved with the arrow keys on its handle, the one playing has none', async () => {
+    const { ha } = render();
+    await screen.findByText(/24 tracks/);
+    const playing = screen.getByRole('button', { name: /^Playing / }).closest('li')!;
+    expect(playing.querySelector('button[aria-label^="Move"]')).toBeNull();
+
+    const [first] = screen.getAllByRole('button', { name: /^Move / });
+    // Nowhere earlier to go in what comes next: the first one stays.
+    fireEvent.keyDown(first!, { key: 'ArrowUp' });
+    expect(ha.calls.filter((call) => call.command === 'moveQueueItem')).toHaveLength(0);
+
+    fireEvent.keyDown(first!, { key: 'ArrowDown' });
+    expect(ha.calls.at(-1)).toMatchObject({
+      command: 'moveQueueItem',
+      args: { item: expect.stringContaining('q3-'), shift: 1 },
+    });
+  });
+
+  test('when the last track has played and the player has stopped, it is shown as played', async () => {
+    const queue = (id: string, title: string, current?: boolean) => ({
+      id,
+      title,
+      duration: 100,
+      ...(current ? { current } : {}),
+    });
+
+    vi.spyOn(MockIntegration.prototype, 'queue').mockResolvedValue({
+      items: [queue('a', 'First'), queue('b', 'Last', true)],
+      total: 2,
+      offset: 0,
+    });
+
+    renderWithMock(
+      <MediaQueue entity="ha:room" />,
+      { room: mockMediaPlayer({ name: 'Room', playback: 'idle', capabilities: { queue: true } }) },
+      { library: mockLibrary() },
+    );
+
+    const last = await screen.findByRole('button', { name: 'Play Last' });
+    expect(last.getAttribute('aria-current')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Playing / })).toBeNull();
+    vi.restoreAllMocks();
   });
 
   test('says how many more there are than are shown', async () => {

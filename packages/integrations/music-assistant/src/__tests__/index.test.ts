@@ -740,6 +740,32 @@ test('the queue commands jump to an item or take one out', async () => {
   await expect(ma.command('kitchen_speaker', 'playQueueItem', {})).rejects.toThrow(/queue item/);
 });
 
+test('moveQueueItem shifts a track by places, and refuses a shift that is not a move', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket);
+
+  void ma.command('kitchen_speaker', 'moveQueueItem', { item: 'qi-9', shift: -2 });
+  await flush();
+  expect(socket().sent.at(-1)).toMatchObject({
+    command: 'player_queues/move_item',
+    args: { queue_id: 'kitchen_speaker', queue_item_id: 'qi-9', pos_shift: -2 },
+  });
+
+  // Music Assistant would take 0 for "play next".
+
+  await expect(
+    ma.command('kitchen_speaker', 'moveQueueItem', { item: 'qi-9', shift: 0 }),
+  ).rejects.toThrow(/shift/);
+
+  await expect(
+    ma.command('kitchen_speaker', 'moveQueueItem', { item: 'qi-9', shift: 1.5 }),
+  ).rejects.toThrow(/shift/);
+
+  await expect(ma.command('kitchen_speaker', 'moveQueueItem', { shift: 1 })).rejects.toThrow(
+    /queue item/,
+  );
+});
+
 test('queue reads a window starting two before the track that plays, and marks the one playing', async () => {
   const { ma, socket } = make();
   await connect(ma, socket);
