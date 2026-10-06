@@ -43,6 +43,15 @@ describe('toForecastPoints', () => {
     ]);
   });
 
+  test('maps where the wind comes from, as degrees or a compass name', () => {
+    expect(
+      toForecastPoints([
+        { datetime: '2026-10-06T00:00:00+00:00', wind_speed: 9, wind_bearing: 'E' },
+        { datetime: '2026-10-07T00:00:00+00:00', wind_bearing: '200' },
+      ]),
+    ).toMatchObject([{ windSpeed: 9, windBearing: 90 }, { windBearing: 200 }]);
+  });
+
   test('leaves out what is missing, and calls a condition it does not know unknown', () => {
     expect(
       toForecastPoints([

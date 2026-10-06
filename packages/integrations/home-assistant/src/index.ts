@@ -225,6 +225,7 @@ export class HomeAssistantIntegration extends BaseIntegration {
       type: query.type,
       points: toForecastPoints(answer.response?.[entityId]?.forecast),
       ...(entity.unit ? { unit: entity.unit } : {}),
+      ...(entity.windUnit ? { windUnit: entity.windUnit } : {}),
     };
   }
 

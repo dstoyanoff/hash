@@ -41,6 +41,15 @@ export interface WeatherEntity extends EntityBase<'weather'> {
   /** Percent. */
   humidity?: number;
 
+  /** How hard the wind blows, in `windUnit`. */
+  windSpeed?: number;
+
+  /** Where the wind comes from, in degrees: 0 is north, 90 east. */
+  windBearing?: number;
+
+  /** `km/h`, `mph`, `m/s`, ... */
+  windUnit?: string;
+
   /** The forecasts the weather source can give, if any. Ask for one with `Client.forecast`. */
   forecasts?: ForecastType[];
 }
@@ -67,8 +76,11 @@ export interface ForecastPoint {
   /** Expected rain or snow, in mm. */
   precipitation?: number;
 
-  /** In the unit the source uses (km/h for most). */
+  /** In the result's `windUnit`. */
   windSpeed?: number;
+
+  /** Where the wind comes from, in degrees: 0 is north, 90 east. */
+  windBearing?: number;
 
   /** For `twice_daily`: whether this step is the day (true) or the night. */
   daytime?: boolean;
@@ -82,6 +94,9 @@ export interface ForecastResult {
 
   /** `°C` or `°F`. */
   unit?: string;
+
+  /** The unit of `windSpeed`: `km/h`, `mph`, ... */
+  windUnit?: string;
 }
 
 export type WeatherCommands = Record<string, never>;

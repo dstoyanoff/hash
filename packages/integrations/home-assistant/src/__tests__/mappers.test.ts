@@ -297,6 +297,26 @@ describe('weather', () => {
     });
   });
 
+  test('maps the wind: speed, where it comes from (degrees or a compass name) and the unit', () => {
+    expect(
+      map(
+        hass('weather.home', 'sunny', {
+          wind_speed: 12.5,
+          wind_bearing: 'NNW',
+          wind_speed_unit: 'km/h',
+        }),
+      ),
+    ).toMatchObject({ windSpeed: 12.5, windBearing: 337.5, windUnit: 'km/h' });
+
+    expect(map(hass('weather.home', 'sunny', { wind_bearing: 90.5 }))).toMatchObject({
+      windBearing: 90.5,
+    });
+
+    expect(map(hass('weather.home', 'sunny', { wind_bearing: 'nowhere' }))).not.toHaveProperty(
+      'windBearing',
+    );
+  });
+
   test('lists the forecasts the weather source supports', () => {
     expect(map(hass('weather.home', 'sunny', { supported_features: 1 | 2 }))).toMatchObject({
       forecasts: ['daily', 'hourly'],

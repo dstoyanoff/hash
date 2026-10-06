@@ -38,3 +38,27 @@ export const CONDITION_LABEL: Record<WeatherCondition, string> = {
   exceptional: 'Exceptional weather',
   unknown: 'Unknown',
 };
+
+const COMPASS = [
+  'N',
+  'NNE',
+  'NE',
+  'ENE',
+  'E',
+  'ESE',
+  'SE',
+  'SSE',
+  'S',
+  'SSW',
+  'SW',
+  'WSW',
+  'W',
+  'WNW',
+  'NW',
+  'NNW',
+];
+
+/** The compass point for a bearing in degrees: `225` is `SW`. */
+export function compass(degrees: number): string {
+  return COMPASS[Math.round((((degrees % 360) + 360) % 360) / 22.5) % 16]!;
+}

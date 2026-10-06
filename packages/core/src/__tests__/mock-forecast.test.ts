@@ -43,6 +43,22 @@ describe('mockForecast', () => {
     );
   });
 
+  test('the wind swings round and gusts, in the entity’s unit', () => {
+    const { points, windUnit } = mockForecast(weather, { type: 'hourly' }, NOW);
+    expect(windUnit).toBe('km/h');
+    for (const point of points) {
+      expect(point.windSpeed).toBeGreaterThan(0);
+      expect(point.windBearing).toBeGreaterThanOrEqual(0);
+      expect(point.windBearing).toBeLessThan(360);
+    }
+
+    const calm: Record<string, unknown> = { ...mockWeather(), ref: 'ha:w' };
+    delete calm.windSpeed;
+    expect(mockForecast(calm as never, { type: 'hourly' }, NOW).points[0]).not.toHaveProperty(
+      'windSpeed',
+    );
+  });
+
   test('has nothing for what is not a weather entity', () => {
     expect(mockForecast(undefined, { type: 'daily' }, NOW).points).toEqual([]);
   });

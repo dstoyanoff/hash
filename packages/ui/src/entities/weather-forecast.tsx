@@ -6,7 +6,7 @@ import { Icon } from '../icon.tsx';
 import { useDetail } from '../layout/detail-provider.tsx';
 import { SeriesChart } from '../layout/series-chart.tsx';
 import { useWeatherForecast } from '../use-weather-forecast.ts';
-import { CONDITION_LABEL, CONDITION_LOOK } from './weather-look.ts';
+import { compass, CONDITION_LABEL, CONDITION_LOOK } from './weather-look.ts';
 
 /** How many hours the chart covers. */
 const HOURS = 24;
@@ -41,6 +41,15 @@ function ConditionIcon({
   return (
     <Flex as="span" css={look.color ? { color: look.color } : undefined}>
       <Icon name={look.icon} size={size} />
+    </Flex>
+  );
+}
+
+/** An arrow that points the way the wind blows (it comes from `bearing`, so it points the other way). */
+function WindArrow({ bearing, size }: { bearing: number; size: number }) {
+  return (
+    <Flex as="span" css={{ transform: `rotate(${bearing + 180}deg)` }}>
+      <Icon name="lu:arrow-up" size={size} />
     </Flex>
   );
 }
@@ -87,6 +96,18 @@ export function WeatherForecast({ entity }: { entity: EntityRef }) {
             {CONDITION_LABEL[weather?.condition ?? 'unknown']}
             {weather?.humidity !== undefined ? ` · ${Math.round(weather.humidity)}% humidity` : ''}
           </Typography>
+          {weather?.windSpeed !== undefined ? (
+            <Flex align="center" gap={1} color="textMuted">
+              {weather.windBearing !== undefined ? (
+                <WindArrow bearing={weather.windBearing} size={12} />
+              ) : null}
+              <Typography as="span" variant="secondary" color="textMuted">
+                Wind {Math.round(weather.windSpeed)}
+                {weather.windUnit ? ` ${weather.windUnit}` : ''}
+                {weather.windBearing !== undefined ? ` from ${compass(weather.windBearing)}` : ''}
+              </Typography>
+            </Flex>
+          ) : null}
         </Flex>
       </Flex>
 
@@ -94,6 +115,9 @@ export function WeatherForecast({ entity }: { entity: EntityRef }) {
         <Flex direction="column" gap={1}>
           <Typography as="h3" variant="label" color="textMuted" m={0}>
             Next 24 hours
+            {hourly.result?.windUnit && along.some((hour) => hour.windSpeed !== undefined)
+              ? ` · wind in ${hourly.result.windUnit}`
+              : ''}
           </Typography>
           {/* The temperature as a curve, and under it a few hours along it with their sky and rain
               chance: a day's worth in a strip about as tall as a line of text, not a row of 24 cards. */}
@@ -129,8 +153,18 @@ export function WeatherForecast({ entity }: { entity: EntityRef }) {
                 <Typography as="span" variant="secondary" color="textMuted">
                   {hour.precipitationProbability
                     ? `${Math.round(hour.precipitationProbability)}%`
-                    : ' '}
+                    : '\u00a0'}
                 </Typography>
+                {hour.windSpeed !== undefined ? (
+                  <Flex align="center" gap={0.5} color="textMuted">
+                    {hour.windBearing !== undefined ? (
+                      <WindArrow bearing={hour.windBearing} size={11} />
+                    ) : null}
+                    <Typography as="span" variant="secondary" color="textMuted">
+                      {Math.round(hour.windSpeed)}
+                    </Typography>
+                  </Flex>
+                ) : null}
               </Flex>
             ))}
           </Flex>

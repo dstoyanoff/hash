@@ -145,6 +145,9 @@ export function mockWeather(init: Init<WeatherEntity> = {}): EntityInput {
     condition: 'sunny',
     temperature: 20,
     unit: '°C',
+    windSpeed: 14,
+    windBearing: 225,
+    windUnit: 'km/h',
     forecasts: ['daily', 'hourly'],
     ...init,
   };

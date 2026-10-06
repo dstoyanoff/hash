@@ -314,11 +314,14 @@ describe('weather', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Home weather: forecast' }));
-    expect(await screen.findByText('Next 24 hours')).toBeTruthy();
+    expect(await screen.findByText(/^Next 24 hours/)).toBeTruthy();
     expect(await screen.findByText('10 days')).toBeTruthy();
     expect(screen.getByText('Today')).toBeTruthy();
     expect(screen.getByText('Tomorrow')).toBeTruthy();
     expect(screen.getByText('Rain · 70% humidity')).toBeTruthy();
+    // Wind now, and how it blows through the day: 225 degrees is a wind from the south-west.
+    expect(screen.getByText(/Wind 14 km\/h from SW/)).toBeTruthy();
+    expect(screen.getByText(/wind in km\/h/)).toBeTruthy();
   });
 
   test('a weather source with no forecasts stays a plain pill', () => {

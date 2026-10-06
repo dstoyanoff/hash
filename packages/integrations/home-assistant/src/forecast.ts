@@ -5,6 +5,7 @@ import {
   type ForecastType,
   type WeatherCondition,
 } from '@hashsome/core';
+import { bearing } from './mappers/common.ts';
 
 /** `WeatherEntityFeature`: which forecasts a weather entity can give, as flags in `supported_features`. */
 const FEATURES: Record<ForecastType, number> = { daily: 1, hourly: 2, twice_daily: 4 };
@@ -24,6 +25,7 @@ export interface HaForecastRow {
   precipitation?: number | null;
   precipitation_probability?: number | null;
   wind_speed?: number | null;
+  wind_bearing?: number | string | null;
   is_daytime?: boolean | null;
 }
 
@@ -48,6 +50,7 @@ export function toForecastPoints(rows: HaForecastRow[] | undefined): ForecastPoi
     const probability = number(row.precipitation_probability);
     const precipitation = number(row.precipitation);
     const wind = number(row.wind_speed);
+    const windBearing = bearing(row.wind_bearing);
     return [
       {
         timestamp: new Date(row.datetime).toISOString(),
@@ -57,6 +60,7 @@ export function toForecastPoints(rows: HaForecastRow[] | undefined): ForecastPoi
         ...(probability !== undefined ? { precipitationProbability: probability } : {}),
         ...(precipitation !== undefined ? { precipitation } : {}),
         ...(wind !== undefined ? { windSpeed: wind } : {}),
+        ...(windBearing !== undefined ? { windBearing } : {}),
         ...(typeof row.is_daytime === 'boolean' ? { daytime: row.is_daytime } : {}),
       },
     ];

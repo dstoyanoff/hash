@@ -56,6 +56,15 @@ export function mockForecast(
   const base = entity.temperature ?? 15;
   const start = new Date(now);
   const points: ForecastPoint[] = [];
+  // The wind swings round slowly and gusts up with the rain.
+  const wind = (step: number) =>
+    entity.windSpeed === undefined
+      ? {}
+      : {
+          windSpeed: round(entity.windSpeed * (0.7 + 0.6 * Math.abs(Math.sin(step * 0.7)))),
+          windBearing: Math.round(((entity.windBearing ?? 0) + step * 9) % 360),
+        };
+
   const spellAt = (step: number) =>
     SPELL[(step + Math.max(0, SPELL.indexOf(entity.condition))) % SPELL.length]!;
 
@@ -71,6 +80,7 @@ export function mockForecast(
         condition: night && condition === 'sunny' ? 'clear-night' : condition,
         temperature: round(base + 4 * Math.sin(((hours - 9) / 24) * 2 * Math.PI) - i * 0.05),
         precipitationProbability: RAIN[condition] ?? 0,
+        ...wind(i),
       });
     }
   } else if (query.type === 'twice_daily') {
@@ -86,6 +96,7 @@ export function mockForecast(
         temperature: round(daytime ? base + 4 + Math.sin(i) : base - 4 + Math.sin(i)),
         precipitationProbability: RAIN[condition] ?? 0,
         daytime,
+        ...wind(i),
       });
     }
   } else {
@@ -100,6 +111,7 @@ export function mockForecast(
         low: round(base - 5 + drift),
         precipitationProbability: RAIN[condition] ?? 0,
         ...(RAIN[condition] ? { precipitation: round((RAIN[condition] ?? 0) / 12) } : {}),
+        ...wind(i),
       });
     }
   }
@@ -108,5 +120,6 @@ export function mockForecast(
     type: query.type,
     points,
     ...(entity.unit ? { unit: entity.unit } : {}),
+    ...(entity.windUnit ? { windUnit: entity.windUnit } : {}),
   };
 }

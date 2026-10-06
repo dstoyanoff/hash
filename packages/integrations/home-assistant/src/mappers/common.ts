@@ -45,6 +45,46 @@ export function baseOf(entity: HassEntity) {
 export const num = (value: unknown): number | undefined =>
   typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 
+/** 16-point compass names, by the degrees they start at: a wind from `NNE` comes from 22.5 degrees. */
+const COMPASS = [
+  'N',
+  'NNE',
+  'NE',
+  'ENE',
+  'E',
+  'ESE',
+  'SE',
+  'SSE',
+  'S',
+  'SSW',
+  'SW',
+  'WSW',
+  'W',
+  'WNW',
+  'NW',
+  'NNW',
+];
+
+/** Where the wind comes from in degrees, from what Home Assistant gives: degrees as a number or as
+ * text, or a compass name such as `NNW`. Anything else is nothing. */
+export function bearing(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return ((value % 360) + 360) % 360;
+  }
+
+  if (typeof value !== 'string' || value.trim() === '') {
+    return undefined;
+  }
+
+  const degrees = Number(value);
+  if (Number.isFinite(degrees)) {
+    return ((degrees % 360) + 360) % 360;
+  }
+
+  const index = COMPASS.indexOf(value.trim().toUpperCase());
+  return index === -1 ? undefined : index * 22.5;
+}
+
 export const str = (value: unknown): string | undefined =>
   typeof value === 'string' && value ? value : undefined;
 
