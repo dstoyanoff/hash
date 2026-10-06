@@ -84,6 +84,6 @@ export interface MediaPlayerCommands {
   /** Takes a track out of the queue: `item` is a `QueueItem`'s `id`. */
   removeQueueItem: { item: string };
 
-  /** Empties the queue. The track playing is left to finish, and nothing follows it. */
+  /** Empties the queue, and stops what is playing with it. */
   clearQueue: void;
 }

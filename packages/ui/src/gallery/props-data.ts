@@ -538,7 +538,7 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
     ],
   },
   MediaQueue: {
-    doc: "A player's queue: the tracks that have just played (dimmed), the one playing, and what comes next, as a list that scrolls. Tap a track to jump to it, the cross takes it out, and Clear empties the queue and lets the track that is playing finish. It is made to sit beside the player in a wide space (see `MediaPlayerFull`'s `queue`).",
+    doc: "A player's queue: the tracks that have just played (dimmed), the one playing, and what comes next, as a list that scrolls. Tap a track to jump to it, the cross takes it out, and Clear empties the queue and stops what is playing. It is made to sit beside the player in a wide space (see `MediaPlayerFull`'s `queue`).",
     props: [
       {
         doc: 'The media player, as a ref like `ma:living_room`. Shows nothing for a player with no queue.',
