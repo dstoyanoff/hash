@@ -649,6 +649,14 @@ Every card kind is on the generic model. HA-shaped `EntityState` and `callServic
   (reconnect, idempotent `connect`, timers) need a transport fake per integration and are not
   asserted yet.
 
+## Upgrading a project
+
+`hashsome upgrade` (run through a project's `hashsome:upgrade` script: `upgrade` alone would be taken
+by the package manager's own command) reads the project's `package.json`, finds its `@hashsome/*`
+dependencies, skips any linked from a checkout (`workspace:`, `link:`, `file:`), and runs the project's
+own package manager (named in `packageManager`, else its lockfile) to move the rest to the latest
+release. All packages share one version, so they move together. It is `packages/runtime/src/cli/upgrade.ts`.
+
 ## Releasing
 
 Packages are published to npm by hand, from **Actions → Release → Run workflow** on `main`.
