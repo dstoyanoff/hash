@@ -296,25 +296,10 @@ export function WeatherForecast({ entity, expanded: layout }: WeatherForecastPro
             height={expanded ? 180 : 88}
           />
           {expanded ? (
-            // 24 hours in whole rows: 12 across, or fewer where the drawer is narrower. Every
-            // count here divides 24, so there is never a short last row.
-            <Box mt={2} css={{ containerType: 'inline-size' }}>
-              <Box
-                css={{
-                  display: 'grid',
-                  gap: 10,
-                  gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
-                  '@container (max-width: 1000px)': {
-                    gridTemplateColumns: 'repeat(8, minmax(0, 1fr))',
-                  },
-                  '@container (max-width: 640px)': {
-                    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
-                  },
-                  '@container (max-width: 420px)': {
-                    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-                  },
-                }}
-              >
+            // The 24 hours in one row, each a column with no box of its own: as many as fit show, and
+            // the rest are a swipe or a scroll away.
+            <Box mt={2}>
+              <Flex css={{ overflowX: 'auto', paddingBottom: 4 }}>
                 {hours.map((hour) => {
                   const rain = rainText(hour, hourly.result?.precipitationUnit);
                   return (
@@ -323,10 +308,9 @@ export function WeatherForecast({ entity, expanded: layout }: WeatherForecastPro
                       direction="column"
                       align="center"
                       gap={1.5}
-                      background="surfaceRaised"
-                      radius="card"
                       px={2}
-                      py={3}
+                      py={1}
+                      css={{ flex: '1 0 84px' }}
                     >
                       <Typography as="span" variant="secondary" color="textMuted">
                         {hourName(hour.timestamp)}
@@ -348,7 +332,7 @@ export function WeatherForecast({ entity, expanded: layout }: WeatherForecastPro
                     </Flex>
                   );
                 })}
-              </Box>
+              </Flex>
             </Box>
           ) : (
             // A few hours along the curve, with their sky and temperature.
