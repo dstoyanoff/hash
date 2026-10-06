@@ -5,9 +5,12 @@ import {
   type BrowseQuery,
   type BrowseResult,
   type EntityInput,
+  type QueueQuery,
+  type QueueResult,
 } from '@hashsome/core';
 import { parseUri, SHELVES, toBrowseItem, type MaItem } from './browse.ts';
 import { toMediaPlayer, type MaPlayer } from './mapper.ts';
+import { toQueueItems, type MaQueueItem } from './queue.ts';
 import { onPlayback, onQueue, positionOf, type Position } from './position.ts';
 
 /**
@@ -120,12 +123,45 @@ function commandFor(
         throw new Error('"mode" must be play, replace, next or add');
       }
 
+      const { context, shuffle } = args;
+      if (context !== undefined && (typeof context !== 'string' || context === '')) {
+        throw new Error('"context" must be the id of an album or playlist');
+      }
+
+      if (shuffle !== undefined && typeof shuffle !== 'boolean') {
+        throw new Error('"shuffle" must be true or false');
+      }
+
       return {
         command: 'player_queues/play_media',
-        args: { media: args.item, option: mode },
+        args: {
+          // A track in an album or playlist: queue all of it and start at the track.
+          media: context ?? args.item,
+          option: mode,
+          ...(context !== undefined ? { start_item: args.item } : {}),
+          ...(shuffle !== undefined ? { shuffle } : {}),
+        },
         idKey: 'queue_id',
       };
     }
+
+    case 'playQueueItem':
+    case 'removeQueueItem': {
+      if (typeof args?.item !== 'string' || args.item === '') {
+        throw new Error(`${name} needs the id of a queue item`);
+      }
+
+      return name === 'playQueueItem'
+        ? { command: 'player_queues/play_index', args: { index: args.item }, idKey: 'queue_id' }
+        : {
+            command: 'player_queues/delete_item',
+            args: { item_id_or_index: args.item },
+            idKey: 'queue_id',
+          };
+    }
+
+    case 'clearQueue':
+      return { command: 'player_queues/clear', idKey: 'queue_id' };
 
     default:
       throw new Error(`A media player has no "${name}" command`);
@@ -237,6 +273,41 @@ export class MusicAssistantIntegration extends BaseIntegration {
 
     const { command, args: commandArgs, idKey = 'player_id' } = commandFor(name, args);
     await this.#send(command, { [idKey]: entityId, ...commandArgs });
+  }
+
+  /**
+   * The player's queue: a window of `limit` tracks starting two before the one playing, with how many
+   * the whole queue has (it can be thousands, left over from earlier playback), so a panel shows
+   * what has just played and what is coming without pulling all of it.
+   */
+  async queue(entityId: string, query: QueueQuery): Promise<QueueResult> {
+    if (!this.getEntity(entityId)) {
+      throw new UnknownEntityError(this.id, entityId);
+    }
+
+    const queue = await this.#send('player_queues/get', { queue_id: entityId });
+    if (!isRecord(queue)) {
+      return { items: [], total: 0, offset: 0 };
+    }
+
+    const total = typeof queue.items === 'number' ? queue.items : 0;
+    const playing = typeof queue.current_index === 'number' ? queue.current_index : 0;
+    const offset = Math.max(0, playing - 2);
+    const raw = await this.#send('player_queues/items', {
+      queue_id: entityId,
+      limit: query.limit ?? 30,
+      offset,
+    });
+
+    const current = isRecord(queue.current_item) ? queue.current_item.queue_item_id : undefined;
+    return {
+      items: toQueueItems(
+        Array.isArray(raw) ? (raw as MaQueueItem[]) : [],
+        typeof current === 'string' ? current : undefined,
+      ),
+      total,
+      offset,
+    };
   }
 
   /** One level of the library, or a search across it, through Music Assistant's own API. */

@@ -126,7 +126,7 @@ export function createGalleryIntegration() {
         duration: 231,
         positionUpdatedAt: new Date().toISOString(),
         shuffle: false,
-        capabilities: { browse: true, search: true, seek: true, shuffle: true },
+        capabilities: { browse: true, search: true, seek: true, shuffle: true, queue: true },
       }),
       'media_player.off': mockMediaPlayer({
         name: 'Kitchen Speaker',

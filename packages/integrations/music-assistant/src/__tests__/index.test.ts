@@ -117,6 +117,7 @@ test('maps a player to a native mediaPlayer entity', async () => {
       search: true,
       seek: true,
       shuffle: true,
+      queue: true,
       transfer: false,
       group: false,
     },
@@ -678,4 +679,124 @@ test('a server that does not answer for queues leaves shuffle unreported and doe
   await connect(ma, socket);
   expect(ma.status).toBe('connected');
   expect(ma.getEntity('kitchen_speaker')).not.toHaveProperty('shuffle');
+});
+
+test('playMedia with a context queues the whole album or playlist and starts at the track, optionally shuffled', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket);
+  void ma.command('kitchen_speaker', 'playMedia', {
+    item: 'library://track/7',
+    context: 'library://album/12',
+    mode: 'replace',
+    shuffle: false,
+  });
+
+  await flush();
+  expect(socket().sent.at(-1)).toMatchObject({
+    command: 'player_queues/play_media',
+    args: {
+      queue_id: 'kitchen_speaker',
+      media: 'library://album/12',
+      start_item: 'library://track/7',
+      option: 'replace',
+      shuffle: false,
+    },
+  });
+
+  // Without a context the track is the media, with no start item.
+  void ma.command('kitchen_speaker', 'playMedia', { item: 'library://track/7', mode: 'add' });
+  await flush();
+  const sent = socket().sent.at(-1)!;
+  expect(sent.args).toMatchObject({ media: 'library://track/7', option: 'add' });
+  expect(sent.args).not.toHaveProperty('start_item');
+  expect(sent.args).not.toHaveProperty('shuffle');
+
+  await expect(
+    ma.command('kitchen_speaker', 'playMedia', { item: 'x://a/1', context: '' }),
+  ).rejects.toThrow(/context/);
+
+  await expect(
+    ma.command('kitchen_speaker', 'playMedia', { item: 'x://a/1', shuffle: 'yes' }),
+  ).rejects.toThrow(/shuffle/);
+});
+
+test('the queue commands jump to an item, take it out, or empty the queue', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket);
+  void ma.command('kitchen_speaker', 'playQueueItem', { item: 'qi-9' });
+  await flush();
+  expect(socket().sent.at(-1)).toMatchObject({
+    command: 'player_queues/play_index',
+    args: { queue_id: 'kitchen_speaker', index: 'qi-9' },
+  });
+
+  void ma.command('kitchen_speaker', 'removeQueueItem', { item: 'qi-9' });
+  await flush();
+  expect(socket().sent.at(-1)).toMatchObject({
+    command: 'player_queues/delete_item',
+    args: { queue_id: 'kitchen_speaker', item_id_or_index: 'qi-9' },
+  });
+
+  void ma.command('kitchen_speaker', 'clearQueue');
+  await flush();
+  expect(socket().sent.at(-1)).toMatchObject({
+    command: 'player_queues/clear',
+    args: { queue_id: 'kitchen_speaker' },
+  });
+
+  await expect(ma.command('kitchen_speaker', 'playQueueItem', {})).rejects.toThrow(/queue item/);
+});
+
+test('queue reads a window starting two before the track that plays, and marks the one playing', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket);
+  const queue = ma.queue('kitchen_speaker', { limit: 3 });
+  await flush();
+  expect(socket().sent.at(-1)).toMatchObject({
+    command: 'player_queues/get',
+    args: { queue_id: 'kitchen_speaker' },
+  });
+
+  await answer(socket, {
+    items: 1322,
+    current_index: 49,
+    current_item: { queue_item_id: 'qi-49' },
+  });
+
+  expect(socket().sent.at(-1)).toMatchObject({
+    command: 'player_queues/items',
+    args: { queue_id: 'kitchen_speaker', limit: 3, offset: 47 },
+  });
+
+  await answer(socket, [
+    { queue_item_id: 'qi-47', name: 'A - One', duration: 100 },
+    { queue_item_id: 'qi-48', name: 'B - Two', duration: 110 },
+    {
+      queue_item_id: 'qi-49',
+      name: 'C - Three',
+      duration: 120,
+      media_item: { name: 'Three', artists: [{ name: 'C' }], album: { name: 'Album' } },
+    },
+  ]);
+
+  const result = await queue;
+  expect(result).toMatchObject({ total: 1322, offset: 47 });
+  expect(result.items.map((item) => item.id)).toEqual(['qi-47', 'qi-48', 'qi-49']);
+  expect(result.items[2]).toMatchObject({
+    title: 'Three',
+    artist: 'C',
+    album: 'Album',
+    current: true,
+  });
+
+  expect(result.items[0]).not.toHaveProperty('current');
+  await expect(ma.queue('nope', {})).rejects.toBeInstanceOf(UnknownEntityError);
+});
+
+test('a player with no queue has no items', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket);
+  const queue = ma.queue('kitchen_speaker', {});
+  await answer(socket, null);
+  expect(await queue).toEqual({ items: [], total: 0, offset: 0 });
 });

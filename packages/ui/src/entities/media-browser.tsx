@@ -43,8 +43,35 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
   const theater = layout === 'theater' || (layout === 'auto' && detail?.expanded === true);
   const browser = useMediaBrowser(entity);
   const player = handle.entity;
+  // A player with a queue can be told to add to it, play next and shuffle; one without can only play.
+  const queueable = player?.capabilities.queue === true;
+
+  /** What the actions do. Playing replaces the queue, as in Spotify: a track in an album or playlist
+   * queues all of it and starts there, so Next goes to the next track of the album. */
   const play = (item: BrowseItem) => {
-    void handle.command('playMedia', { item: item.id });
+    const container = browser.inside;
+    const within =
+      item.kind === 'track' && container && ['album', 'playlist'].includes(container.kind)
+        ? container
+        : undefined;
+
+    void handle.command('playMedia', {
+      item: item.id,
+      mode: 'replace',
+      ...(within ? { context: within.id } : {}),
+    });
+
+    onPlay?.(item);
+  };
+
+  const playNext = (item: BrowseItem) =>
+    void handle.command('playMedia', { item: item.id, mode: 'next' });
+
+  const addToQueue = (item: BrowseItem) =>
+    void handle.command('playMedia', { item: item.id, mode: 'add' });
+
+  const shuffleAll = (item: BrowseItem) => {
+    void handle.command('playMedia', { item: item.id, mode: 'replace', shuffle: true });
     onPlay?.(item);
   };
 
@@ -60,6 +87,26 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
       </Typography>
     </Flex>
   );
+
+  /** What can be done with the whole album, playlist or artist that is open: play it, shuffle it,
+   * add it to the queue. Playing it replaces the queue. */
+  const opened = browser.inside;
+  const allActions =
+    opened?.playable === true ? (
+      <Flex align="center" gap={2} css={{ flexShrink: 0 }}>
+        <PillButton icon="lu:play" label="Play" onClick={() => play(opened)} primary />
+        {queueable ? (
+          <>
+            <PillButton icon="lu:shuffle" label="Shuffle" onClick={() => shuffleAll(opened)} />
+            <PillButton
+              icon="lu:list-plus"
+              label="Add to queue"
+              onClick={() => addToQueue(opened)}
+            />
+          </>
+        ) : null}
+      </Flex>
+    ) : null;
 
   const search = player?.capabilities.search ? (
     <Flex
@@ -128,6 +175,7 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
           }
         />
       ) : null}
+      {allActions}
       {browser.error ? (
         <Typography as="p" variant="body" color="danger" role="alert">
           {browser.error}
@@ -160,7 +208,13 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
         >
           {browser.items.map((item) => (
             <li key={item.id} css={{ flex: 'none', scrollSnapAlign: 'start' }}>
-              <BrowseCard item={item} onOpen={() => browser.open(item)} onPlay={() => play(item)} />
+              <BrowseCard
+                item={item}
+                queueable={queueable}
+                onOpen={() => browser.open(item)}
+                onPlay={() => play(item)}
+                onAdd={() => addToQueue(item)}
+              />
             </li>
           ))}
         </FadeScroll>
@@ -178,7 +232,14 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
         >
           {browser.items.map((item) => (
             <li key={item.id} css={{ flex: 'none' }}>
-              <BrowseRow item={item} onOpen={() => browser.open(item)} onPlay={() => play(item)} />
+              <BrowseRow
+                item={item}
+                queueable={queueable}
+                onOpen={() => browser.open(item)}
+                onPlay={() => play(item)}
+                onNext={() => playNext(item)}
+                onAdd={() => addToQueue(item)}
+              />
             </li>
           ))}
         </Flex>
@@ -187,14 +248,52 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
   );
 }
 
+/** A labelled round button, for the actions of the album or playlist that is open. */
+function PillButton({
+  icon,
+  label,
+  onClick,
+  primary,
+}: {
+  icon: IconName;
+  label: string;
+  onClick: () => void;
+  primary?: boolean;
+}) {
+  return (
+    <PlainButton
+      onClick={onClick}
+      align="center"
+      justify="center"
+      gap={1.5}
+      height={40}
+      px={4}
+      radius="full"
+      background={primary ? 'accent' : 'surfaceRaised'}
+      color={primary ? 'accentText' : 'text'}
+    >
+      <Icon name={icon} size={16} />
+      <Typography as="span" variant="label">
+        {label}
+      </Typography>
+    </PlainButton>
+  );
+}
+
 function BrowseRow({
   item,
+  queueable,
   onOpen,
   onPlay,
+  onNext,
+  onAdd,
 }: {
   item: BrowseItem;
+  queueable: boolean;
   onOpen: () => void;
   onPlay: () => void;
+  onNext: () => void;
+  onAdd: () => void;
 }) {
   // A row opens what can be opened and otherwise plays; an openable thing that can also be played
   // (an album) gets its own play button.
@@ -256,6 +355,22 @@ function BrowseRow({
           ) : null}
         </Flex>
       </PlainButton>
+      {queueable && item.playable ? (
+        <>
+          <IconButton
+            icon="lu:list-start"
+            label={`Play ${item.title} next`}
+            glyph={16}
+            onClick={onNext}
+          />
+          <IconButton
+            icon="lu:list-plus"
+            label={`Add ${item.title} to the queue`}
+            glyph={16}
+            onClick={onAdd}
+          />
+        </>
+      ) : null}
       {item.expandable && item.playable ? (
         <IconButton icon="lu:play" label={`Play ${item.title}`} glyph={16} onClick={onPlay} />
       ) : null}
@@ -280,12 +395,16 @@ const CARD_SIZE = `min(${CARD}px, max(${MIN_CARD}px, calc(100cqh - ${LABEL}px)))
  * button over the artwork's corner. */
 function BrowseCard({
   item,
+  queueable,
   onOpen,
   onPlay,
+  onAdd,
 }: {
   item: BrowseItem;
+  queueable: boolean;
   onOpen: () => void;
   onPlay: () => void;
+  onAdd: () => void;
 }) {
   const main = item.expandable ? onOpen : item.playable ? onPlay : undefined;
   return (
@@ -338,11 +457,26 @@ function BrowseCard({
           ) : null}
         </Flex>
       </PlainButton>
-      {item.expandable && item.playable ? (
-        // Over the artwork's lower right corner.
-        <Box position="absolute" css={{ right: 10, top: `calc(${CARD_SIZE} - 54px)` }}>
-          <IconButton icon="lu:play" label={`Play ${item.title}`} glyph={16} onClick={onPlay} />
-        </Box>
+      {item.playable && (queueable || item.expandable) ? (
+        // Over the artwork's lower right corner: add to the queue, and play all of an album or playlist.
+        <Flex
+          align="center"
+          gap={1}
+          position="absolute"
+          css={{ right: 10, top: `calc(${CARD_SIZE} - 54px)` }}
+        >
+          {queueable ? (
+            <IconButton
+              icon="lu:list-plus"
+              label={`Add ${item.title} to the queue`}
+              glyph={16}
+              onClick={onAdd}
+            />
+          ) : null}
+          {item.expandable ? (
+            <IconButton icon="lu:play" label={`Play ${item.title}`} glyph={16} onClick={onPlay} />
+          ) : null}
+        </Flex>
       ) : null}
     </Box>
   );

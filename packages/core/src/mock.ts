@@ -3,6 +3,7 @@ import { UnknownEntityError } from './entity.ts';
 import { mockForecast } from './mock-forecast.ts';
 import { mockHistory } from './mock-history.ts';
 import { mockLogbook } from './mock-logbook.ts';
+import { mockQueue } from './mock-queue.ts';
 import {
   isCommandOf,
   type ActionEntity,
@@ -19,6 +20,8 @@ import {
   type HistoryResult,
   type LogbookQuery,
   type LogbookResult,
+  type QueueQuery,
+  type QueueResult,
   type LightEntity,
   type MediaPlayerEntity,
   type PersonEntity,
@@ -57,6 +60,7 @@ export function mockMediaPlayer(
       search: false,
       seek: false,
       shuffle: false,
+      queue: false,
       transfer: false,
       group: false,
       ...capabilities,
@@ -506,6 +510,16 @@ export class MockIntegration extends BaseIntegration {
     }
 
     return Promise.resolve(mockHistory(entityId, entity, query));
+  }
+
+  /** A made-up queue for a player that has one (see `mockQueue`); empty for anything else. */
+  queue(entityId: string, query: QueueQuery): Promise<QueueResult> {
+    const entity = this.getEntity(entityId);
+    if (!entity) {
+      return Promise.reject(new UnknownEntityError(this.id, entityId));
+    }
+
+    return Promise.resolve(mockQueue(entity, this.#library, query));
   }
 
   /** Made-up activity for a light, switch or heater (see `mockLogbook`); empty for anything else. */

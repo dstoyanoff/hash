@@ -613,13 +613,16 @@ function layoutOf(volume: HTMLElement) {
     body = body.parentElement as HTMLElement;
   }
 
+  // The top of the body is a row (the player, and the queue beside it when there is one) whose first
+  // child is the box that centers the player.
   const area = Array.from(body.children).find((child) => child.contains(volume)) as HTMLElement;
-  const player = area.firstElementChild as HTMLElement;
+  const centering = area.firstElementChild as HTMLElement;
+  const player = centering.firstElementChild as HTMLElement;
   return {
     direction: getComputedStyle(body).flexDirection,
     playerCentered:
-      getComputedStyle(area).justifyContent === 'center' &&
-      getComputedStyle(area).alignItems === 'center',
+      getComputedStyle(centering).justifyContent === 'center' &&
+      getComputedStyle(centering).alignItems === 'center',
     playerMaxWidth: getComputedStyle(player).maxWidth,
     libraryBelow: Boolean(area.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING),
   };
@@ -652,5 +655,34 @@ describe('the library’s layout follows the space it has', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Browse media' }));
     await screen.findAllByRole('button', { name: 'Play Dreams' });
     expect(getComputedStyle(rows()).overflowX).toBe('auto');
+  });
+});
+
+describe('the queue beside the player', () => {
+  const queue = <div>the queue</div>;
+
+  test('a wide player puts the queue beside it, not below it', () => {
+    renderWithMock(
+      <MediaPlayerFull entity="ha:room" wide queue={queue} />,
+      playing({ queue: true }),
+      library,
+    );
+
+    const beside = screen.getByText('the queue');
+    const volume = screen.getByRole('slider', { name: 'Volume level' });
+    // Both are in the same row at the top: the queue's box and the player's are siblings.
+    const row = beside.parentElement!.parentElement!;
+    expect(row.contains(volume)).toBe(true);
+    expect(getComputedStyle(row).flexDirection).not.toBe('column');
+  });
+
+  test('a narrow one has no room for it', () => {
+    renderWithMock(
+      <MediaPlayerFull entity="ha:room" wide={false} queue={queue} />,
+      playing({ queue: true }),
+      library,
+    );
+
+    expect(screen.queryByText('the queue')).toBeNull();
   });
 });

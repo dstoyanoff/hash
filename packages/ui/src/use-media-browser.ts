@@ -6,6 +6,7 @@ interface Level {
   /** The item that was opened to get here; `undefined` for the top level. */
   path?: string;
   title?: string;
+  item?: BrowseItem;
 }
 
 interface Answer {
@@ -34,6 +35,9 @@ export interface MediaBrowserState {
 
   /** Goes to a shelf: leaves whatever was open inside one, and any search. */
   selectTab(id: string): void;
+
+  /** The album, playlist or artist that is open: what a "play all" would play, and what the tracks in the list belong to. Absent at the top, on a shelf and in search results. */
+  inside: BrowseItem | undefined;
 
   /** Opened a folder (or searching), so there is somewhere to go back to. */
   canGoBack: boolean;
@@ -118,7 +122,8 @@ export function useMediaBrowser(ref: EntityRef): MediaBrowserState {
   }, [client, ref, key, searching, needle, path]);
 
   const open = useCallback(
-    (item: BrowseItem) => setTrail((levels) => [...levels, { path: item.id, title: item.title }]),
+    (item: BrowseItem) =>
+      setTrail((levels) => [...levels, { path: item.id, title: item.title, item }]),
     [],
   );
 
@@ -151,6 +156,7 @@ export function useMediaBrowser(ref: EntityRef): MediaBrowserState {
     tabs,
     activeTab: searching ? undefined : selected,
     selectTab,
+    inside: searching || atTop ? undefined : here.item,
     canGoBack: searching || !atTop,
     searching,
     open,

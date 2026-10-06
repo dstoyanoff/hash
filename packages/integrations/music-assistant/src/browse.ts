@@ -59,7 +59,7 @@ export function toBrowseItem(item: MaItem): BrowseItem | undefined {
 
 /** Pictures Music Assistant serves itself need its login, so only ones the browser can open on its
  * own (a streaming service's CDN) are passed on. */
-function artworkOf(item: MaItem): string | undefined {
+export function artworkOf(item: MaItem): string | undefined {
   const image = item.image ?? item.metadata?.images?.[0];
   return image?.remotely_accessible && image.path && /^https?:\/\//.test(image.path)
     ? image.path

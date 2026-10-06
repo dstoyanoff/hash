@@ -495,6 +495,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'ReactNode',
       },
       {
+        doc: 'What goes beside the player in a wide space, usually the player\'s queue: `<MediaQueue entity="ma:living_room" />`. Only used when `wide`; the narrow layout has no room for it.',
+        name: 'queue',
+        optional: true,
+        type: 'ReactNode',
+      },
+      {
         doc: 'Calls the player this instead of the name it reports.',
         name: 'name',
         optional: true,
@@ -528,6 +534,17 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         name: 'layout',
         optional: true,
         type: "'list' | 'theater' | 'auto'",
+      },
+    ],
+  },
+  MediaQueue: {
+    doc: "A player's queue: the tracks that have just played (dimmed), the one playing, and what comes next, as a list that scrolls. Tap a track to jump to it, the cross takes it out, and Clear empties the queue. It is made to sit beside the player in a wide space (see `MediaPlayerFull`'s `queue`).",
+    props: [
+      {
+        doc: 'The media player, as a ref like `ma:living_room`. Shows nothing for a player with no queue.',
+        name: 'entity',
+        optional: false,
+        type: 'EntityRef',
       },
     ],
   },

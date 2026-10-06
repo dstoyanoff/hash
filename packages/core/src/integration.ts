@@ -9,6 +9,8 @@ import type {
   HistoryResult,
   LogbookQuery,
   LogbookResult,
+  QueueQuery,
+  QueueResult,
 } from './model/index.ts';
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
@@ -86,6 +88,14 @@ export interface Integration {
    * `Error` for an unknown entity. Arguments come from a browser: validate them.
    */
   logbook?(entityId: string, query: LogbookQuery): Promise<LogbookResult>;
+
+  /**
+   * A media player's queue: the tracks that play, in order, starting a little before the current one.
+   * Optional: only for players that report `capabilities.queue`. Resolves with no items for a player
+   * with an empty queue, and rejects with a displayable `Error` for an unknown entity. Arguments come
+   * from a browser: validate them.
+   */
+  queue?(entityId: string, query: QueueQuery): Promise<QueueResult>;
 
   /**
    * Fetches a file the backend serves for its entities, such as artwork, with the integration's own

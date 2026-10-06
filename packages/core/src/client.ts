@@ -10,6 +10,8 @@ import type {
   HistoryResult,
   LogbookQuery,
   LogbookResult,
+  QueueQuery,
+  QueueResult,
 } from './model/index.ts';
 import { encodeMessage, parseServerMessage, type ClientMessage } from './protocol.ts';
 
@@ -63,6 +65,9 @@ export interface Client {
 
   /** What happened to an entity lately and who or what caused it, newest first. */
   logbook(ref: EntityRef, query: LogbookQuery): Promise<LogbookResult>;
+
+  /** A media player's queue, in the order it plays. */
+  queue(ref: EntityRef, query: QueueQuery): Promise<QueueResult>;
 
   /** Escape hatch: a backend-specific request, answered with whatever the integration returns. */
   callRaw(integration: string, request: Record<string, unknown>): Promise<unknown>;
@@ -207,6 +212,16 @@ export class RemoteClient implements Client {
       query: 'logbook',
       args: { ...query },
     }))) as LogbookResult;
+  }
+
+  async queue(ref: EntityRef, query: QueueQuery): Promise<QueueResult> {
+    return (await this.#request((id) => ({
+      type: 'query',
+      id,
+      ref,
+      query: 'queue',
+      args: { ...query },
+    }))) as QueueResult;
   }
 
   callRaw(integration: string, request: Record<string, unknown>): Promise<unknown> {

@@ -9,6 +9,7 @@ import { MediaBrowser } from '../entities/media-browser.tsx';
 import { MediaPlayerBar } from '../entities/media-player-bar.tsx';
 import { MediaPlayerColumn } from '../entities/media-player-column.tsx';
 import { MediaPlayerFull } from '../entities/media-player-full.tsx';
+import { MediaQueue } from '../entities/media-queue.tsx';
 import { WeatherForecast } from '../entities/weather-forecast.tsx';
 import { NavDock } from '../entities/nav-dock.tsx';
 import { NavRail } from '../entities/nav-rail.tsx';
@@ -791,8 +792,8 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
 
           <ComponentDoc
             title="Media Player Full"
-            components={['MediaPlayerFull']}
-            description="The big player: the player centered, and its library below it, so songs are picked right there instead of in a drawer. The media cards' drawers show it too. A dashboard puts it in a page of its own, around it whatever it likes."
+            components={['MediaPlayerFull', 'MediaQueue']}
+            description="The big player: the player centered with its queue beside it (`MediaQueue`: tap a track to jump to it, the cross takes it out, Clear empties it), and its library below, where every track can be played, played next or added to the queue, and an open album or playlist can be played, shuffled or added whole. The media cards' drawers show the player and library too. A dashboard puts it in a page of its own, around it whatever it likes."
           >
             {/* No fixed height: it fills whatever it is given, so here it is as tall as what it shows,
                 with no spare room under it. */}
@@ -800,6 +801,7 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
               <MediaPlayerFull
                 entity="ha:media_player.living_room"
                 wide
+                queue={<MediaQueue entity="ha:media_player.living_room" />}
                 browser={<MediaBrowser entity="ha:media_player.living_room" layout="theater" />}
               />
             </Flex>
