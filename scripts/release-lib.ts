@@ -60,6 +60,22 @@ export function levelFor(commits: Parsed[], current: string): Level | undefined 
   return undefined;
 }
 
+const SEMVER = /^\d+\.\d+\.\d+$/;
+
+/**
+ * The version released last. The newest tag says (`v0.1.0`), since a tag is the record of a release
+ * and the root package's own version can lag behind one made by hand; with no tag yet, the root
+ * package's version is the start.
+ */
+export function currentVersion(lastTag: string | undefined, packageVersion: string): string {
+  const version = lastTag === undefined ? packageVersion : lastTag.replace(/^v/, '');
+  if (!SEMVER.test(version)) {
+    throw new Error(`"${version}" is not a version like 1.2.3 (from ${lastTag ?? 'package.json'})`);
+  }
+
+  return version;
+}
+
 export function bump(version: string, level: Level): string {
   const [major, minor, patch] = version.split('.').map(Number) as [number, number, number];
   if (level === 'major') {

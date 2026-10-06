@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bump, levelFor, notes, parse, prependChangelog } from './release-lib.ts';
+import { bump, currentVersion, levelFor, notes, parse, prependChangelog } from './release-lib.ts';
 
 const c = (subject: string, body = '') => parse({ hash: 'abcdef1234567', subject, body })!;
 
@@ -36,6 +36,22 @@ describe('levelFor', () => {
 
   it('nothing user-facing is no release', () => {
     expect(levelFor([c('docs: a'), c('chore: b'), c('ci: c')], '0.1.0')).toBeUndefined();
+  });
+});
+
+describe('currentVersion', () => {
+  it('the last tag says, even when the root package lags behind a release made by hand', () => {
+    expect(currentVersion('v0.1.0', '0.0.0')).toBe('0.1.0');
+    expect(currentVersion('v0.54.1', '0.54.0')).toBe('0.54.1');
+  });
+
+  it('with no tag the root package is the start', () => {
+    expect(currentVersion(undefined, '0.1.0')).toBe('0.1.0');
+  });
+
+  it('something that is not a version is an error', () => {
+    expect(() => currentVersion('v1.0', '0.1.0')).toThrow(/not a version/);
+    expect(() => currentVersion(undefined, 'next')).toThrow(/not a version/);
   });
 });
 
