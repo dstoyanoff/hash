@@ -226,7 +226,6 @@ those, and you only import it yourself to write an integration.
 packages/        the packages above, one folder each (integrations under packages/integrations/)
 example/         a complete project you can run, and the template for your own
 demo/            the example's dashboards as a static site on mock data (the live demo)
-templates/       scaffolds for new dashboards
 docs/            screenshots
 ```
 

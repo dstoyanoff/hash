@@ -515,7 +515,6 @@ example/                     @hashsome/example          a complete project: the 
   shared/                      conventions the dashboards reuse (top bar, the switcher's list)
   dashboards/<id>/             one folder per dashboard: layout.tsx, pages/*.tsx
 demo/                        @hashsome/demo             the example's dashboards as a static site on mock data (GitHub Pages)
-templates/dashboard/         the scaffold a new dashboards/<id>/ folder is made from
 docs/screenshots/            the images the README shows
 ```
 
