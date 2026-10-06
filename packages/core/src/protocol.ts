@@ -26,11 +26,11 @@ export type ClientMessage =
       args?: Record<string, unknown>;
     }
   | {
-      /** A read that is not a subscription: one level of a media library, or an entity's history, answered by `result`. */
+      /** A read that is not a subscription: one level of a media library, an entity's history, or a weather forecast, answered by `result`. */
       type: 'query';
       id: number;
       ref: EntityRef;
-      query: 'browse' | 'history';
+      query: 'browse' | 'history' | 'forecast';
       args?: Record<string, unknown>;
     }
   | {
@@ -93,7 +93,7 @@ export function parseClientMessage(raw: string): ClientMessage | undefined {
       if (
         typeof value.id !== 'number' ||
         !isRef(value.ref) ||
-        (value.query !== 'browse' && value.query !== 'history') ||
+        (value.query !== 'browse' && value.query !== 'history' && value.query !== 'forecast') ||
         (value.args !== undefined && !isRecord(value.args))
       ) {
         return undefined;

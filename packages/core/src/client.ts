@@ -4,6 +4,8 @@ import type {
   BrowseQuery,
   BrowseResult,
   Entity,
+  ForecastQuery,
+  ForecastResult,
   HistoryQuery,
   HistoryResult,
 } from './model/index.ts';
@@ -53,6 +55,9 @@ export interface Client {
 
   /** The entity's past values, bucketed, from the backend's own record. */
   history(ref: EntityRef, query: HistoryQuery): Promise<HistoryResult>;
+
+  /** A weather entity's forecast: days, hours or half-days ahead, soonest first. */
+  forecast(ref: EntityRef, query: ForecastQuery): Promise<ForecastResult>;
 
   /** Escape hatch: a backend-specific request, answered with whatever the integration returns. */
   callRaw(integration: string, request: Record<string, unknown>): Promise<unknown>;
@@ -177,6 +182,16 @@ export class RemoteClient implements Client {
       query: 'history',
       args: { ...query },
     }))) as HistoryResult;
+  }
+
+  async forecast(ref: EntityRef, query: ForecastQuery): Promise<ForecastResult> {
+    return (await this.#request((id) => ({
+      type: 'query',
+      id,
+      ref,
+      query: 'forecast',
+      args: { ...query },
+    }))) as ForecastResult;
   }
 
   callRaw(integration: string, request: Record<string, unknown>): Promise<unknown> {

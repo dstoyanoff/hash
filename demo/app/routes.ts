@@ -8,6 +8,7 @@ export default [
     route('lights', '../../example/dashboards/home/pages/lights.tsx'),
     route('climate', '../../example/dashboards/home/pages/climate.tsx'),
     route('media', '../../example/dashboards/home/pages/media.tsx'),
+    route('weather', '../../example/dashboards/home/pages/weather.tsx'),
   ]),
   route('second-floor', '../../example/dashboards/second-floor/pages/home.tsx'),
   route('kitchen', '../../example/dashboards/kitchen/pages/home.tsx'),

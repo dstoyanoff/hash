@@ -5,6 +5,8 @@ import {
   type BrowseQuery,
   type ConnectionStatus,
   type EntityRef,
+  type ForecastQuery,
+  type ForecastType,
   type HistoryBucket,
   type HistoryQuery,
   type HistoryRange,
@@ -43,12 +45,60 @@ function historyArgs(args: Record<string, unknown> | undefined): HistoryQuery | 
   };
 }
 
+const FORECAST_TYPES = ['daily', 'hourly', 'twice_daily'];
+
+/** A forecast query's one field, kept only when it is a kind there is: the rest came from a browser. */
+function forecastArgs(args: Record<string, unknown> | undefined): ForecastQuery | undefined {
+  const { type } = args ?? {};
+  return typeof type === 'string' && FORECAST_TYPES.includes(type)
+    ? { type: type as ForecastType }
+    : undefined;
+}
+
 /** The only fields a browse query has, kept only when they are strings: the rest came from a browser. */
 function browseArgs(args: Record<string, unknown> | undefined): BrowseQuery {
   return {
     ...(typeof args?.path === 'string' ? { path: args.path } : {}),
     ...(typeof args?.search === 'string' ? { search: args.search } : {}),
   };
+}
+
+/** Answers one read (`browse`, `history` or `forecast`) from the integration that owns the entity. */
+function runQuery(
+  integration: Integration,
+  integrationId: string,
+  id: string,
+  query: 'browse' | 'history' | 'forecast',
+  args: Record<string, unknown> | undefined,
+): Promise<unknown> {
+  switch (query) {
+    case 'forecast': {
+      const forecast = forecastArgs(args);
+      if (!integration.forecast) {
+        return Promise.reject(new Error(`"${integrationId}" has no forecasts`));
+      }
+
+      return forecast
+        ? integration.forecast(id, forecast)
+        : Promise.reject(new Error('A forecast query needs a type'));
+    }
+
+    case 'history': {
+      const history = historyArgs(args);
+      if (!integration.history) {
+        return Promise.reject(new Error(`"${integrationId}" keeps no history`));
+      }
+
+      return history
+        ? integration.history(id, history)
+        : Promise.reject(new Error('A history query needs a range'));
+    }
+
+    default:
+      return integration.browse
+        ? integration.browse(id, browseArgs(args))
+        : Promise.reject(new Error(`"${integrationId}" has no media library`));
+  }
 }
 
 /**
@@ -189,20 +239,11 @@ export class Proxy {
         case 'query': {
           const { integration: integrationId, id } = parseEntityRef(message.ref);
           const integration = this.#integrations.get(integrationId);
-          const history = message.query === 'history' ? historyArgs(message.args) : undefined;
           answer(
             message.id,
-            !integration
-              ? Promise.reject(new Error(`Unknown integration "${integrationId}"`))
-              : message.query === 'history'
-                ? integration.history
-                  ? history
-                    ? integration.history(id, history)
-                    : Promise.reject(new Error('A history query needs a range'))
-                  : Promise.reject(new Error(`"${integrationId}" keeps no history`))
-                : integration.browse
-                  ? integration.browse(id, browseArgs(message.args))
-                  : Promise.reject(new Error(`"${integrationId}" has no media library`)),
+            integration
+              ? runQuery(integration, integrationId, id, message.query, message.args)
+              : Promise.reject(new Error(`Unknown integration "${integrationId}"`)),
           );
 
           return;

@@ -13,6 +13,8 @@ import {
   type BrowseQuery,
   type BrowseResult,
   type EntityInput,
+  type ForecastQuery,
+  type ForecastResult,
   type HistoryQuery,
   type HistoryResult,
   type Unsubscribe,
@@ -26,6 +28,7 @@ import {
   type HaStatisticsRow,
 } from './history.ts';
 import { toServiceRequest } from './commands.ts';
+import { toForecastPoints, type HaForecastResponse } from './forecast.ts';
 import { mapEntity } from './mappers/index.ts';
 
 export interface HaArea {
@@ -192,6 +195,40 @@ export class HomeAssistantIntegration extends BaseIntegration {
 
     const unit = meta.statistics_unit_of_measurement;
     return { points, kind: total ? 'total' : 'measurement', ...(unit ? { unit } : {}) };
+  }
+
+  /**
+   * A weather entity's forecast, from the `weather.get_forecasts` service (the forecast is no longer
+   * part of the entity's state). An entity that does not give that kind of forecast has no points.
+   */
+  async forecast(entityId: string, query: ForecastQuery): Promise<ForecastResult> {
+    const client = this.#requireClient();
+    const entity = this.getEntity(entityId);
+    if (entity?.kind !== 'weather') {
+      throw new UnknownEntityError(this.id, entityId);
+    }
+
+    if (!entity.forecasts?.includes(query.type)) {
+      return { type: query.type, points: [] };
+    }
+
+    const answer = await client.sendCommand<{ response?: HaForecastResponse }>({
+      type: 'call_service',
+      domain: 'weather',
+      service: 'get_forecasts',
+      service_data: { type: query.type },
+      target: { entity_id: entityId },
+      return_response: true,
+    });
+
+    return {
+      type: query.type,
+      points: toForecastPoints(answer.response?.[entityId]?.forecast),
+      ...(entity.unit ? { unit: entity.unit } : {}),
+      ...(entity.windUnit ? { windUnit: entity.windUnit } : {}),
+      ...(entity.precipitationUnit ? { precipitationUnit: entity.precipitationUnit } : {}),
+      ...(entity.pressureUnit ? { pressureUnit: entity.pressureUnit } : {}),
+    };
   }
 
   /** A file Home Assistant serves (artwork, a person's picture), fetched with the token. Only a

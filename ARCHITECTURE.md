@@ -200,6 +200,7 @@ interface Integration {
 
   // ── optional capabilities ───────────────────────────────────────────────
   history?(entityId: string, query: HistoryQuery): Promise<HistoryResult>; // bucketed past values
+  forecast?(entityId: string, query: ForecastQuery): Promise<ForecastResult>; // a weather entity's days / hours ahead
   fetchAsset?(path: string): Promise<Response>; // artwork etc., fetched with the integration's credentials
   logbook?(entityId: string, query: LogbookQuery): Promise<LogbookEntry[]>;
   browse?(entityId: string, query: { path?: string; search?: string }): Promise<BrowseResult>;
@@ -301,6 +302,10 @@ the UI hides the feature.
 
 - **`history(id, { from, to, resolution? })`** → timestamped numeric samples, oldest first. Feeds
   charts and min / max / usage totals.
+- **`forecast(id, { type })`** → a weather entity's forecast, soonest first: `daily`, `hourly` or
+  `twice_daily`. The weather entity lists the types its source supports in `forecasts`; Home Assistant
+  answers from `weather.get_forecasts`, whichever provider sits behind the entity. Feeds the top bar's
+  weather chip (today's high and low) and its forecast drawer.
 - **`logbook(id, { limit? })`** → recent activity entries (what changed, who or what caused it,
   when), newest first.
 - **`browse(id, { path?, search? })`** → one level of a player's media library, or a search of it, as
@@ -428,7 +433,7 @@ every command of every kind runs and bad commands reject, and that no credential
 
 **Status:** built. `Integration`, `BaseIntegration`, the mock integration and `UnknownEntityError` live in
 `packages/core/src`; the runtime strips the prefix and defers subscriptions until an integration is
-connected. `browse` is built (below); `history` and `logbook` are not. The mock conformance suite is (below).
+connected. `browse`, `history` and `forecast` are built (below); `logbook` is not. The mock conformance suite is (below).
 
 ## Wire protocol
 
@@ -437,12 +442,12 @@ runtime talks to the integrations.
 
 Browser → runtime:
 
-| Message                                        | Meaning                                                          |
-| ---------------------------------------------- | ---------------------------------------------------------------- |
-| `{ type: 'subscribe', ref }` / `'unsubscribe'` | Start / stop receiving an entity                                 |
-| `{ type: 'command', id, ref, command, args? }` | Run a command; answered by `result`                              |
-| `{ type: 'query', id, ref, query, args? }`     | `history` / `logbook` / `browse`; answered by `result` with data |
-| `{ type: 'raw', id, integration, request }`    | The escape hatch                                                 |
+| Message                                        | Meaning                                                           |
+| ---------------------------------------------- | ----------------------------------------------------------------- |
+| `{ type: 'subscribe', ref }` / `'unsubscribe'` | Start / stop receiving an entity                                  |
+| `{ type: 'command', id, ref, command, args? }` | Run a command; answered by `result`                               |
+| `{ type: 'query', id, ref, query, args? }`     | `history` / `forecast` / `browse`; answered by `result` with data |
+| `{ type: 'raw', id, integration, request }`    | The escape hatch                                                  |
 
 Runtime → browser:
 
@@ -466,7 +471,7 @@ When a browser connects, the runtime replays each integration's status and the c
 every entity it subscribes to, so a display that wakes up gets a full picture at once.
 
 **Status:** built for `subscribe`, `unsubscribe`, `command`, `raw`, `entity`, `status` and `result`;
-`query` carries `browse` today; `history` and `logbook` will join it.
+`query` carries `browse`, `history` and `forecast`; `logbook` will join it.
 
 ## The UI
 

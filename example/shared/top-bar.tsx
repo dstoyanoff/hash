@@ -10,7 +10,7 @@ export function HomeTopBar({ title, scenes }: Pick<TopBarProps, 'scenes'> & { ti
       title={title}
       dashboards={switchableDashboards}
       {...(scenes ? { scenes } : {})}
-      weather="ha:sensor.outdoor_temperature"
+      weather="ha:weather.home"
       people={['ha:person.dan', 'ha:person.alex']}
       clockFormat="24h"
     />
