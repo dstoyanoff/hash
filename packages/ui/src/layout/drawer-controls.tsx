@@ -269,7 +269,11 @@ export function ChipRow({
             px={3}
             background={selected ? 'accent' : 'surface'}
             color={selected ? 'accentText' : 'text'}
-            css={{ flex: 'none', whiteSpace: 'nowrap' }}
+            css={{
+              flex: 'none',
+              whiteSpace: 'nowrap',
+              transition: 'background-color 160ms ease, color 160ms ease',
+            }}
           >
             {option.icon ? <Icon name={option.icon} size={14} /> : null}
             <Typography as="span" variant="body" css={{ minWidth: 0, maxWidth: 220 }}>

@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import type { EntityRef, QueueItem } from '@hashsome/core';
 import { Flex, Typography } from 'e-prim';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useState } from 'react';
 import { useEntityHandle } from '../hooks.ts';
 import { Icon } from '../icon.tsx';
@@ -26,8 +27,9 @@ const ROW = 56;
 export function MediaQueue({ entity }: MediaQueueProps) {
   const handle = useEntityHandle('mediaPlayer', entity);
   const { queue, refresh } = useMediaQueue(entity);
-  // Clearing a long queue takes a moment: the button waits, and the list is dimmed meanwhile.
+  // Clearing a long queue takes a moment: the button waits, and what is being taken out is dimmed meanwhile.
   const [clearing, setClearing] = useState(false);
+  const still = useReducedMotion();
   if (!queue || handle.entity?.capabilities.queue !== true) {
     return null;
   }
@@ -94,93 +96,111 @@ export function MediaQueue({ entity }: MediaQueueProps) {
           m={0}
           p={0}
           minHeight={0}
-          css={{ listStyle: 'none', overflowY: 'auto', opacity: clearing ? 0.5 : 1 }}
+          css={{ listStyle: 'none', overflowY: 'auto' }}
         >
-          {queue.items.map((item, index) => {
-            const played = !item.current && index < queue.items.findIndex((x) => x.current);
-            return (
-              <Flex
-                as="li"
-                key={item.id}
-                align="center"
-                gap={1}
-                css={{ flex: 'none', opacity: played ? 0.5 : 1 }}
-              >
-                <PlainButton
-                  align="center"
-                  gap={3}
-                  grow={1}
-                  minWidth={0}
-                  height={ROW}
-                  px={2}
-                  radius="row"
-                  aria-label={`${item.current ? 'Playing' : 'Play'} ${item.title}`}
-                  aria-current={item.current ? 'true' : undefined}
-                  background={item.current ? 'surfaceRaised' : 'transparent'}
-                  onClick={() => run('playQueueItem', item)}
-                  css={({ palette }) => ({ '&:hover': { background: palette.surfaceRaised } })}
+          {/* A track that arrives grows in, one that leaves closes up, and the rest slide to fill the
+              space, so removing one, jumping to one or clearing the queue is something to watch rather
+              than a list that changes in one frame. The ones there from the start do not animate. */}
+          <AnimatePresence initial={false}>
+            {queue.items.map((item, index) => {
+              const played = !item.current && index < queue.items.findIndex((x) => x.current);
+              // While Clear works only what is on its way out is dimmed: the track that plays and
+              // the ones before it stay as they are.
+              const leaving = clearing && !item.current && !played;
+              return (
+                <motion.li
+                  key={item.id}
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: played || leaving ? 0.5 : 1, height: ROW }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: still ? 0 : 0.2, ease: 'easeOut' }}
+                  css={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    flex: 'none',
+                    overflow: 'hidden',
+                  }}
                 >
-                  <Flex
-                    align="center"
-                    justify="center"
-                    background="surfaceRaised"
-                    color={item.current ? 'accent' : 'textMuted'}
-                    radius="small"
-                    width={40}
-                    height={40}
-                    overflow="hidden"
-                    css={{ flex: 'none' }}
-                  >
-                    {item.artworkUrl ? (
-                      <Cover src={item.artworkUrl} />
-                    ) : (
-                      <Icon name={item.current ? 'lu:audio-lines' : 'lu:music'} size={18} />
-                    )}
-                  </Flex>
-                  <Flex direction="column" minWidth={0} grow={1} align="flex-start">
-                    <Typography
-                      as="span"
-                      variant="bodyStrong"
-                      color={item.current ? 'accent' : 'text'}
-                      maxWidth="100%"
-                    >
-                      <MarqueeText>{item.title}</MarqueeText>
-                    </Typography>
-                    {item.artist ? (
-                      <Typography as="span" variant="secondary" color="textMuted" maxWidth="100%">
-                        <MarqueeText>{item.artist}</MarqueeText>
-                      </Typography>
-                    ) : null}
-                  </Flex>
-                  {item.duration !== undefined ? (
-                    <Typography as="span" variant="secondary" color="textMuted">
-                      {formatDuration(item.duration)}
-                    </Typography>
-                  ) : null}
-                </PlainButton>
-                {item.current ? (
-                  <Flex width={ROW / 2} css={{ flex: 'none' }} />
-                ) : (
                   <PlainButton
-                    aria-label={`Remove ${item.title} from the queue`}
-                    title="Remove from the queue"
-                    onClick={() => run('removeQueueItem', item)}
-                    center
-                    width={ROW / 2}
-                    height={ROW / 2}
-                    radius="full"
-                    color="textMuted"
+                    align="center"
+                    gap={3}
+                    grow={1}
+                    minWidth={0}
+                    height={ROW}
+                    px={2}
+                    radius="row"
+                    aria-label={`${item.current ? 'Playing' : 'Play'} ${item.title}`}
+                    aria-current={item.current ? 'true' : undefined}
+                    background={item.current ? 'surfaceRaised' : 'transparent'}
+                    onClick={() => run('playQueueItem', item)}
                     css={({ palette }) => ({
-                      flex: 'none',
+                      transition: 'background-color 160ms ease',
                       '&:hover': { background: palette.surfaceRaised },
                     })}
                   >
-                    <Icon name="lu:x" size={16} />
+                    <Flex
+                      align="center"
+                      justify="center"
+                      background="surfaceRaised"
+                      color={item.current ? 'accent' : 'textMuted'}
+                      radius="small"
+                      width={40}
+                      height={40}
+                      overflow="hidden"
+                      css={{ flex: 'none' }}
+                    >
+                      {item.artworkUrl ? (
+                        <Cover src={item.artworkUrl} />
+                      ) : (
+                        <Icon name={item.current ? 'lu:audio-lines' : 'lu:music'} size={18} />
+                      )}
+                    </Flex>
+                    <Flex direction="column" minWidth={0} grow={1} align="flex-start">
+                      <Typography
+                        as="span"
+                        variant="bodyStrong"
+                        color={item.current ? 'accent' : 'text'}
+                        maxWidth="100%"
+                      >
+                        <MarqueeText>{item.title}</MarqueeText>
+                      </Typography>
+                      {item.artist ? (
+                        <Typography as="span" variant="secondary" color="textMuted" maxWidth="100%">
+                          <MarqueeText>{item.artist}</MarqueeText>
+                        </Typography>
+                      ) : null}
+                    </Flex>
+                    {item.duration !== undefined ? (
+                      <Typography as="span" variant="secondary" color="textMuted">
+                        {formatDuration(item.duration)}
+                      </Typography>
+                    ) : null}
                   </PlainButton>
-                )}
-              </Flex>
-            );
-          })}
+                  {item.current ? (
+                    <Flex width={ROW / 2} css={{ flex: 'none' }} />
+                  ) : (
+                    <PlainButton
+                      aria-label={`Remove ${item.title} from the queue`}
+                      title="Remove from the queue"
+                      onClick={() => run('removeQueueItem', item)}
+                      center
+                      width={ROW / 2}
+                      height={ROW / 2}
+                      radius="full"
+                      color="textMuted"
+                      css={({ palette }) => ({
+                        flex: 'none',
+                        '&:hover': { background: palette.surfaceRaised },
+                      })}
+                    >
+                      <Icon name="lu:x" size={16} />
+                    </PlainButton>
+                  )}
+                </motion.li>
+              );
+            })}
+          </AnimatePresence>
           {hidden > 0 ? (
             <Typography as="li" variant="secondary" color="textMuted" py={2} css={{ flex: 'none' }}>
               and {hidden.toLocaleString()} more

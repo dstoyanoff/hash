@@ -21,6 +21,9 @@ export interface MediaBrowserState {
   /** What is listed now. */
   items: BrowseItem[];
 
+  /** Which list that is: it changes when another one is shown (another tab, an album opened, a search), so a view can tell the same list updating from a new one arriving. */
+  listKey: string;
+
   /** A name for the list: the opened folder's, or what was searched for. Absent on a tab. */
   title: string | undefined;
   loading: boolean;
@@ -152,6 +155,7 @@ export function useMediaBrowser(ref: EntityRef): MediaBrowserState {
   const listing = !searching && atTop && !tabs ? top : result;
   return {
     items: listing?.items ?? [],
+    listKey: searching ? 'search' : `path:${path ?? 'top'}`,
     title: searching
       ? (result?.title ?? `Results for “${needle}”`)
       : atTop

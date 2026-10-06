@@ -1,5 +1,5 @@
 import { mockLibrary, mockMediaPlayer } from '@hashsome/core';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, test } from 'vitest';
 import { renderWithMock } from '../../test-utils.tsx';
 import { MediaQueue } from '../media-queue.tsx';
@@ -49,6 +49,24 @@ describe('MediaQueue', () => {
     const { ha } = render();
     fireEvent.click(await screen.findByRole('button', { name: 'Clear the queue' }));
     expect(ha.calls.at(-1)).toMatchObject({ command: 'clearQueue' });
+  });
+
+  test('while Clear works, the track that plays is not dimmed with the ones on their way out', async () => {
+    const { ha } = render();
+    // A slow clear, so the list is seen while it works.
+    const send = ha.command.bind(ha);
+    ha.command = async (...args) => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return send(...args);
+    };
+
+    const playing = (await screen.findByRole('button', { name: /^Playing / })).closest('li')!;
+    const rows = screen.getAllByRole('listitem');
+    const next = rows[rows.indexOf(playing) + 1]!;
+    fireEvent.click(screen.getByRole('button', { name: 'Clear the queue' }));
+
+    await waitFor(() => expect(Number(next.style.opacity)).toBeLessThan(1));
+    expect(Number(playing.style.opacity || 1)).toBe(1);
   });
 
   test('says how many more there are than are shown', async () => {

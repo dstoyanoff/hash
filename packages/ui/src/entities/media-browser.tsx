@@ -11,6 +11,7 @@ import { CHIP_HEIGHT, ChipRow } from '../layout/drawer-controls.tsx';
 import { FadeScroll } from '../layout/fade-scroll.tsx';
 import { MarqueeText } from '../layout/marquee-text.tsx';
 import { PlainButton } from '../layout/plain-button.tsx';
+import { Reveal } from '../layout/reveal.tsx';
 import { Skeleton } from '../layout/skeleton.tsx';
 import { IconButton } from '../layout/tile.tsx';
 import { useMediaBrowser } from '../use-media-browser.ts';
@@ -225,15 +226,22 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
           pb={2}
           css={{ ...THEATER_STAGE, listStyle: 'none', scrollSnapType: 'x proximity' }}
         >
-          {browser.items.map((item) => (
-            <li key={item.id} css={{ flex: 'none', scrollSnapAlign: 'start' }}>
-              <BrowseCard
-                item={item}
-                queueable={queueable}
-                onOpen={() => browser.open(item)}
-                onPlay={() => play(item)}
-                onAdd={() => addToQueue(item)}
-              />
+          {browser.items.map((item, index) => (
+            // Keyed by the list too, so another list arriving is new items fading in, not the same
+            // ones left as they were; typing in the search does not stagger them.
+            <li
+              key={`${browser.listKey}:${item.id}`}
+              css={{ flex: 'none', scrollSnapAlign: 'start' }}
+            >
+              <Reveal index={browser.searching ? 0 : index}>
+                <BrowseCard
+                  item={item}
+                  queueable={queueable}
+                  onOpen={() => browser.open(item)}
+                  onPlay={() => play(item)}
+                  onAdd={() => addToQueue(item)}
+                />
+              </Reveal>
             </li>
           ))}
         </FadeScroll>
@@ -249,16 +257,18 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
           minHeight={0}
           css={{ listStyle: 'none', overflowY: 'auto' }}
         >
-          {browser.items.map((item) => (
-            <li key={item.id} css={{ flex: 'none' }}>
-              <BrowseRow
-                item={item}
-                queueable={queueable}
-                onOpen={() => browser.open(item)}
-                onPlay={() => play(item)}
-                onNext={() => playNext(item)}
-                onAdd={() => addToQueue(item)}
-              />
+          {browser.items.map((item, index) => (
+            <li key={`${browser.listKey}:${item.id}`} css={{ flex: 'none' }}>
+              <Reveal index={browser.searching ? 0 : index}>
+                <BrowseRow
+                  item={item}
+                  queueable={queueable}
+                  onOpen={() => browser.open(item)}
+                  onPlay={() => play(item)}
+                  onNext={() => playNext(item)}
+                  onAdd={() => addToQueue(item)}
+                />
+              </Reveal>
             </li>
           ))}
         </Flex>
