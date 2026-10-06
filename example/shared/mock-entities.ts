@@ -5,6 +5,7 @@ import {
   mockPerson,
   mockSensor,
   mockSwitch,
+  mockWeather,
 } from '@hashsome/core';
 
 // The entities the example's mock Home Assistant has, one shared list for every dashboard: two can
@@ -60,12 +61,12 @@ export const mockEntities = {
     unit: '°C',
     measurement: 'temperature',
   }),
-  // global layout config (the top bar's weather) — shared across every dashboard
-  'sensor.outdoor_temperature': mockSensor({
-    name: 'Outdoor temperature',
-    value: '12.3',
-    unit: '°C',
-    measurement: 'temperature',
+  // global layout config (the top bar's weather, with its forecast) — shared across every dashboard
+  'weather.home': mockWeather({
+    name: 'Home',
+    condition: 'partlycloudy',
+    temperature: 12.3,
+    humidity: 71,
   }),
   'person.dan': mockPerson({
     name: 'Dan',

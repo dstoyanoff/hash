@@ -297,6 +297,56 @@ describe('weather', () => {
     });
   });
 
+  test('maps the wind: speed, where it comes from (degrees or a compass name) and the unit', () => {
+    expect(
+      map(
+        hass('weather.home', 'sunny', {
+          wind_speed: 12.5,
+          wind_bearing: 'NNW',
+          wind_speed_unit: 'km/h',
+        }),
+      ),
+    ).toMatchObject({ windSpeed: 12.5, windBearing: 337.5, windUnit: 'km/h' });
+
+    expect(map(hass('weather.home', 'sunny', { wind_bearing: 90.5 }))).toMatchObject({
+      windBearing: 90.5,
+    });
+
+    expect(map(hass('weather.home', 'sunny', { wind_bearing: 'nowhere' }))).not.toHaveProperty(
+      'windBearing',
+    );
+  });
+
+  test('maps UV, cloud cover, feels-like, pressure and the units of the forecast', () => {
+    expect(
+      map(
+        hass('weather.home', 'sunny', {
+          uv_index: 2.9,
+          cloud_coverage: 64,
+          apparent_temperature: 18.5,
+          pressure: 1013,
+          pressure_unit: 'hPa',
+          precipitation_unit: 'mm',
+        }),
+      ),
+    ).toMatchObject({
+      uvIndex: 2.9,
+      cloudCoverage: 64,
+      apparentTemperature: 18.5,
+      pressure: 1013,
+      pressureUnit: 'hPa',
+      precipitationUnit: 'mm',
+    });
+  });
+
+  test('lists the forecasts the weather source supports', () => {
+    expect(map(hass('weather.home', 'sunny', { supported_features: 1 | 2 }))).toMatchObject({
+      forecasts: ['daily', 'hourly'],
+    });
+
+    expect(map(hass('weather.home', 'sunny', {}))).not.toHaveProperty('forecasts');
+  });
+
   test('a condition it does not know is unknown, and an unavailable entity says so', () => {
     expect(map(hass('weather.home', 'volcanic-ash'))).toMatchObject({ condition: 'unknown' });
     expect(map(hass('weather.home', 'unavailable'))).toMatchObject({

@@ -238,6 +238,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         optional: true,
         type: 'number',
       },
+      {
+        doc: 'For an icon drawn in more than one color: part `i` of the icon (its `i`th shape) is drawn in `colors[i]`, and any part without one, in the surrounding text color. Only for outline icons.',
+        name: 'colors',
+        optional: true,
+        type: 'readonly (string | undefined)[]',
+      },
     ],
   },
   LightTile: {
@@ -587,7 +593,7 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: '(EntityRef | TopBarScene)[]',
       },
       {
-        doc: 'Current weather as a pill with an icon for the sky and a rounded whole-degree reading. A weather entity, like `ha:weather.forecast_home`, shows its real condition; a plain sensor, e.g. an outdoor temperature, gets a fixed sun.',
+        doc: "Current weather as a pill with an icon for the sky and a rounded whole-degree reading. A weather entity, like `ha:weather.forecast_home`, shows its real condition, today's high and low once its forecast has loaded, and opens the forecast (the next 24 hours and the days ahead) when tapped, if its source has one; a plain sensor, e.g. an outdoor temperature, gets a fixed sun and no forecast.",
         name: 'weather',
         optional: true,
         type: 'EntityRef',
@@ -679,6 +685,23 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         name: 'colors',
         optional: true,
         type: 'readonly string[]',
+      },
+    ],
+  },
+  WeatherForecast: {
+    doc: "A weather entity's forecast: the weather now, the next 24 hours as a chart (hover it for everything about an hour) and the days ahead. The top bar's weather chip shows it in a drawer; a dashboard can put it in a page of its own, with `expanded` for the full-size layout. Wide, it adds the current readings and a card for each hour. A source with no forecast shows only the weather now.",
+    props: [
+      {
+        doc: 'A weather entity, as a ref like `ha:weather.forecast_home`. The forecasts it offers (hourly, daily) are read through the runtime.',
+        name: 'entity',
+        optional: false,
+        type: 'EntityRef',
+      },
+      {
+        doc: 'Lay it out for a wide space (readings tiles, a card for each hour, more columns for the days) or for a narrow one. Left out, it follows the drawer it is in.',
+        name: 'expanded',
+        optional: true,
+        type: 'boolean',
       },
     ],
   },

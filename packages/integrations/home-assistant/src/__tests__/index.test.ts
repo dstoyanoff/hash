@@ -382,3 +382,74 @@ describe('HomeAssistantIntegration history', () => {
     );
   });
 });
+
+describe('HomeAssistantIntegration forecast', () => {
+  const setup = async (response: unknown, attributes = { supported_features: 1 | 2 }) => {
+    const sent: Record<string, unknown>[] = [];
+    const { client } = fakeClient({
+      'weather.home': entity('weather.home', 'sunny', { temperature_unit: '°C', ...attributes }),
+      'light.lamp': entity('light.lamp', 'on', {}),
+    });
+
+    client.sendCommand = ((message: Record<string, unknown>) => {
+      sent.push(message);
+      return Promise.resolve({ context: {}, response });
+    }) as HaClient['sendCommand'];
+
+    const ha = new HomeAssistantIntegration({
+      url: 'x',
+      token: 'y',
+      createClient: () => Promise.resolve(client),
+    });
+
+    await ha.connect();
+    return { ha, sent };
+  };
+
+  test('asks weather.get_forecasts for the entity and the kind, and maps the answer', async () => {
+    const { ha, sent } = await setup({
+      'weather.home': {
+        forecast: [{ datetime: '2026-10-06T00:00:00+00:00', condition: 'sunny', temperature: 17 }],
+      },
+    });
+
+    expect(await ha.forecast('weather.home', { type: 'daily' })).toEqual({
+      type: 'daily',
+      unit: '°C',
+      points: [{ timestamp: '2026-10-06T00:00:00.000Z', condition: 'sunny', temperature: 17 }],
+    });
+
+    expect(sent).toEqual([
+      {
+        type: 'call_service',
+        domain: 'weather',
+        service: 'get_forecasts',
+        service_data: { type: 'daily' },
+        target: { entity_id: 'weather.home' },
+        return_response: true,
+      },
+    ]);
+  });
+
+  test('a kind the source does not give is empty, without asking', async () => {
+    const { ha, sent } = await setup({});
+    expect(await ha.forecast('weather.home', { type: 'twice_daily' })).toEqual({
+      type: 'twice_daily',
+      points: [],
+    });
+
+    expect(sent).toEqual([]);
+  });
+
+  test('an answer with no forecast is no points, and a non-weather or unknown entity is an error', async () => {
+    const { ha } = await setup({});
+    expect((await ha.forecast('weather.home', { type: 'hourly' })).points).toEqual([]);
+    await expect(ha.forecast('light.lamp', { type: 'daily' })).rejects.toBeInstanceOf(
+      UnknownEntityError,
+    );
+
+    await expect(ha.forecast('weather.nope', { type: 'daily' })).rejects.toBeInstanceOf(
+      UnknownEntityError,
+    );
+  });
+});

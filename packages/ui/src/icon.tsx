@@ -8,6 +8,9 @@ export interface IconProps {
 
   /** Overrides the density's icon size, in px. */
   size?: number;
+
+  /** For an icon drawn in more than one color: part `i` of the icon (its `i`th shape) is drawn in `colors[i]`, and any part without one, in the surrounding text color. Only for outline icons. */
+  colors?: readonly (string | undefined)[];
 }
 
 const STROKE_WIDTH = 1.5;
@@ -17,7 +20,7 @@ const STROKE_WIDTH = 1.5;
 const STROKE_PACKS = new Set(['lu', 'tb']);
 
 /** An inline SVG icon, from a plain prefixed id (`lu:` Lucide, `tb:` Tabler outline). Takes the surrounding text color. */
-export function Icon({ name, size }: IconProps) {
+export function Icon({ name, size, colors }: IconProps) {
   const stroke = STROKE_PACKS.has(name.slice(0, name.indexOf(':')));
   const nodes = ICON_NODES[name];
   if (!nodes) {
@@ -43,7 +46,13 @@ export function Icon({ name, size }: IconProps) {
         : {})}
       aria-hidden="true"
     >
-      {(nodes ?? []).map(([tag, attrs], i) => createElement(tag, { key: i, ...attrs }))}
+      {(nodes ?? []).map(([tag, attrs], i) =>
+        createElement(tag, {
+          key: i,
+          ...attrs,
+          ...(stroke && colors?.[i] ? { stroke: colors[i] } : {}),
+        }),
+      )}
     </svg>
   );
 }

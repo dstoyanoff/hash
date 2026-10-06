@@ -9,6 +9,7 @@ import { MediaBrowser } from '../entities/media-browser.tsx';
 import { MediaPlayerBar } from '../entities/media-player-bar.tsx';
 import { MediaPlayerColumn } from '../entities/media-player-column.tsx';
 import { MediaPlayerFull } from '../entities/media-player-full.tsx';
+import { WeatherForecast } from '../entities/weather-forecast.tsx';
 import { NavDock } from '../entities/nav-dock.tsx';
 import { NavRail } from '../entities/nav-rail.tsx';
 import { Page } from '../layout/page.tsx';
@@ -805,6 +806,19 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
           </ComponentDoc>
 
           <ComponentDoc
+            title="Weather Forecast"
+            components={['WeatherForecast']}
+            description="A weather entity's forecast: the weather now, the next 24 hours as a chart (hover it for everything about an hour) and the days ahead. The top bar's weather chip shows it in a drawer; a dashboard can put it in a page of its own. Narrow, then with `expanded` (readings tiles, a card for each hour)."
+          >
+            <Flex direction="column" gap={6}>
+              <Flex direction="column" width={380}>
+                <WeatherForecast entity="ha:weather.home" expanded={false} />
+              </Flex>
+              <WeatherForecast entity="ha:weather.home" expanded />
+            </Flex>
+          </ComponentDoc>
+
+          <ComponentDoc
             title="Media Browser"
             components={['MediaBrowser']}
             description="A player's own library in the app's style: tap a folder to open it, a track or station to play it, or the play button on an album, playlist or artist for all of it. The search box appears when the library can be searched. The `theater` layout (second demo) is one row of large cards that scrolls sideways, for a wide space; `list` is the compact default."
@@ -840,7 +854,7 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
           <ComponentDoc
             title="Top Bar"
             components={['TopBar']}
-            description="Page chrome above a dashboard's content: a title (a dropdown to switch dashboards, once there's more than one to switch to), scene shortcuts, weather, presence, and a clock."
+            description="Page chrome above a dashboard's content: a title (a dropdown to switch dashboards, once there's more than one to switch to), scene shortcuts, weather (tap it for the forecast), presence, and a clock."
           >
             <TopBar
               title="Living Room"
@@ -850,7 +864,7 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
                 { id: 'bathroom', title: 'Bathroom', icon: 'tb:bath' },
               ]}
               scenes={[{ entity: 'ha:scene.tv_time', icon: 'lu:tv' }]}
-              weather="ha:sensor.temperature"
+              weather="ha:weather.home"
               people={['ha:person.dan', 'ha:person.alex']}
             />
           </ComponentDoc>

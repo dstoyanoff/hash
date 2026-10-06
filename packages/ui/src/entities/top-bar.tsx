@@ -1,5 +1,5 @@
 /** @jsxImportSource @emotion/react */
-import type { ConnectionStatus, EntityRef, LinkStatus, WeatherCondition } from '@hashsome/core';
+import type { ConnectionStatus, EntityRef, LinkStatus } from '@hashsome/core';
 import { Box, Flex, Typography } from 'e-prim';
 import { PlainButton } from '../layout/plain-button.tsx';
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
@@ -14,7 +14,12 @@ import {
 } from '../hooks.ts';
 import { Icon } from '../icon.tsx';
 import { statusLabels } from '../status.ts';
+import { DrawerTrigger } from '../layout/use-drawer.tsx';
+import { useWeatherForecast } from '../use-weather-forecast.ts';
 import { SensorReadout } from './sensor-readout.tsx';
+import { WeatherForecast } from './weather-forecast.tsx';
+import { WeatherIcon } from './weather-icon.tsx';
+import { CONDITION_LOOK } from './weather-look.ts';
 
 /** One entry in the title's dashboard-switcher dropdown. */
 export interface DashboardOption {
@@ -86,7 +91,7 @@ export interface TopBarProps {
   /** Compact circular buttons that fire `scene.turn_on` directly (not the `Tile`-based `SceneButton`); a bare entity ref uses the default icon and an auto-assigned color, or pass `{ entity, icon, color }` to pick either. */
   scenes?: (EntityRef | TopBarScene)[];
 
-  /** Current weather as a pill with an icon for the sky and a rounded whole-degree reading. A weather entity, like `ha:weather.forecast_home`, shows its real condition; a plain sensor, e.g. an outdoor temperature, gets a fixed sun. */
+  /** Current weather as a pill with an icon for the sky and a rounded whole-degree reading. A weather entity, like `ha:weather.forecast_home`, shows its real condition, today's high and low once its forecast has loaded, and opens the forecast (the next 24 hours and the days ahead) when tapped, if its source has one; a plain sensor, e.g. an outdoor temperature, gets a fixed sun and no forecast. */
   weather?: EntityRef;
 
   /** Your own component(s) for the right-hand side, after the weather: a security mode picker, a custom status. Whatever it is, it sits in the bar's row and is yours to style. */
@@ -429,25 +434,6 @@ function StatusChip({ children }: { children: ReactNode }) {
   );
 }
 
-/** What a condition looks like in the pill: an icon, and a color where the weather has one. */
-const CONDITION_LOOK: Record<WeatherCondition, { icon: IconName; color?: string }> = {
-  sunny: { icon: 'lu:sun', color: '#FBBF24' },
-  'clear-night': { icon: 'lu:moon', color: '#A5B4FC' },
-  partlycloudy: { icon: 'lu:cloud-sun', color: '#FBBF24' },
-  cloudy: { icon: 'lu:cloud' },
-  fog: { icon: 'lu:cloud-fog' },
-  rainy: { icon: 'lu:cloud-rain', color: '#60A5FA' },
-  pouring: { icon: 'lu:cloud-rain-wind', color: '#60A5FA' },
-  snowy: { icon: 'lu:cloud-snow', color: '#BAE6FD' },
-  'snowy-rainy': { icon: 'lu:cloud-snow', color: '#93C5FD' },
-  hail: { icon: 'lu:cloud-hail', color: '#93C5FD' },
-  lightning: { icon: 'lu:cloud-lightning', color: '#FBBF24' },
-  'lightning-rainy': { icon: 'lu:cloud-lightning', color: '#FBBF24' },
-  windy: { icon: 'lu:wind' },
-  exceptional: { icon: 'lu:triangle-alert', color: '#F2554A' },
-  unknown: { icon: 'lu:cloud' },
-};
-
 /** Current weather, as a pill: an icon for the sky and a rounded whole-degree reading. A `weather`
  * entity gives the real condition; a plain `sensor.*` (an outdoor temperature) gets a fixed sun,
  * since a sensor says nothing about the sky. */
@@ -463,19 +449,62 @@ function WeatherPill({ entity }: { entity: EntityRef }) {
   const handle = useEntityHandle('weather', entity);
   const { status } = handle;
   const weather = handle.entity;
-  const look = CONDITION_LOOK[weather?.condition ?? 'unknown'];
+  const condition = weather?.condition ?? 'unknown';
+  const look = CONDITION_LOOK[condition];
   const ready = status === 'ready' && weather?.temperature !== undefined;
-  return (
+  const forecastable = ready && (weather?.forecasts?.length ?? 0) > 0;
+
+  // Today's high and low sit under the reading, once the forecast has said what they are.
+  const daily = useWeatherForecast(
+    weather?.forecasts?.includes('daily') ? entity : undefined,
+    'daily',
+  );
+
+  const today =
+    daily.result?.points.find(
+      (point) => new Date(point.timestamp).toDateString() === new Date().toDateString(),
+    ) ?? daily.result?.points[0];
+
+  const range =
+    today?.temperature !== undefined && today.low !== undefined
+      ? `${Math.round(today.temperature)}° / ${Math.round(today.low)}°`
+      : undefined;
+
+  const chip = (
     <StatusChip>
-      <Flex as="span" css={look.color ? { color: look.color } : undefined}>
-        <Icon name={look.icon} size={14} />
+      <Flex as="span">
+        <WeatherIcon condition={condition} size={14} />
       </Flex>
       <Typography as="span" variant="label">
         {ready
           ? `${Math.round(weather.temperature ?? 0)}°`
           : statusLabels[status as Exclude<typeof status, 'ready'>]}
       </Typography>
+      {ready && range ? (
+        <Typography as="span" variant="secondary" color="textMuted">
+          {range}
+        </Typography>
+      ) : null}
     </StatusChip>
+  );
+
+  if (!forecastable) {
+    return chip;
+  }
+
+  return (
+    <DrawerTrigger
+      icon={look.icon}
+      label={weather?.name ?? 'Weather'}
+      kind="Weather"
+      body={<WeatherForecast entity={entity} />}
+    >
+      {(open) => (
+        <PlainButton aria-label={`${weather?.name ?? 'Weather'}: forecast`} onClick={open}>
+          {chip}
+        </PlainButton>
+      )}
+    </DrawerTrigger>
   );
 }
 

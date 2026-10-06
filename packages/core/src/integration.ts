@@ -3,6 +3,8 @@ import type {
   BrowseQuery,
   BrowseResult,
   Entity,
+  ForecastQuery,
+  ForecastResult,
   HistoryQuery,
   HistoryResult,
 } from './model/index.ts';
@@ -66,6 +68,14 @@ export interface Integration {
    * Arguments come from a browser: validate them.
    */
   history?(entityId: string, query: HistoryQuery): Promise<HistoryResult>;
+
+  /**
+   * A weather entity's forecast of the asked kind (days, hours, half-days), soonest first. Optional:
+   * only for backends that have forecasts. Resolves with no points when the entity cannot give that
+   * kind, and rejects with a displayable `Error` for an unknown entity. Arguments come from a
+   * browser: validate them.
+   */
+  forecast?(entityId: string, query: ForecastQuery): Promise<ForecastResult>;
 
   /**
    * Fetches a file the backend serves for its entities, such as artwork, with the integration's own

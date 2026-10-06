@@ -23,6 +23,7 @@ export * from './entities/scene-button.tsx';
 export * from './entities/media-player-bar.tsx';
 export * from './entities/media-player-column.tsx';
 export * from './entities/media-player-full.tsx';
+export * from './entities/weather-forecast.tsx';
 export * from './entities/media-browser.tsx';
 export { formatDuration } from './entities/media-progress.ts';
 export * from './entities/nav-rail.tsx';

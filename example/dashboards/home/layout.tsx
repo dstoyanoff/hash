@@ -8,6 +8,7 @@ const items: NavItem[] = [
   { to: 'lights', label: 'Lights', icon: 'lu:lightbulb' },
   { to: 'climate', label: 'Climate', icon: 'lu:thermometer' },
   { to: 'media', label: 'Media', icon: 'lu:music' },
+  { to: 'weather', label: 'Weather', icon: 'lu:cloud-sun' },
 ];
 
 /** The home dashboard's own layout: a nav rail, and the shared top bar above whichever page is
