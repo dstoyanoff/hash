@@ -36,23 +36,50 @@ export function ArtworkRing({
   size?: number;
 }) {
   const ring = useRef<HTMLDivElement>(null);
-  const dragging = useRef(false);
+
+  /** A drag in progress: where round the ring the pointer was last, and how far along it has taken
+   * the position, which may run past either end while the pointer carries on (see `follow`). */
+  const drag = useRef<{ turn: number; along: number } | null>(null);
   const total = seekable && duration !== undefined && duration > 0 ? duration : undefined;
   const shown = seek.shown;
   const fraction =
     shown !== undefined && duration ? Math.min(1, Math.max(0, shown / duration)) : undefined;
 
-  /** Where on the ring a pointer is, as a position in the item; `undefined` off the ring. */
-  const positionAt = (event: PointerEvent<HTMLDivElement>): number | undefined => {
+  /** How far round the ring a pointer is, from the top, clockwise: 0 to 1. */
+  const turnAt = (event: PointerEvent<HTMLDivElement>): number | undefined => {
     const box = ring.current?.getBoundingClientRect();
-    if (!box || !duration) {
+    if (!box) {
       return undefined;
     }
 
     const dx = event.clientX - (box.left + box.width / 2);
     const dy = event.clientY - (box.top + box.height / 2);
-    const turn = Math.atan2(dx, -dy) / (2 * Math.PI);
-    return Math.round(((turn + 1) % 1) * duration);
+    return (Math.atan2(dx, -dy) / (2 * Math.PI) + 1) % 1;
+  };
+
+  /** Moves a drag with the pointer and says where in the item that is. The position follows how far the
+   * pointer has gone round, not which side of the ring it is on, and stops at the start and the end:
+   * carrying on past the top (the start and the end meet there) holds it where it is, instead of
+   * jumping to the other end, and it only moves again once the pointer is back round. */
+  const follow = (event: PointerEvent<HTMLDivElement>): number | undefined => {
+    const now = turnAt(event);
+    const held = drag.current;
+    if (now === undefined || !held || !duration) {
+      return undefined;
+    }
+
+    // The way round that is the short one, so crossing the top does not read as a whole turn.
+    let step = now - held.turn;
+    if (step > 0.5) {
+      step -= 1;
+    } else if (step < -0.5) {
+      step += 1;
+    }
+
+    // Only a little past either end is remembered, so the pointer is never far from its place.
+    held.along = Math.min(1.25, Math.max(-0.25, held.along + step));
+    held.turn = now;
+    return Math.round(Math.min(1, Math.max(0, held.along)) * duration);
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -95,19 +122,21 @@ export function ArtworkRing({
                   return;
                 }
 
-                dragging.current = true;
+                // Where it was pressed is where the position starts.
+                const turn = turnAt(event) ?? 0;
+                drag.current = { turn, along: turn };
                 event.currentTarget.setPointerCapture?.(event.pointerId);
-                seek.preview(positionAt(event) ?? 0);
+                seek.preview(Math.round(turn * total));
               },
               onPointerMove: (event: PointerEvent<HTMLDivElement>) => {
-                if (dragging.current) {
-                  seek.preview(positionAt(event) ?? 0);
+                if (drag.current) {
+                  seek.preview(follow(event) ?? 0);
                 }
               },
               onPointerUp: (event: PointerEvent<HTMLDivElement>) => {
-                if (dragging.current) {
-                  dragging.current = false;
-                  const next = positionAt(event);
+                if (drag.current) {
+                  const next = follow(event);
+                  drag.current = null;
                   if (next !== undefined) {
                     seek.commit(next);
                   }

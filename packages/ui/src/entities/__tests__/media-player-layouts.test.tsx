@@ -184,6 +184,72 @@ test('dragging around the ring moves the time under the title with it', () => {
   box.mockRestore();
 });
 
+describe('the ring stops at the start and the end instead of wrapping round the top', () => {
+  // A 168px ring centred on (84, 84), 120 seconds long: 12 o'clock is both the start and the end.
+  const AT = {
+    justAfterTop: { clientX: 100, clientY: 10, pointerId: 1 },
+    top: { clientX: 84, clientY: 8, pointerId: 1 },
+    justBeforeTop: { clientX: 60, clientY: 10, pointerId: 1 },
+  };
+
+  const setup = () => {
+    const box = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      top: 0,
+      right: 168,
+      bottom: 168,
+      width: 168,
+      height: 168,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    const view = renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing(), library);
+    return { ...view, ring: screen.getByRole('slider', { name: 'Position' }), box };
+  };
+
+  test('dragging back past the start holds it at the start, not near the end', () => {
+    const { ha, ring, box } = setup();
+    fireEvent.pointerDown(ring, AT.justAfterTop);
+    expect(screen.getByText('0:04 / 2:00')).toBeTruthy();
+    fireEvent.pointerMove(ring, AT.top);
+    expect(screen.getByText('0:00 / 2:00')).toBeTruthy();
+    // Past the top the other way: used to be 1:54, nearly the end.
+    fireEvent.pointerMove(ring, AT.justBeforeTop);
+    expect(screen.getByText('0:00 / 2:00')).toBeTruthy();
+    fireEvent.pointerUp(ring, AT.justBeforeTop);
+    expect(ha.calls.at(-1)).toMatchObject({ command: 'seek', args: { position: 0 } });
+    box.mockRestore();
+  });
+
+  test('and it only moves again once the pointer is back round, so it stays under the pointer', () => {
+    const { ring, box } = setup();
+    fireEvent.pointerDown(ring, AT.justAfterTop);
+    fireEvent.pointerMove(ring, AT.justBeforeTop);
+    expect(screen.getByText('0:00 / 2:00')).toBeTruthy();
+    // Back to the top: still the start. Past it: it moves.
+    fireEvent.pointerMove(ring, AT.top);
+    expect(screen.getByText('0:00 / 2:00')).toBeTruthy();
+    fireEvent.pointerMove(ring, AT.justAfterTop);
+    expect(screen.getByText('0:04 / 2:00')).toBeTruthy();
+    box.mockRestore();
+  });
+
+  test('dragging on past the end holds it at the end, not back at the start', () => {
+    const { ha, ring, box } = setup();
+    fireEvent.pointerDown(ring, AT.justBeforeTop);
+    expect(screen.getByText('1:54 / 2:00')).toBeTruthy();
+    fireEvent.pointerMove(ring, AT.top);
+    expect(screen.getByText('2:00 / 2:00')).toBeTruthy();
+    fireEvent.pointerMove(ring, AT.justAfterTop);
+    expect(screen.getByText('2:00 / 2:00')).toBeTruthy();
+    fireEvent.pointerUp(ring, AT.justAfterTop);
+    expect(ha.calls.at(-1)).toMatchObject({ command: 'seek', args: { position: 120 } });
+    box.mockRestore();
+  });
+});
+
 test('the bar leaves the browse button out for browse={false} and for a player with no library', () => {
   const { unmount } = renderWithMock(
     <MediaPlayerBar entity="ha:room" browse={false} />,
