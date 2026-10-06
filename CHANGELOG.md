@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0 (2026-10-06)
+
+### Features
+
+- **runtime:** a page left open reloads when a newer build is being served (#51) ([c60adad](https://github.com/dstoyanoff/hashsome/commit/c60adad39a1d1f7ca281bec2c7c6214f9c6f6019))
+
+### Fixes
+
+- **ui:** the weather pill's reading and its high and low are centred on their digits (#52) ([956a4b7](https://github.com/dstoyanoff/hashsome/commit/956a4b7e0cbfa4e00d701cb139c705f7b5236646))
+
 ## 0.3.0 (2026-10-06)
 
 ### Features
