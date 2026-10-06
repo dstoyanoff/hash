@@ -1,25 +1,10 @@
 /** @jsxImportSource @emotion/react */
+import type { LogbookEntry } from '@hashsome/core';
 import { Flex, Typography } from 'e-prim';
 import { Icon } from '../icon.tsx';
 import { capitalize } from '../status.ts';
 
-export interface LogbookEntry {
-  id: string;
-
-  /** Lowercase, no actor prefix, e.g. "turned on", "brightness set to 60%" — capitalized when
-   * there's no `actor` to lead with ("Turned on"), left lowercase after one ("Dan turned on"). */
-  message: string;
-
-  /** ISO 8601. */
-  timestamp: string;
-
-  /** Who or what triggered it, e.g. "Dan" or "automation.bedtime". Omit for the system. */
-  actor?: string;
-
-  /** Only matters when `actor` is set: a person gets an initials avatar, an automation a robot
-   * icon. Default `'person'`. */
-  actorKind?: 'person' | 'automation';
-}
+export type { LogbookEntry };
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;

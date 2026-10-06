@@ -383,6 +383,70 @@ describe('HomeAssistantIntegration history', () => {
   });
 });
 
+describe('HomeAssistantIntegration logbook', () => {
+  const setup = async (events: unknown) => {
+    const sent: Record<string, unknown>[] = [];
+    const { client } = fakeClient({
+      'light.lamp': entity('light.lamp', 'on', { friendly_name: 'Lamp' }),
+      'person.danny': entity('person.danny', 'home', { friendly_name: 'Danny', user_id: 'u-1' }),
+      'automation.sleep': entity('automation.sleep', 'on', { friendly_name: 'Sleep' }),
+    });
+
+    client.sendCommand = ((message: Record<string, unknown>) => {
+      sent.push(message);
+      return Promise.resolve(events);
+    }) as HaClient['sendCommand'];
+
+    const ha = new HomeAssistantIntegration({
+      url: 'x',
+      token: 'y',
+      createClient: () => Promise.resolve(client),
+    });
+
+    await ha.connect();
+    return { ha, sent };
+  };
+
+  test('asks the logbook for the entity over the last week and names who did it from the person entities', async () => {
+    const { ha, sent } = await setup([
+      { when: 1_000, entity_id: 'light.lamp', state: 'off', context_user_id: 'u-1' },
+      {
+        when: 2_000,
+        entity_id: 'light.lamp',
+        state: 'on',
+        context_event_type: 'automation_triggered',
+        context_entity_id: 'automation.sleep',
+      },
+    ]);
+
+    const { entries } = await ha.logbook('light.lamp', { limit: 5 });
+    expect(entries.map(({ message, actor, actorKind }) => ({ message, actor, actorKind }))).toEqual(
+      [
+        { message: 'turned on', actor: 'Sleep', actorKind: 'automation' },
+        { message: 'turned off', actor: 'Danny', actorKind: 'person' },
+      ],
+    );
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ type: 'logbook/get_events', entity_ids: ['light.lamp'] });
+    const span =
+      Date.parse(sent[0]!.end_time as string) - Date.parse(sent[0]!.start_time as string);
+
+    expect(span).toBe(7 * 24 * 60 * 60 * 1000);
+  });
+
+  test('the limit keeps the latest, and an unknown entity is an error', async () => {
+    const { ha } = await setup([
+      { when: 1, entity_id: 'light.lamp', state: 'on' },
+      { when: 2, entity_id: 'light.lamp', state: 'off' },
+      { when: 3, entity_id: 'light.lamp', state: 'on' },
+    ]);
+
+    expect((await ha.logbook('light.lamp', { limit: 2 })).entries).toHaveLength(2);
+    await expect(ha.logbook('light.nope', {})).rejects.toBeInstanceOf(UnknownEntityError);
+  });
+});
+
 describe('HomeAssistantIntegration forecast', () => {
   const setup = async (response: unknown, attributes = { supported_features: 1 | 2 }) => {
     const sent: Record<string, unknown>[] = [];

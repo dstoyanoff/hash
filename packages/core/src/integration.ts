@@ -7,6 +7,8 @@ import type {
   ForecastResult,
   HistoryQuery,
   HistoryResult,
+  LogbookQuery,
+  LogbookResult,
 } from './model/index.ts';
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
@@ -76,6 +78,14 @@ export interface Integration {
    * browser: validate them.
    */
   forecast?(entityId: string, query: ForecastQuery): Promise<ForecastResult>;
+
+  /**
+   * Recent activity of an entity: what happened to it (turned on, went offline) and who or what
+   * caused it, newest first. Optional: only for backends that keep such a record (Home Assistant's
+   * logbook). Resolves with no entries for an entity with none, and rejects with a displayable
+   * `Error` for an unknown entity. Arguments come from a browser: validate them.
+   */
+  logbook?(entityId: string, query: LogbookQuery): Promise<LogbookResult>;
 
   /**
    * Fetches a file the backend serves for its entities, such as artwork, with the integration's own

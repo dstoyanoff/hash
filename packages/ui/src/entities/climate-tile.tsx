@@ -24,7 +24,7 @@ export interface ClimateTileProps {
   /** Power-draw chart for the drawer, above `history`. No default source yet — pass explicitly. */
   energy?: EnergyChartProps;
 
-  /** Recent activity, shown in the drawer. No default source yet — pass explicitly. */
+  /** Recent activity, shown in the drawer: who or what changed it, and when. Left out, it comes from the backend's own record when it keeps one (Home Assistant's logbook), fetched when the drawer opens. */
   history?: LogbookEntry[];
 }
 
@@ -105,6 +105,7 @@ export function ClimateTile({ entity, name, icon, energy, history }: ClimateTile
       }
       {...(energy ? { energy } : {})}
       {...(history ? { history } : {})}
+      {...(typeof entity === 'string' ? { logbook: entity } : {})}
       {...(ready && picking
         ? {
             // A render prop `Tile` calls, not a component of its own.
