@@ -48,3 +48,10 @@ test('it never grows past the room it is given, so a long title cannot push its 
   expect(getComputedStyle(frameOf()).maxWidth).toBe('100%');
   expect(getComputedStyle(frameOf()).display).toBe('block');
 });
+
+test('it has a line height of its own, so a title with an emoji is no taller than one without', () => {
+  measured(200, 120);
+  render(<MarqueeText>A very long title</MarqueeText>);
+  // An emoji is drawn from another font with a taller line; a fixed line height keeps the row the same.
+  expect(getComputedStyle(frameOf()).lineHeight).toBe('1.3');
+});

@@ -7,7 +7,7 @@ import { Icon } from '../icon.tsx';
 import { useEntityHandle } from '../hooks.ts';
 import { useDetail } from '../layout/detail-provider.tsx';
 import { Cover } from '../layout/cover.tsx';
-import { ChipRow } from '../layout/drawer-controls.tsx';
+import { CHIP_HEIGHT, ChipRow } from '../layout/drawer-controls.tsx';
 import { FadeScroll } from '../layout/fade-scroll.tsx';
 import { MarqueeText } from '../layout/marquee-text.tsx';
 import { PlainButton } from '../layout/plain-button.tsx';
@@ -362,7 +362,7 @@ function PillButton({
       align="center"
       justify="center"
       gap={1.5}
-      py={1.5}
+      height={CHIP_HEIGHT}
       px={3}
       radius="full"
       cursor="pointer"

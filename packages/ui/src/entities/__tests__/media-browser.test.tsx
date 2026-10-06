@@ -359,3 +359,18 @@ describe('playing, queueing and the queue', () => {
     expect(screen.queryByRole('button', { name: /to the queue$/ })).toBeNull();
   });
 });
+
+test('every tab is the same height, whatever its label holds, so opening a playlist with an emoji in its name moves nothing', async () => {
+  render();
+  fireEvent.click(await screen.findByRole('tab', { name: 'Playlists' }));
+  const heights = () => screen.getAllByRole('tab').map((tab) => getComputedStyle(tab).height);
+
+  const before = heights();
+  expect(new Set(before)).toEqual(new Set(['28px']));
+
+  // The playlist with an emoji in its name: its title becomes the selected tab.
+  fireEvent.click(await screen.findByRole('button', { name: /^Open BASS BOOSTED SONGS/ }));
+  await screen.findByRole('button', { name: 'Play Electric Feel' });
+  expect(screen.getByRole('tab', { name: 'Back' }).textContent).toContain('\u{1F50A}');
+  expect(heights()).toEqual(before);
+});

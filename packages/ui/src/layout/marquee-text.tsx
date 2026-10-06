@@ -48,6 +48,9 @@ export function MarqueeText({ children }: { children: ReactNode }) {
       ref={outer}
       css={{
         display: 'block',
+        // A line height of its own, not the font's: an emoji comes from another font with a taller
+        // line, and would make a row with one in its title taller than the rest.
+        lineHeight: 1.3,
         minWidth: 0,
         maxWidth: '100%',
         overflow: 'hidden',

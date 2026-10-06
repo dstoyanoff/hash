@@ -221,6 +221,9 @@ export function PowerButton({ on, onToggle }: { on: boolean; onToggle: () => voi
   );
 }
 
+/** The height of every chip, whatever its label holds. */
+export const CHIP_HEIGHT = 28;
+
 /** A wrapping row of pill choices (modes, presets) with the selected one filled. With `tabs` it is
  * a tab list (the selected chip is the open tab) that never wraps: too many to fit scroll sideways. */
 export function ChipRow({
@@ -260,7 +263,9 @@ export function ChipRow({
             gap={1.5}
             radius="full"
             cursor="pointer"
-            py={1.5}
+            // A fixed height, not the text's: an emoji is drawn from another font with a taller line,
+            // which would make this one chip taller than the rest.
+            height={CHIP_HEIGHT}
             px={3}
             background={selected ? 'accent' : 'surface'}
             color={selected ? 'accentText' : 'text'}
