@@ -103,13 +103,49 @@ describe('MediaQueue', () => {
 
     renderWithMock(
       <MediaQueue entity="ha:room" />,
-      { room: mockMediaPlayer({ name: 'Room', playback: 'idle', capabilities: { queue: true } }) },
+      {
+        room: mockMediaPlayer({
+          name: 'Room',
+          playback: 'idle',
+          position: 100,
+          duration: 100,
+          capabilities: { queue: true },
+        }),
+      },
       { library: mockLibrary() },
     );
 
     const last = await screen.findByRole('button', { name: 'Play Last' });
     expect(last.getAttribute('aria-current')).toBeNull();
     expect(screen.queryByRole('button', { name: /^Playing / })).toBeNull();
+    vi.restoreAllMocks();
+  });
+
+  test('a track that is paused, or stopped part way, is still the one playing', async () => {
+    vi.spyOn(MockIntegration.prototype, 'queue').mockResolvedValue({
+      items: [{ id: 'a', title: 'Last', duration: 100, current: true }],
+      total: 1,
+      offset: 0,
+    });
+
+    renderWithMock(
+      <MediaQueue entity="ha:room" />,
+      {
+        room: mockMediaPlayer({
+          name: 'Room',
+          playback: 'idle',
+          position: 40,
+          duration: 100,
+          capabilities: { queue: true },
+        }),
+      },
+      { library: mockLibrary() },
+    );
+
+    expect(
+      (await screen.findByRole('button', { name: 'Playing Last' })).getAttribute('aria-current'),
+    ).toBe('true');
+
     vi.restoreAllMocks();
   });
 

@@ -76,8 +76,15 @@ export function MediaQueue({ entity }: MediaQueueProps) {
       ? draft.ids.map((id) => byId.get(id)!)
       : upcoming;
 
-  // The player has stopped on the last track: it is over, not playing.
-  const stopped = handle.entity.playback === 'idle' || handle.entity.playback === 'off';
+  // The player has stopped on the last track and its position is at the end: it is over. A track
+  // that was merely paused or stopped part way through is not, whatever state the player reports.
+  const { playback, position, duration } = handle.entity;
+  const stopped =
+    (playback === 'idle' || playback === 'off') &&
+    position !== undefined &&
+    duration !== undefined &&
+    position >= duration - 2;
+
   const finished =
     stopped &&
     at !== -1 &&
