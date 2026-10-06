@@ -9,7 +9,8 @@
     "dev": "hashsome dev",
     "build": "hashsome build",
     "start": "hashsome start",
-    "package": "hashsome package"
+    "package": "hashsome package",
+    "hashsome:upgrade": "hashsome upgrade"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

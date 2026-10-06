@@ -16,7 +16,7 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before adding a component, a device kind
 ## Commands
 
 `pnpm install`, `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm test`,
-`pnpm generate:catalog`. A project is deployed with `hashsome package <plain|compose|helm|image>` (README "Deploying"; mechanics in ARCHITECTURE.md "Packaging and deployment"): the server is bundled into one file and shipped as an image you load onto the host, never built there, and secrets stay in the host's environment. `pnpm dev`/`build`/`start` at the root are thin
+`pnpm generate:catalog`. A project updates its `@hashsome/*` packages with `hashsome upgrade` (its `hashsome:upgrade` script). A project is deployed with `hashsome package <plain|compose|helm|image>` (README "Deploying"; mechanics in ARCHITECTURE.md "Packaging and deployment"): the server is bundled into one file and shipped as an image you load onto the host, never built there, and secrets stay in the host's environment. `pnpm dev`/`build`/`start` at the root are thin
 `pnpm --filter @hashsome/example <script>` passthroughs — real work happens in that package, same
 as it would in a real consumer's own repo.
 
