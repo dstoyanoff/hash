@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import type { BrowseItem, BrowseKind, EntityRef } from '@hashsome/core';
 import { Box, Flex, Typography } from 'e-prim';
+import type { ReactNode } from 'react';
 import type { IconName } from '../icon-data.ts';
 import { Icon } from '../icon.tsx';
 import { useEntityHandle } from '../hooks.ts';
@@ -10,6 +11,7 @@ import { ChipRow } from '../layout/drawer-controls.tsx';
 import { FadeScroll } from '../layout/fade-scroll.tsx';
 import { MarqueeText } from '../layout/marquee-text.tsx';
 import { PlainButton } from '../layout/plain-button.tsx';
+import { Skeleton } from '../layout/skeleton.tsx';
 import { IconButton } from '../layout/tile.tsx';
 import { useMediaBrowser } from '../use-media-browser.ts';
 
@@ -198,17 +200,19 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
         </Flex>
       ) : null}
       {browser.error ? (
-        <Typography as="p" variant="body" color="danger" role="alert">
-          {browser.error}
-        </Typography>
+        <Message theater={theater}>
+          <Typography as="p" variant="body" color="danger" role="alert" m={0}>
+            {browser.error}
+          </Typography>
+        </Message>
       ) : browser.loading ? (
-        <Typography as="p" variant="body" color="textMuted">
-          Loading…
-        </Typography>
+        <BrowseSkeleton theater={theater} />
       ) : browser.items.length === 0 ? (
-        <Typography as="p" variant="body" color="textMuted">
-          {browser.searching ? 'Nothing found.' : 'Nothing here.'}
-        </Typography>
+        <Message theater={theater}>
+          <Typography as="p" variant="body" color="textMuted" m={0}>
+            {browser.searching ? 'Nothing found.' : 'Nothing here.'}
+          </Typography>
+        </Message>
       ) : theater ? (
         // One row of large cards that scrolls sideways, with a thin quiet scrollbar. It is a size
         // container that asks for room for full-size cards and gives way when there is less, and the
@@ -219,13 +223,7 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
           m={0}
           p={0}
           pb={2}
-          css={{
-            listStyle: 'none',
-            scrollSnapType: 'x proximity',
-            containerType: 'size',
-            flex: `0 1 ${CARD + LABEL + 16}px`,
-            minHeight: MIN_CARD + LABEL + 16,
-          }}
+          css={{ ...THEATER_STAGE, listStyle: 'none', scrollSnapType: 'x proximity' }}
         >
           {browser.items.map((item) => (
             <li key={item.id} css={{ flex: 'none', scrollSnapAlign: 'start' }}>
@@ -266,6 +264,74 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
         </Flex>
       )}
     </Flex>
+  );
+}
+
+/** What shows where the list will be while it loads: placeholders shaped like what is coming (cards in
+ * the theater layout, rows in the list), in the room the real thing takes, so nothing moves. */
+function BrowseSkeleton({ theater }: { theater: boolean }) {
+  return theater ? (
+    <Flex
+      as="ul"
+      role="status"
+      aria-label="Loading"
+      aria-busy="true"
+      gap={4}
+      m={0}
+      p={0}
+      pb={2}
+      css={{ ...THEATER_STAGE, listStyle: 'none', overflow: 'hidden' }}
+    >
+      {Array.from({ length: 12 }, (_, index) => (
+        <Flex
+          as="li"
+          key={index}
+          direction="column"
+          gap={2}
+          css={{ flex: 'none', width: CARD_SIZE }}
+        >
+          <Skeleton width={CARD_SIZE} height={CARD_SIZE} radius="card" />
+          <Flex direction="column" gap={1} px={1}>
+            <Skeleton width="70%" height={14} />
+            <Skeleton width="45%" height={12} />
+          </Flex>
+        </Flex>
+      ))}
+    </Flex>
+  ) : (
+    <Flex
+      as="ul"
+      role="status"
+      aria-label="Loading"
+      aria-busy="true"
+      direction="column"
+      gap={1}
+      m={0}
+      p={0}
+      css={{ listStyle: 'none' }}
+    >
+      {Array.from({ length: 6 }, (_, index) => (
+        <Flex as="li" key={index} align="center" gap={3} py={1.5} px={2}>
+          <Skeleton width={44} height={44} />
+          <Flex direction="column" gap={1.5} grow={1}>
+            <Skeleton width="60%" height={14} />
+            <Skeleton width="35%" height={12} />
+          </Flex>
+        </Flex>
+      ))}
+    </Flex>
+  );
+}
+
+/** A line of text where the list would be (an error, nothing found), in the room the list takes in
+ * the theater layout, so showing it does not change the library's height. */
+function Message({ theater, children }: { theater: boolean; children: ReactNode }) {
+  return theater ? (
+    <Flex align="center" css={{ ...THEATER_STAGE, overflow: 'hidden' }}>
+      {children}
+    </Flex>
+  ) : (
+    <>{children}</>
   );
 }
 
@@ -398,6 +464,15 @@ function BrowseRow({
     </Flex>
   );
 }
+
+/** The room the theater row takes, whatever it holds: it asks for full-size cards and gives way when
+ * there is less, and is a size container so the cards can shrink to fit. What stands in for the row
+ * while it loads, or when it is empty, takes the same room, so the library does not change height. */
+const THEATER_STAGE = {
+  containerType: 'size',
+  flex: '0 1 272px',
+  minHeight: 192,
+} as const;
 
 /** The width and height of a theater card's artwork when there is room for it. */
 const CARD = 200;

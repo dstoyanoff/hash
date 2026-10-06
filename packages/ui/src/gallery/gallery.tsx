@@ -823,13 +823,16 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
           <ComponentDoc
             title="Media Browser"
             components={['MediaBrowser']}
-            description="A player's own library in the app's style: tap a folder to open it, a track or station to play it, or the play button on an album, playlist or artist for all of it. The search box appears when the library can be searched. The `theater` layout (second demo) is one row of large cards that scrolls sideways, for a wide space; `list` is the compact default."
+            description="A player's own library in the app's style: tap a folder to open it, a track or station to play it, or the play button on an album, playlist or artist for all of it. The search box appears when the library can be searched. The `theater` layout (second demo) is one row of large cards that scrolls sideways, for a wide space; `list` is the compact default. While a shelf loads, placeholders take the room the cards will (third demo, a shelf that never arrives), so nothing moves."
           >
             <Flex direction="column" gap={6}>
               <Flex direction="column" maxHeight={420} overflow="auto">
                 <MediaBrowser entity="ha:media_player.living_room" />
               </Flex>
               <MediaBrowser entity="ha:media_player.living_room" layout="theater" />
+              {/* Changing tab shows placeholders in the room the cards will take, so the library does not
+                  change height while it loads. Here the shelf never arrives. */}
+              <MediaBrowser entity="ha:media_player.loading" layout="theater" />
             </Flex>
           </ComponentDoc>
 
