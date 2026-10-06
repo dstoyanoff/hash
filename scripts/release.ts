@@ -11,6 +11,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import {
   bump,
+  currentVersion,
   levelFor,
   notes,
   parse,
@@ -47,11 +48,10 @@ if (forced !== undefined && !['major', 'minor', 'patch'].includes(forced)) {
 }
 
 const readJson = (file: string) => JSON.parse(readFileSync(file, 'utf8')) as { version: string };
-const current = readJson('package.json').version;
-
 // The last release is the newest `v*` tag; without one, everything counts.
 const tags = git('tag', '--list', 'v*', '--sort=-v:refname').split('\n').filter(Boolean);
 const since = tags[0];
+const current = currentVersion(since, readJson('package.json').version);
 const range = since ? `${since}..HEAD` : 'HEAD';
 
 const SEPARATOR = '\u001e';
@@ -78,6 +78,12 @@ if (level === undefined) {
 }
 
 const version = bump(current, level);
+if (tags.includes(`v${version}`)) {
+  throw new Error(
+    `v${version} is already tagged: the last release is ${current}, so there is nothing to bump from`,
+  );
+}
+
 const body = notes(parsed, REPO) || '_Maintenance release._';
 console.error(`${since ?? '(first release)'} -> v${version} (${level}), ${commits.length} commits`);
 console.log(`version=${version}`);
