@@ -449,6 +449,14 @@ function WeatherChip({ entity }: { entity: EntityRef }) {
   );
 }
 
+/** Text boxes cut to the height of the digits, so the reading and the range, in different sizes, are
+ * both centred on their digits and not on the font's line box (which sits a little low or high).
+ * Where the browser does not know `text-box` the text keeps its usual box. */
+/** The height of one line of the 12px label text. */
+const LABEL_LINE = 15;
+
+const TRIM_TO_DIGITS = { textBox: 'trim-both cap alphabetic' } as const;
+
 function WeatherPill({ entity }: { entity: EntityRef }) {
   const handle = useEntityHandle('weather', entity);
   const { status } = handle;
@@ -476,16 +484,18 @@ function WeatherPill({ entity }: { entity: EntityRef }) {
 
   const chip = (
     <StatusChip>
-      <Flex as="span">
+      {/* As tall as a line of the label, which the trimmed texts no longer are: the pill keeps the
+          height of the bar's other pills. */}
+      <Flex as="span" css={{ minHeight: LABEL_LINE }}>
         <WeatherIcon condition={condition} size={14} />
       </Flex>
-      <Typography as="span" variant="label">
+      <Typography as="span" variant="label" css={TRIM_TO_DIGITS}>
         {ready
           ? `${Math.round(weather.temperature ?? 0)}°`
           : statusLabels[status as Exclude<typeof status, 'ready'>]}
       </Typography>
       {ready && range ? (
-        <Typography as="span" variant="secondary" color="textMuted">
+        <Typography as="span" variant="secondary" color="textMuted" css={TRIM_TO_DIGITS}>
           {range}
         </Typography>
       ) : null}
