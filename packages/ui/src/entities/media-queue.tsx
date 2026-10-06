@@ -4,6 +4,7 @@ import { Flex, Typography } from 'e-prim';
 import { useEntityHandle } from '../hooks.ts';
 import { Icon } from '../icon.tsx';
 import { Cover } from '../layout/cover.tsx';
+import { MarqueeText } from '../layout/marquee-text.tsx';
 import { PlainButton } from '../layout/plain-button.tsx';
 import { useMediaQueue } from '../use-media-queue.ts';
 import { formatDuration } from './media-progress.ts';
@@ -130,24 +131,13 @@ export function MediaQueue({ entity }: MediaQueueProps) {
                       as="span"
                       variant="bodyStrong"
                       color={item.current ? 'accent' : 'text'}
-                      noWrap
-                      textOverflow="ellipsis"
-                      overflow="hidden"
                       maxWidth="100%"
                     >
-                      {item.title}
+                      <MarqueeText>{item.title}</MarqueeText>
                     </Typography>
                     {item.artist ? (
-                      <Typography
-                        as="span"
-                        variant="secondary"
-                        color="textMuted"
-                        noWrap
-                        textOverflow="ellipsis"
-                        overflow="hidden"
-                        maxWidth="100%"
-                      >
-                        {item.artist}
+                      <Typography as="span" variant="secondary" color="textMuted" maxWidth="100%">
+                        <MarqueeText>{item.artist}</MarqueeText>
                       </Typography>
                     ) : null}
                   </Flex>

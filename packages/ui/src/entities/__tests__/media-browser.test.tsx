@@ -219,11 +219,12 @@ describe('layouts', () => {
   });
 
   test.each(['list', 'theater'] as const)(
-    'a long title is cut with an ellipsis instead of running over the next item (%s)',
+    'a long title is held to its room and rolls (or ends in an ellipsis) instead of running over the next item (%s)',
     async (layout) => {
       show(layout);
       await screen.findByRole('button', { name: 'Play Dreams' });
-      const title = screen.getAllByText('Dreams')[0] as HTMLElement;
+      // The title sits in a frame that clips it to the room it has.
+      const title = (screen.getAllByText('Dreams')[0] as HTMLElement).parentElement as HTMLElement;
       const style = getComputedStyle(title);
       expect(style.whiteSpace).toBe('nowrap');
       expect(style.textOverflow).toBe('ellipsis');

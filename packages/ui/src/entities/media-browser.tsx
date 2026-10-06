@@ -8,6 +8,7 @@ import { useDetail } from '../layout/detail-provider.tsx';
 import { Cover } from '../layout/cover.tsx';
 import { ChipRow } from '../layout/drawer-controls.tsx';
 import { FadeScroll } from '../layout/fade-scroll.tsx';
+import { MarqueeText } from '../layout/marquee-text.tsx';
 import { PlainButton } from '../layout/plain-button.tsx';
 import { IconButton } from '../layout/tile.tsx';
 import { useMediaBrowser } from '../use-media-browser.ts';
@@ -365,25 +366,12 @@ function BrowseRow({
           )}
         </Flex>
         <Flex direction="column" minWidth={0}>
-          <Typography
-            as="span"
-            variant="bodyStrong"
-            noWrap
-            textOverflow="ellipsis"
-            overflow="hidden"
-          >
-            {item.title}
+          <Typography as="span" variant="bodyStrong">
+            <MarqueeText>{item.title}</MarqueeText>
           </Typography>
           {item.subtitle ? (
-            <Typography
-              as="span"
-              variant="secondary"
-              color="textMuted"
-              noWrap
-              textOverflow="ellipsis"
-              overflow="hidden"
-            >
-              {item.subtitle}
+            <Typography as="span" variant="secondary" color="textMuted">
+              <MarqueeText>{item.subtitle}</MarqueeText>
             </Typography>
           ) : null}
         </Flex>
@@ -467,25 +455,12 @@ function BrowseCard({
           )}
         </Flex>
         <Flex direction="column" minWidth={0} px={1}>
-          <Typography
-            as="span"
-            variant="bodyStrong"
-            noWrap
-            textOverflow="ellipsis"
-            overflow="hidden"
-          >
-            {item.title}
+          <Typography as="span" variant="bodyStrong">
+            <MarqueeText>{item.title}</MarqueeText>
           </Typography>
           {item.subtitle ? (
-            <Typography
-              as="span"
-              variant="secondary"
-              color="textMuted"
-              noWrap
-              textOverflow="ellipsis"
-              overflow="hidden"
-            >
-              {item.subtitle}
+            <Typography as="span" variant="secondary" color="textMuted">
+              <MarqueeText>{item.subtitle}</MarqueeText>
             </Typography>
           ) : null}
         </Flex>

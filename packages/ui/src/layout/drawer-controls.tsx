@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import { Box, Flex, Typography } from 'e-prim';
 import { motion } from 'motion/react';
+import { MarqueeText } from './marquee-text.tsx';
 import { useEffect, useRef, type ElementType, type KeyboardEvent, type PointerEvent } from 'react';
 import type { IconName } from '../icon-data.ts';
 import { Icon } from '../icon.tsx';
@@ -266,14 +267,8 @@ export function ChipRow({
             css={{ flex: 'none', whiteSpace: 'nowrap' }}
           >
             {option.icon ? <Icon name={option.icon} size={14} /> : null}
-            <Typography
-              as="span"
-              variant="body"
-              noWrap
-              textOverflow="ellipsis"
-              css={{ maxWidth: 220 }}
-            >
-              {option.label}
+            <Typography as="span" variant="body" css={{ minWidth: 0, maxWidth: 220 }}>
+              <MarqueeText>{option.label}</MarqueeText>
             </Typography>
           </Flex>
         );

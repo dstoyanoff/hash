@@ -240,6 +240,13 @@ export function mockLibrary(): MockLibrary {
         libraryFolder('pl-morning', 'Morning coffee', 'playlist', '24 tracks'),
         libraryFolder('pl-dinner', 'Dinner party', 'playlist', '41 tracks'),
         libraryFolder('pl-focus', 'Deep focus', 'playlist', '60 tracks'),
+        // A title far too long for any tile, to see how a layout copes with one.
+        libraryFolder(
+          'pl-bass',
+          'BASS BOOSTED SONGS 2026 🔊 REMIXES 🔊 🔊',
+          'playlist',
+          'A playlist with a very, very long name to show how titles are held to their room',
+        ),
       ],
     },
     albums: {
@@ -275,6 +282,13 @@ export function mockLibrary(): MockLibrary {
         libraryTrack('t-dreams', 'Dreams', 'Fleetwood Mac'),
         libraryTrack('t-kids', 'Kids', 'MGMT'),
         libraryTrack('t-blank-space', 'Blank Space', 'Taylor Swift'),
+      ],
+    },
+    'pl-bass': {
+      title: 'BASS BOOSTED SONGS 2026 🔊 REMIXES 🔊 🔊',
+      items: [
+        libraryTrack('t-electric', 'Electric Feel', 'MGMT'),
+        libraryTrack('t-borderline', 'Borderline', 'Tame Impala'),
       ],
     },
     'al-1989': {
