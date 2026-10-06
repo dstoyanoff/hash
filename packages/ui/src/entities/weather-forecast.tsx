@@ -146,7 +146,7 @@ function WindMetric({ point, unit }: { point: ForecastPoint; unit?: string | und
 /** A tile with a label and a value, for the current readings of the expanded drawer. */
 function Stat({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <Flex direction="column" gap={0.5} background="surfaceRaised" radius="card" px={3} py={2.5}>
+    <Flex direction="column" gap={0.5} border radius="row" px={3} py={2.5}>
       <Typography as="span" variant="secondary" color="textMuted">
         {label}
       </Typography>
