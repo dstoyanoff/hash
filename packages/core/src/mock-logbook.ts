@@ -43,6 +43,7 @@ export function mockLogbook(
       id: `${entityId}@${at}`,
       message: lost ? 'became unavailable' : on ? 'turned on' : 'turned off',
       timestamp: new Date(at).toISOString(),
+      change: lost ? 'availability' : 'state',
       ...(lost ? {} : cause),
     });
 

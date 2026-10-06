@@ -15,6 +15,11 @@ export interface LogbookEntry {
   /** Only matters when `actor` is set: a person gets an initials avatar, an automation (or anything
    * else that is not a person) a robot icon. Default `'person'`. */
   actorKind?: 'person' | 'automation';
+
+  /** What kind of change it was: `state` (turned on or off, or a new mode) or `availability` (the
+   * device could not be reached, or came back). Lets a row say more than the words when nothing
+   * caused it: a change of state with no actor is often someone at a physical switch. */
+  change?: 'state' | 'availability';
 }
 
 export interface LogbookQuery {

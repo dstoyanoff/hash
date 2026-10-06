@@ -75,24 +75,47 @@ function actorOf(
   return {};
 }
 
-/** The events as entries, newest first and at most `limit` of them. An event without a usable time is dropped. */
+const UNREACHABLE = new Set(['unavailable', 'unknown']);
+
+/** The events as entries, newest first and at most `limit` of them. An event without a usable time is
+ * dropped. A change of state with no cause that follows the device being unreachable is worded as it
+ * coming back ("came back online, on"), not as someone turning it on. */
 export function toLogbookEntries(
   events: readonly HaLogbookEvent[],
   lookup: LogbookLookup,
   limit: number,
 ): LogbookEntry[] {
+  const lastState = new Map<string, string | undefined>();
   return events
     .flatMap((event) =>
       typeof event.when === 'number' && Number.isFinite(event.when)
         ? [{ event, when: event.when }]
         : [],
     )
-    .toSorted((a, b) => b.when - a.when)
-    .slice(0, limit)
-    .map(({ event, when }) => ({
-      id: `${event.entity_id ?? ''}@${when}`,
-      message: messageFor(event.state),
-      timestamp: new Date(when * 1000).toISOString(),
-      ...actorOf(event, lookup),
-    }));
+    .toSorted((a, b) => a.when - b.when)
+    .map(({ event, when }) => {
+      const entity = event.entity_id ?? '';
+      const before = lastState.get(entity);
+      lastState.set(entity, event.state);
+      const cause = actorOf(event, lookup);
+      const back =
+        cause.actor === undefined &&
+        before !== undefined &&
+        UNREACHABLE.has(before) &&
+        event.state !== undefined &&
+        !UNREACHABLE.has(event.state);
+
+      return {
+        id: `${entity}@${when}`,
+        message: back ? `came back online, ${event.state}` : messageFor(event.state),
+        timestamp: new Date(when * 1000).toISOString(),
+        change:
+          back || (event.state !== undefined && UNREACHABLE.has(event.state))
+            ? 'availability'
+            : 'state',
+        ...cause,
+      } satisfies LogbookEntry;
+    })
+    .toReversed()
+    .slice(0, limit);
 }

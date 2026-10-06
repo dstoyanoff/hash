@@ -286,7 +286,13 @@ test('every History row has a picture, so the text lines up: initials, a robot, 
           actorKind: 'automation',
           timestamp: new Date().toISOString(),
         },
-        { id: '3', message: 'became unavailable', timestamp: new Date().toISOString() },
+        {
+          id: '3',
+          message: 'became unavailable',
+          change: 'availability',
+          timestamp: new Date().toISOString(),
+        },
+        { id: '4', message: 'turned on', change: 'state', timestamp: new Date().toISOString() },
       ]}
     />,
   );
@@ -296,5 +302,7 @@ test('every History row has a picture, so the text lines up: initials, a robot, 
   act(() => vi.advanceTimersByTime(500));
   expect(screen.getByRole('img', { name: 'Dan' })).toBeTruthy();
   expect(screen.getByRole('img', { name: 'Bedtime' })).toBeTruthy();
-  expect(screen.getByRole('img', { name: 'System' })).toBeTruthy();
+  // Two rows with no cause: the one that lost its connection has a chip, the one that changed state a switch.
+  const [lost, switched] = screen.getAllByRole('img', { name: 'System' });
+  expect(lost!.querySelector('svg')!.innerHTML).not.toBe(switched!.querySelector('svg')!.innerHTML);
 });

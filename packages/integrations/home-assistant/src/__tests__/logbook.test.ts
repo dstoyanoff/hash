@@ -41,6 +41,7 @@ describe('toLogbookEntries', () => {
         timestamp: new Date(1_791_228_851_980).toISOString(),
         actor: 'Danny',
         actorKind: 'person',
+        change: 'state',
       },
     ]);
   });
@@ -82,6 +83,63 @@ describe('toLogbookEntries', () => {
     expect(entries[1]).not.toHaveProperty('actor');
     expect(entries[2]).not.toHaveProperty('actor');
     expect(entries[3]).not.toHaveProperty('actor');
+  });
+
+  test('a change with no cause after the device was unreachable is it coming back, not someone turning it on', () => {
+    const entries = toLogbookEntries(
+      [
+        { when: 100, entity_id: 'light.lamp', state: 'on', context_user_id: 'u-danny' },
+        { when: 200, entity_id: 'light.lamp', state: 'unavailable' },
+        { when: 300, entity_id: 'light.lamp', state: 'off' },
+        { when: 400, entity_id: 'light.lamp', state: 'on' },
+        { when: 500, entity_id: 'light.lamp', state: 'unknown' },
+        { when: 600, entity_id: 'light.lamp', state: 'on', context_user_id: 'u-danny' },
+      ],
+      lookup,
+      20,
+    );
+
+    // Newest first.
+    expect(entries.map((entry) => entry.message)).toEqual([
+      'turned on',
+      'became unknown',
+      'turned on',
+      'came back online, off',
+      'became unavailable',
+      'turned on',
+    ]);
+
+    // Someone who did turn it on after an outage is still the cause; an unrelated light's history is its own.
+    expect(entries[0]).toMatchObject({ actor: 'Danny', change: 'state' });
+    expect(entries[3]).toMatchObject({ change: 'availability' });
+    expect(entries[2]).toMatchObject({ change: 'state' });
+    expect(
+      toLogbookEntries(
+        [
+          { when: 1, entity_id: 'light.a', state: 'unavailable' },
+          { when: 2, entity_id: 'light.b', state: 'on' },
+        ],
+        lookup,
+        5,
+      )[0]!.message,
+    ).toBe('turned on');
+  });
+
+  test('marks a change of state, and a device coming or going, so a row can say more than its words', () => {
+    const [off, lost] = toLogbookEntries(
+      [
+        { when: 2, entity_id: 'light.a', state: 'off' },
+        { when: 1, entity_id: 'light.a', state: 'unavailable' },
+      ],
+      lookup,
+      5,
+    );
+
+    expect(off).toMatchObject({ message: 'came back online, off', change: 'availability' });
+    expect(lost).toMatchObject({ message: 'became unavailable', change: 'availability' });
+    expect(
+      toLogbookEntries([{ when: 3, entity_id: 'light.a', state: 'heat' }], lookup, 5)[0],
+    ).toMatchObject({ change: 'state' });
   });
 
   test('is newest first, limited, and drops an event without a time', () => {

@@ -36,8 +36,17 @@ function initials(name: string): string {
 }
 
 /** The round picture at the start of a row: initials for a person, a robot for an automation, and
- * for nobody (the system, a device going offline) a quiet chip, so every row's text lines up. */
-function Avatar({ actor, kind }: { actor: string | undefined; kind: 'person' | 'automation' }) {
+ * for nobody a quiet chip, so every row's text lines up: a switch for a change of state (often someone
+ * at the device's own switch), a chip for the device coming or going. */
+function Avatar({
+  actor,
+  kind,
+  change,
+}: {
+  actor: string | undefined;
+  kind: 'person' | 'automation';
+  change: LogbookEntry['change'];
+}) {
   const person = actor !== undefined && kind === 'person';
   return (
     <Flex
@@ -57,7 +66,10 @@ function Avatar({ actor, kind }: { actor: string | undefined; kind: 'person' | '
           {initials(actor)}
         </Typography>
       ) : (
-        <Icon name={actor === undefined ? 'lu:cpu' : 'lu:bot'} size={16} />
+        <Icon
+          name={actor !== undefined ? 'lu:bot' : change === 'state' ? 'lu:toggle-right' : 'lu:cpu'}
+          size={16}
+        />
       )}
     </Flex>
   );
@@ -82,7 +94,7 @@ export function HistorySection({ entries }: HistorySectionProps) {
       <Flex direction="column">
         {entries.map((entry) => (
           <Flex key={entry.id} align="center" gap={3} py={2}>
-            <Avatar actor={entry.actor} kind={entry.actorKind ?? 'person'} />
+            <Avatar actor={entry.actor} kind={entry.actorKind ?? 'person'} change={entry.change} />
             <Flex direction="column" minWidth={0}>
               <Typography as="span" variant="body" noWrap textOverflow="ellipsis" minWidth={0}>
                 {entry.actor ? (
