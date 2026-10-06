@@ -18,7 +18,7 @@ import { DrawerTrigger } from '../layout/use-drawer.tsx';
 import { useWeatherForecast } from '../use-weather-forecast.ts';
 import { SensorReadout } from './sensor-readout.tsx';
 import { WeatherForecast } from './weather-forecast.tsx';
-import { CONDITION_LABEL, CONDITION_LOOK } from './weather-look.ts';
+import { CONDITION_LOOK } from './weather-look.ts';
 
 /** One entry in the title's dashboard-switcher dropdown. */
 export interface DashboardOption {
@@ -495,11 +495,11 @@ function WeatherPill({ entity }: { entity: EntityRef }) {
     <DrawerTrigger
       icon={look.icon}
       label={weather?.name ?? 'Weather'}
-      kind={CONDITION_LABEL[condition]}
+      kind="Weather"
       body={<WeatherForecast entity={entity} />}
     >
-      {(_open, openExpanded) => (
-        <PlainButton aria-label={`${weather?.name ?? 'Weather'}: forecast`} onClick={openExpanded}>
+      {(open) => (
+        <PlainButton aria-label={`${weather?.name ?? 'Weather'}: forecast`} onClick={open}>
           {chip}
         </PlainButton>
       )}

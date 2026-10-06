@@ -41,6 +41,7 @@ export function SeriesChart({
   expanded,
   unit,
   fitDomain = false,
+  height,
 }: {
   samples: SeriesSample[];
   range: SeriesRange;
@@ -49,6 +50,9 @@ export function SeriesChart({
 
   /** Fit the y axis to the data instead of starting at 0 — right for temperature/humidity, wrong for power. */
   fitDomain?: boolean;
+
+  /** The chart's height in px. Default 48 for the sparkline, 220 when expanded. */
+  height?: number;
 }) {
   const accent = useColorByKey('accent') ?? '';
   const textMuted = useColorByKey('textMuted') ?? '';
@@ -56,7 +60,7 @@ export function SeriesChart({
   const tickSize = useTypographySize('secondary');
 
   return (
-    <Box height={expanded ? 220 : 48} mt={3}>
+    <Box height={height ?? (expanded ? 220 : 48)} mt={3}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={samples} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
           {expanded ? <CartesianGrid stroke={line} strokeDasharray="3 3" vertical={false} /> : null}

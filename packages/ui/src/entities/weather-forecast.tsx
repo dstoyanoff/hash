@@ -3,12 +3,16 @@ import type { EntityRef, ForecastPoint } from '@hashsome/core';
 import { Box, Flex, Typography } from 'e-prim';
 import { useEntityHandle } from '../hooks.ts';
 import { Icon } from '../icon.tsx';
-import { FadeScroll } from '../layout/fade-scroll.tsx';
+import { useDetail } from '../layout/detail-provider.tsx';
+import { SeriesChart } from '../layout/series-chart.tsx';
 import { useWeatherForecast } from '../use-weather-forecast.ts';
 import { CONDITION_LABEL, CONDITION_LOOK } from './weather-look.ts';
 
-/** How many hours the strip shows. */
+/** How many hours the chart covers. */
 const HOURS = 24;
+
+/** Hours between the labelled points under the chart: more of them in the wide, expanded drawer. */
+const EVERY = { collapsed: 4, expanded: 2 };
 
 const degrees = (value: number | undefined) =>
   value === undefined ? '–' : `${Math.round(value)}°`;
@@ -56,8 +60,14 @@ export function WeatherForecast({ entity }: { entity: EntityRef }) {
     'daily',
   );
 
+  const { detail } = useDetail();
+  const expanded = detail?.expanded ?? false;
   const now = new Date();
   const hours = (hourly.result?.points ?? []).slice(0, HOURS);
+  const along = hours.filter(
+    (_, index) => index % EVERY[expanded ? 'expanded' : 'collapsed'] === 0,
+  );
+
   const days = daily.result?.points ?? [];
   const lows = days.flatMap((day) => (day.low !== undefined ? [day.low] : []));
   const highs = days.flatMap((day) => (day.temperature !== undefined ? [day.temperature] : []));
@@ -81,28 +91,38 @@ export function WeatherForecast({ entity }: { entity: EntityRef }) {
       </Flex>
 
       {hours.length > 0 ? (
-        <Flex direction="column" gap={2}>
+        <Flex direction="column" gap={1}>
           <Typography as="h3" variant="label" color="textMuted" m={0}>
             Next 24 hours
           </Typography>
-          <FadeScroll as="ul" gap={3} m={0} p={0} pb={2} css={{ listStyle: 'none' }}>
-            {hours.map((hour) => (
+          {/* The temperature as a curve, and under it a few hours along it with their sky and rain
+              chance: a day's worth in a strip about as tall as a line of text, not a row of 24 cards. */}
+          <SeriesChart
+            samples={hours.flatMap((hour) =>
+              hour.temperature !== undefined
+                ? [{ timestamp: hour.timestamp, value: hour.temperature }]
+                : [],
+            )}
+            range="1d"
+            expanded={expanded}
+            unit="°"
+            fitDomain
+            height={expanded ? 180 : 88}
+          />
+          <Flex justify="space-between" mt={1}>
+            {along.map((hour) => (
               <Flex
-                as="li"
                 key={hour.timestamp}
                 direction="column"
                 align="center"
-                gap={1.5}
-                background="surfaceRaised"
-                radius="card"
-                px={3}
-                py={2.5}
-                css={{ flex: 'none', minWidth: 64 }}
+                gap={1}
+                grow={1}
+                css={{ flexBasis: 0 }}
               >
                 <Typography as="span" variant="secondary" color="textMuted">
                   {new Date(hour.timestamp).toLocaleTimeString([], { hour: 'numeric' })}
                 </Typography>
-                <ConditionIcon condition={hour.condition} size={20} />
+                <ConditionIcon condition={hour.condition} size={18} />
                 <Typography as="span" variant="label">
                   {degrees(hour.temperature)}
                 </Typography>
@@ -113,7 +133,7 @@ export function WeatherForecast({ entity }: { entity: EntityRef }) {
                 </Typography>
               </Flex>
             ))}
-          </FadeScroll>
+          </Flex>
         </Flex>
       ) : null}
 
