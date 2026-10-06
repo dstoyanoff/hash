@@ -77,6 +77,15 @@ function actorOf(
 
 const UNREACHABLE = new Set(['unavailable', 'unknown']);
 
+/** What kind of change a state is: on, off, the device being (un)reachable, or any other mode. */
+function changeOf(state: string | undefined, back: boolean): NonNullable<LogbookEntry['change']> {
+  if (back || (state !== undefined && UNREACHABLE.has(state))) {
+    return 'availability';
+  }
+
+  return state === 'on' || state === 'off' ? state : 'state';
+}
+
 /** The events as entries, newest first and at most `limit` of them. An event without a usable time is
  * dropped. A change of state with no cause that follows the device being unreachable is worded as it
  * coming back ("came back online, on"), not as someone turning it on. */
@@ -109,10 +118,7 @@ export function toLogbookEntries(
         id: `${entity}@${when}`,
         message: back ? `came back online, ${event.state}` : messageFor(event.state),
         timestamp: new Date(when * 1000).toISOString(),
-        change:
-          back || (event.state !== undefined && UNREACHABLE.has(event.state))
-            ? 'availability'
-            : 'state',
+        change: changeOf(event.state, back),
         ...cause,
       } satisfies LogbookEntry;
     })

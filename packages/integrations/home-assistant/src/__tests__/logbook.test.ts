@@ -41,7 +41,7 @@ describe('toLogbookEntries', () => {
         timestamp: new Date(1_791_228_851_980).toISOString(),
         actor: 'Danny',
         actorKind: 'person',
-        change: 'state',
+        change: 'off',
       },
     ]);
   });
@@ -110,9 +110,9 @@ describe('toLogbookEntries', () => {
     ]);
 
     // Someone who did turn it on after an outage is still the cause; an unrelated light's history is its own.
-    expect(entries[0]).toMatchObject({ actor: 'Danny', change: 'state' });
+    expect(entries[0]).toMatchObject({ actor: 'Danny', change: 'on' });
     expect(entries[3]).toMatchObject({ change: 'availability' });
-    expect(entries[2]).toMatchObject({ change: 'state' });
+    expect(entries[2]).toMatchObject({ change: 'on' });
     expect(
       toLogbookEntries(
         [
@@ -125,7 +125,7 @@ describe('toLogbookEntries', () => {
     ).toBe('turned on');
   });
 
-  test('marks a change of state, and a device coming or going, so a row can say more than its words', () => {
+  test('marks on, off, another state and a device coming or going, so a row can say more than its words', () => {
     const [off, lost] = toLogbookEntries(
       [
         { when: 2, entity_id: 'light.a', state: 'off' },
@@ -140,6 +140,10 @@ describe('toLogbookEntries', () => {
     expect(
       toLogbookEntries([{ when: 3, entity_id: 'light.a', state: 'heat' }], lookup, 5)[0],
     ).toMatchObject({ change: 'state' });
+
+    expect(
+      toLogbookEntries([{ when: 4, entity_id: 'light.a', state: 'on' }], lookup, 5)[0],
+    ).toMatchObject({ change: 'on' });
   });
 
   test('is newest first, limited, and drops an event without a time', () => {

@@ -13,13 +13,13 @@ export interface LogbookEntry {
   actor?: string;
 
   /** Only matters when `actor` is set: a person gets an initials avatar, an automation (or anything
-   * else that is not a person) a robot icon. Default `'person'`. */
+   * else that is not a person) a workflow icon. Default `'person'`. */
   actorKind?: 'person' | 'automation';
 
-  /** What kind of change it was: `state` (turned on or off, or a new mode) or `availability` (the
-   * device could not be reached, or came back). Lets a row say more than the words when nothing
-   * caused it: a change of state with no actor is often someone at a physical switch. */
-  change?: 'state' | 'availability';
+  /** What kind of change it was: it turned `on` or `off`, took another `state` (a new mode), or its
+   * `availability` changed (the device could not be reached, or came back). Lets a row say more than
+   * the words when nothing caused it: an on or off with no actor is often someone at a physical switch. */
+  change?: 'on' | 'off' | 'state' | 'availability';
 }
 
 export interface LogbookQuery {

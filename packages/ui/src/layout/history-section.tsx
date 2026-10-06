@@ -35,9 +35,18 @@ function initials(name: string): string {
     .join('');
 }
 
-/** The round picture at the start of a row: initials for a person, a robot for an automation, and
- * for nobody a quiet chip, so every row's text lines up: a switch for a change of state (often someone
- * at the device's own switch), a chip for the device coming or going. */
+/** The chip for a row nobody caused: a switch thrown the way it went for on and off, and a chip for
+ * the device coming or going or another mode. */
+const QUIET_ICON = {
+  on: 'lu:toggle-right',
+  off: 'lu:toggle-left',
+  state: 'lu:cpu',
+  availability: 'lu:cpu',
+} as const;
+
+/** The round picture at the start of a row: initials for a person, a workflow icon for an automation, and
+ * for nobody a quiet chip, so every row's text lines up: a switch for on and off (often someone at
+ * the device's own switch), a chip for the device coming or going. */
 function Avatar({
   actor,
   kind,
@@ -67,7 +76,7 @@ function Avatar({
         </Typography>
       ) : (
         <Icon
-          name={actor !== undefined ? 'lu:bot' : change === 'state' ? 'lu:toggle-right' : 'lu:cpu'}
+          name={actor !== undefined ? 'lu:workflow' : QUIET_ICON[change ?? 'availability']}
           size={16}
         />
       )}
