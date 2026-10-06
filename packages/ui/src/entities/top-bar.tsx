@@ -185,6 +185,9 @@ export function TopBar({
   );
 }
 
+/** The height of the switcher's button, and of each entry in its list. */
+const SWITCHER_HEIGHT = 40;
+
 function DashboardSwitcher({
   title,
   dashboards,
@@ -218,7 +221,7 @@ function DashboardSwitcher({
         color="text"
         background="surface"
         border
-        height={40}
+        height={SWITCHER_HEIGHT}
         px={4}
         radius="chrome"
       >
@@ -262,9 +265,10 @@ function DashboardSwitcher({
                   align="center"
                   gap={2}
                   width="100%"
+                  // As tall as the button that opened the list, so an entry is as easy to hit on a touch screen.
+                  height={SWITCHER_HEIGHT}
                   radius="small"
-                  px={2}
-                  py={1.5}
+                  px={3}
                   color="text"
                   background={active ? 'surface' : 'transparent'}
                   cursor={active ? 'default' : 'pointer'}
