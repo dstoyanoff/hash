@@ -495,7 +495,7 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'ReactNode',
       },
       {
-        doc: 'What goes beside the player in a wide space, usually the player\'s queue: `<MediaQueue entity="ma:living_room" />`. Only used when `wide`; the narrow layout has no room for it.',
+        doc: 'What goes beside the player in a wide space, usually the player\'s queue: `<MediaQueue entity="ma:living_room" />`. Only used when `wide` and the player has a queue; the narrow layout has no room for it.',
         name: 'queue',
         optional: true,
         type: 'ReactNode',

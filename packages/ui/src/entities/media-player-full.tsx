@@ -17,7 +17,7 @@ export interface MediaPlayerFullProps {
   /** What goes below the player, usually the player's library: `<MediaBrowser entity="ma:living_room" layout="theater" />`. Left out, only the player is drawn. */
   browser?: ReactNode;
 
-  /** What goes beside the player in a wide space, usually the player's queue: `<MediaQueue entity="ma:living_room" />`. Only used when `wide`; the narrow layout has no room for it. */
+  /** What goes beside the player in a wide space, usually the player's queue: `<MediaQueue entity="ma:living_room" />`. Only used when `wide` and the player has a queue; the narrow layout has no room for it. */
   queue?: ReactNode;
 
   /** Calls the player this instead of the name it reports. */
@@ -58,7 +58,7 @@ export function MediaPlayerFull({ entity, browser, queue, wide, name }: MediaPla
             />
           </Box>
         </Flex>
-        {full && queue !== undefined ? (
+        {full && queue !== undefined && handle.entity?.capabilities.queue === true ? (
           // Beside the player, as tall as it is and no taller: a long queue scrolls inside.
           <Flex direction="column" width={400} minHeight={0} css={{ flex: 'none', maxHeight: 560 }}>
             {queue}

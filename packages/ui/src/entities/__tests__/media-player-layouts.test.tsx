@@ -686,3 +686,28 @@ describe('the queue beside the player', () => {
     expect(screen.queryByText('the queue')).toBeNull();
   });
 });
+
+describe('the queue in the expanded drawer of a media card', () => {
+  test('the vertical card’s expanded drawer shows the queue beside the player, when the player has one', async () => {
+    renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing({ queue: true }), library);
+    fireEvent.click(screen.getByRole('button', { name: 'Open media browser' }));
+    // Collapsed, there is no room for it.
+    expect(screen.queryByText(/ tracks$/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
+    expect(await screen.findByText(/24 tracks/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Clear the queue' })).toBeTruthy();
+  });
+
+  test('the bar’s browse button opens the drawer expanded, with the queue too, and a player with no queue has no empty column', async () => {
+    renderWithMock(<MediaPlayerBar entity="ha:room" />, playing({ queue: true }), library);
+    fireEvent.click(screen.getByRole('button', { name: 'Browse media' }));
+    expect(await screen.findByText(/24 tracks/)).toBeTruthy();
+    cleanup();
+
+    renderWithMock(<MediaPlayerBar entity="ha:room" />, playing({ queue: false }), library);
+    fireEvent.click(screen.getByRole('button', { name: 'Browse media' }));
+    await screen.findAllByRole('button', { name: 'Play Dreams' });
+    expect(screen.queryByText(/ tracks$/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Clear the queue' })).toBeNull();
+  });
+});

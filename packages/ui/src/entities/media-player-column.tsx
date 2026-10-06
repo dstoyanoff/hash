@@ -10,6 +10,7 @@ import { DrawerTrigger } from '../layout/use-drawer.tsx';
 import { useHold } from '../layout/use-hold.ts';
 import { MediaBrowser } from './media-browser.tsx';
 import { MediaPlayerFull } from './media-player-full.tsx';
+import { MediaQueue } from './media-queue.tsx';
 import { NowPlaying } from './now-playing.tsx';
 
 export interface MediaPlayerColumnProps {
@@ -51,6 +52,7 @@ export function MediaPlayerColumn({ entity, name, browse }: MediaPlayerColumnPro
         <MediaPlayerFull
           entity={entity}
           browser={browser}
+          {...(typeof entity === 'string' ? { queue: <MediaQueue entity={entity} /> } : {})}
           {...(name !== undefined ? { name } : {})}
         />
       }
