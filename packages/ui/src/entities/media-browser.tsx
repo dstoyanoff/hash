@@ -77,6 +77,41 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
 
   /** Something is open inside the selected shelf (not a search): the tab shows the way back. */
   const inside = browser.canGoBack && !browser.searching;
+
+  /** What can be done with the whole album, playlist or artist that is open: play it, shuffle it,
+   * add it to the queue. Playing it replaces the queue. They sit at the end of the row of tabs (or
+   * of the heading), never in a row of their own, so opening an album moves nothing; where there is
+   * no room for words they are just their icons. */
+  const opened = browser.inside;
+  const actionsHere =
+    opened?.playable === true ? (
+      <Flex align="center" gap={2} css={{ flexShrink: 0 }}>
+        <PillButton
+          icon="lu:play"
+          label="Play"
+          compact={!theater}
+          onClick={() => play(opened)}
+          primary
+        />
+        {queueable ? (
+          <>
+            <PillButton
+              icon="lu:shuffle"
+              label="Shuffle"
+              compact={!theater}
+              onClick={() => shuffleAll(opened)}
+            />
+            <PillButton
+              icon="lu:list-plus"
+              label="Add to queue"
+              compact={!theater}
+              onClick={() => addToQueue(opened)}
+            />
+          </>
+        ) : null}
+      </Flex>
+    ) : null;
+
   const header = (
     <Flex align="center" gap={2} css={{ flexShrink: 0 }}>
       {browser.canGoBack ? (
@@ -85,28 +120,9 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
       <Typography as="h2" variant="heading" grow={1} m={0}>
         {browser.title ?? 'Library'}
       </Typography>
+      {actionsHere}
     </Flex>
   );
-
-  /** What can be done with the whole album, playlist or artist that is open: play it, shuffle it,
-   * add it to the queue. Playing it replaces the queue. */
-  const opened = browser.inside;
-  const allActions =
-    opened?.playable === true ? (
-      <Flex align="center" gap={2} css={{ flexShrink: 0 }}>
-        <PillButton icon="lu:play" label="Play" onClick={() => play(opened)} primary />
-        {queueable ? (
-          <>
-            <PillButton icon="lu:shuffle" label="Shuffle" onClick={() => shuffleAll(opened)} />
-            <PillButton
-              icon="lu:list-plus"
-              label="Add to queue"
-              onClick={() => addToQueue(opened)}
-            />
-          </>
-        ) : null}
-      </Flex>
-    ) : null;
 
   const search = player?.capabilities.search ? (
     <Flex
@@ -155,27 +171,31 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
       {browser.tabs === undefined ? header : null}
       {search}
       {browser.tabs ? (
-        <ChipRow
-          tabs
-          options={browser.tabs.map((item) =>
-            // Inside a shelf the selected tab becomes the way back, so nothing is added to the
-            // layout and nothing below it moves.
-            item.id === browser.activeTab && inside
-              ? {
-                  value: item.id,
-                  label: browser.title ?? item.title,
-                  icon: 'lu:arrow-left' as const,
-                  ariaLabel: 'Back',
-                }
-              : { value: item.id, label: item.title },
-          )}
-          value={browser.activeTab}
-          onChange={(id) =>
-            id === browser.activeTab && inside ? browser.back() : browser.selectTab(id)
-          }
-        />
+        <Flex align="center" gap={3}>
+          <Flex direction="column" grow={1} minWidth={0}>
+            <ChipRow
+              tabs
+              options={browser.tabs.map((item) =>
+                // Inside a shelf the selected tab becomes the way back, so nothing is added to the
+                // layout and nothing below it moves.
+                item.id === browser.activeTab && inside
+                  ? {
+                      value: item.id,
+                      label: browser.title ?? item.title,
+                      icon: 'lu:arrow-left' as const,
+                      ariaLabel: 'Back',
+                    }
+                  : { value: item.id, label: item.title },
+              )}
+              value={browser.activeTab}
+              onChange={(id) =>
+                id === browser.activeTab && inside ? browser.back() : browser.selectTab(id)
+              }
+            />
+          </Flex>
+          {actionsHere}
+        </Flex>
       ) : null}
-      {allActions}
       {browser.error ? (
         <Typography as="p" variant="body" color="danger" role="alert">
           {browser.error}
@@ -254,29 +274,42 @@ function PillButton({
   label,
   onClick,
   primary,
+  compact,
 }: {
   icon: IconName;
   label: string;
   onClick: () => void;
   primary?: boolean;
+
+  /** Only the icon, for a narrow space. */
+  compact?: boolean;
 }) {
+  // Built like a tab (a button with the same padding), so the row they share does not change height.
   return (
-    <PlainButton
+    <Flex
+      as="button"
+      type="button"
       onClick={onClick}
+      aria-label={label}
+      title={label}
       align="center"
       justify="center"
       gap={1.5}
-      height={40}
-      px={4}
+      py={1.5}
+      px={3}
       radius="full"
+      cursor="pointer"
       background={primary ? 'accent' : 'surfaceRaised'}
       color={primary ? 'accentText' : 'text'}
+      css={{ flex: 'none', whiteSpace: 'nowrap' }}
     >
-      <Icon name={icon} size={16} />
-      <Typography as="span" variant="label">
-        {label}
-      </Typography>
-    </PlainButton>
+      <Icon name={icon} size={14} />
+      {compact ? null : (
+        <Typography as="span" variant="body">
+          {label}
+        </Typography>
+      )}
+    </Flex>
   );
 }
 

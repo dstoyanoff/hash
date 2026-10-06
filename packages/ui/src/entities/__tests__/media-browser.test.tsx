@@ -11,6 +11,13 @@ const rooms = {
   }),
 };
 
+const queueRoom = () => ({
+  room: mockMediaPlayer({
+    name: 'Room',
+    capabilities: { browse: true, search: true, queue: true },
+  }),
+});
+
 const render = (entities = rooms) =>
   renderWithMock(<MediaBrowser entity="ha:room" />, entities, { library: mockLibrary() });
 
@@ -52,27 +59,24 @@ test('opening something changes only what is below the tabs, and the selected ta
   expect(screen.getByRole('tab', { name: 'Albums' }).getAttribute('aria-selected')).toBe('true');
 });
 
-test('nothing is inserted between the tabs and the content until an album is opened, and then only its actions', async () => {
-  render();
+test('opening an album adds its actions to the row of tabs and inserts nothing, so nothing moves', async () => {
+  renderWithMock(<MediaBrowser entity="ha:room" />, queueRoom(), { library: mockLibrary() });
   fireEvent.click(await screen.findByRole('tab', { name: 'Albums' }));
   const list = async () => (await screen.findAllByRole('list')).at(-1) as HTMLElement;
-  const before = await list();
-  // What sits between the tab row and the list of items: nothing, before or after.
-  const between = (el: HTMLElement) => {
-    const tabs = screen.getByRole('tablist');
-    let count = 0;
-    for (let node = tabs.nextElementSibling; node && node !== el; node = node.nextElementSibling) {
-      count += 1;
-    }
+  // The one element between the search box and the list: the tabs, and the album's actions at their end.
+  const row = (el: HTMLElement) => el.previousElementSibling as HTMLElement;
+  const before = row(await list());
+  expect(before.contains(screen.getByRole('tablist'))).toBe(true);
+  expect(screen.queryByRole('button', { name: 'Play' })).toBeNull();
 
-    return count;
-  };
-
-  expect(between(before)).toBe(0);
   fireEvent.click(screen.getByRole('button', { name: 'Open Rumours' }));
   await screen.findByRole('button', { name: 'Play Go Your Own Way' });
-  // The album's own actions (play it all) are the one thing there, and only for a playable album.
-  expect(between(await list())).toBe(1);
+  const after = row(await list());
+  // The same row, now with the album's actions in it; no extra row came between.
+  expect(after).toBe(before);
+  expect(after.contains(screen.getByRole('button', { name: 'Play' }))).toBe(true);
+  expect(after.contains(screen.getByRole('button', { name: 'Shuffle' }))).toBe(true);
+  expect(after.contains(screen.getByRole('tablist'))).toBe(true);
 });
 
 test('picking another tab from inside a shelf leaves what was open', async () => {
