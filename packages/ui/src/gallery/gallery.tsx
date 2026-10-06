@@ -8,7 +8,7 @@ import { LightTile } from '../entities/light-tile.tsx';
 import { MediaBrowser } from '../entities/media-browser.tsx';
 import { MediaPlayerBar } from '../entities/media-player-bar.tsx';
 import { MediaPlayerColumn } from '../entities/media-player-column.tsx';
-import { MediaPlayerPage } from '../entities/media-player-page.tsx';
+import { MediaPlayerFull } from '../entities/media-player-full.tsx';
 import { WeatherForecast } from '../entities/weather-forecast.tsx';
 import { NavDock } from '../entities/nav-dock.tsx';
 import { NavRail } from '../entities/nav-rail.tsx';
@@ -790,14 +790,18 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
           </ComponentDoc>
 
           <ComponentDoc
-            title="Media Player Page"
-            components={['MediaPlayerPage']}
-            description="The player as a whole page: the player centered, and its library below it, so songs are picked right there instead of in a drawer. The expanded drawer is this same layout."
+            title="Media Player Full"
+            components={['MediaPlayerFull']}
+            description="The big player: the player centered, and its library below it, so songs are picked right there instead of in a drawer. The media cards' drawers show it too. A dashboard puts it in a page of its own, around it whatever it likes."
           >
-            {/* No fixed height: the page fills whatever it is given, so here it is as tall as what
-                it shows, with no spare room under it. */}
+            {/* No fixed height: it fills whatever it is given, so here it is as tall as what it shows,
+                with no spare room under it. */}
             <Flex direction="column">
-              <MediaPlayerPage entity="ha:media_player.living_room" />
+              <MediaPlayerFull
+                entity="ha:media_player.living_room"
+                wide
+                browser={<MediaBrowser entity="ha:media_player.living_room" layout="theater" />}
+              />
             </Flex>
           </ComponentDoc>
 

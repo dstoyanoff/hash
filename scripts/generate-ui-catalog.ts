@@ -66,7 +66,7 @@ const sections: Section[] = [
       'entities/scene-button.tsx',
       'entities/media-player-bar.tsx',
       'entities/media-player-column.tsx',
-      'entities/media-player-page.tsx',
+      'entities/media-player-full.tsx',
       'entities/media-browser.tsx',
       'entities/nav-rail.tsx',
       'entities/nav-dock.tsx',

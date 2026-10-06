@@ -14,7 +14,7 @@ import { ArtworkRing } from './artwork-ring.tsx';
 
 /** The upright "now playing" panel the media column and page share: the artwork on a record, what is playing, how
  * far along it is, the transport buttons and a volume bar that is always there. Not exported from
- * the package; `MediaPlayerColumn` and `MediaPlayerPage` are its public forms. */
+ * the package; `MediaPlayerColumn` and `MediaPlayerFull` are its public forms. */
 export function NowPlaying({
   handle,
   fallback,

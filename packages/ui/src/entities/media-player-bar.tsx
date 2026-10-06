@@ -16,7 +16,7 @@ import { usePressFeedback, useVolumeControl } from './media-controls.ts';
 import { Cover } from '../layout/cover.tsx';
 import { PlainButton } from '../layout/plain-button.tsx';
 import { MediaBrowser } from './media-browser.tsx';
-import { MediaPlayerBody } from './media-player-body.tsx';
+import { MediaPlayerFull } from './media-player-full.tsx';
 import { formatDuration, useMediaPosition } from './media-progress.ts';
 import { useSeekHold } from './media-seek.ts';
 import { SeekLine } from './seek-line.tsx';
@@ -323,7 +323,7 @@ export function MediaPlayerBar({ entity, name, browse }: MediaPlayerBarProps) {
       label={name ?? player?.name ?? fallbackName(entity)}
       kind="Media"
       body={
-        <MediaPlayerBody
+        <MediaPlayerFull
           entity={entity}
           {...(name !== undefined ? { name } : {})}
           {...(browser !== undefined ? { browser } : {})}

@@ -473,20 +473,32 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
       },
     ],
   },
-  MediaPlayerPage: {
-    doc: "The player as a whole page: the player centered, and the player's library below it, so songs are picked right here instead of in a drawer. It is the same layout as the expanded drawer. It fills the height it is given and scrolls inside it.",
+  MediaPlayerFull: {
+    doc: "The big player: the player centered at the top, and the library (or whatever `browser` is) below it. It is what the media cards' drawers show, at every width, and it is the widget a dashboard puts in a page of its own, around it whatever it likes (a surface that fills the space and scrolls, a heading, other cards beside it). It fills the height it is given, so the page that holds it decides how tall that is.",
     props: [
       {
-        doc: 'A media player, as a ref like `ma:living_room`. A ref, not a handle: the library below the player is read through the runtime.',
+        doc: 'The media player, as a ref like `ma:living_room`.',
         name: 'entity',
         optional: false,
-        type: 'EntityRef',
+        type: "EntityRef | EntityHandle<'mediaPlayer'>",
       },
       {
-        doc: "What to call the player: the drawer's title and the name shown when nothing is playing. Defaults to the player's own name.",
+        doc: 'What goes below the player, usually the player\'s library: `<MediaBrowser entity="ma:living_room" layout="theater" />`. Left out, only the player is drawn.',
+        name: 'browser',
+        optional: true,
+        type: 'ReactNode',
+      },
+      {
+        doc: 'Calls the player this instead of the name it reports.',
         name: 'name',
         optional: true,
         type: 'string',
+      },
+      {
+        doc: 'Gives the library the whole width, for one laid out to use it (the theater layout). Defaults to whether the drawer is expanded.',
+        name: 'wide',
+        optional: true,
+        type: 'boolean',
       },
     ],
   },

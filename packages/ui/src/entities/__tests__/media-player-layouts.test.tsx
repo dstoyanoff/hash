@@ -1,10 +1,39 @@
-import { mockLibrary, mockMediaPlayer } from '@hashsome/core';
+import { mockLibrary, mockMediaPlayer, type EntityRef } from '@hashsome/core';
 import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { renderWithMock } from '../../test-utils.tsx';
 import { MediaPlayerBar } from '../media-player-bar.tsx';
 import { MediaPlayerColumn } from '../media-player-column.tsx';
-import { MediaPlayerPage } from '../media-player-page.tsx';
+import { Flex } from 'e-prim';
+import { useEntityHandle } from '../../hooks.ts';
+import { MediaBrowser } from '../media-browser.tsx';
+import { MediaPlayerFull } from '../media-player-full.tsx';
+
+/** What a dashboard's music page is: the widget in a surface that fills the space, with the player's
+ * library below it when it has one. */
+function RoomPage({ entity, name }: { entity: EntityRef; name?: string }) {
+  const handle = useEntityHandle('mediaPlayer', entity);
+  return (
+    <Flex
+      direction="column"
+      background="surface"
+      radius="card"
+      p={5}
+      grow={1}
+      minHeight={0}
+      overflow="auto"
+    >
+      <MediaPlayerFull
+        entity={entity}
+        wide
+        {...(name !== undefined ? { name } : {})}
+        {...(handle.entity?.capabilities.browse === true
+          ? { browser: <MediaBrowser entity={entity} layout="theater" /> }
+          : {})}
+      />
+    </Flex>
+  );
+}
 
 const now = () => new Date().toISOString();
 const playing = (capabilities = {}) => ({
@@ -69,7 +98,7 @@ test('no browse button for a player without a library', () => {
 });
 
 test('the page puts the library beside the player, and picks a song right there', async () => {
-  const { ha } = renderWithMock(<MediaPlayerPage entity="ha:room" />, playing(), library);
+  const { ha } = renderWithMock(<RoomPage entity="ha:room" />, playing(), library);
   expect(screen.getByRole('heading', { name: 'Dreams' })).toBeTruthy();
   // The library opens on its first shelf, so a song is one tap away.
   fireEvent.click(await screen.findByRole('button', { name: 'Play Kids' }));
@@ -77,7 +106,7 @@ test('the page puts the library beside the player, and picks a song right there'
 });
 
 test('the page has no library column for a player without one', () => {
-  renderWithMock(<MediaPlayerPage entity="ha:room" />, playing({ browse: false }), library);
+  renderWithMock(<RoomPage entity="ha:room" />, playing({ browse: false }), library);
   expect(screen.getByRole('heading', { name: 'Dreams' })).toBeTruthy();
   expect(screen.queryByRole('searchbox')).toBeNull();
   expect(screen.queryByRole('tab')).toBeNull();
@@ -303,7 +332,7 @@ describe('name', () => {
     expect(screen.getAllByText('Kitchen speaker').length).toBeGreaterThan(0);
     cleanup();
 
-    renderWithMock(<MediaPlayerPage entity="ha:room" name="Kitchen speaker" />, idle(), library);
+    renderWithMock(<RoomPage entity="ha:room" name="Kitchen speaker" />, idle(), library);
     expect(screen.getByText('Kitchen speaker')).toBeTruthy();
   });
 });
@@ -434,7 +463,7 @@ describe('the vertical card’s artwork', () => {
   });
 
   test('the page keeps its library beside the player, so its artwork opens nothing', () => {
-    renderWithMock(<MediaPlayerPage entity="ha:room" />, playing(), library);
+    renderWithMock(<RoomPage entity="ha:room" />, playing(), library);
     expect(screen.queryByRole('button', { name: 'Open media browser' })).toBeNull();
   });
 
@@ -547,7 +576,7 @@ describe('long press on the vertical card, and what each way of opening the draw
   });
 
   test('the full page is the same layout as the expanded drawer', () => {
-    renderWithMock(<MediaPlayerPage entity="ha:room" />, playing(), library);
+    renderWithMock(<RoomPage entity="ha:room" />, playing(), library);
     expect(layoutOf(screen.getByRole('slider', { name: 'Volume level' }))).toEqual({
       ...SHAPE,
       playerMaxWidth: '560px',
@@ -600,7 +629,7 @@ describe('the library’s layout follows the space it has', () => {
   const rows = () => screen.getAllByRole('list').at(-1) as HTMLElement;
 
   test('the full page lays the library out as a theater row', async () => {
-    renderWithMock(<MediaPlayerPage entity="ha:room" />, playing(), library);
+    renderWithMock(<RoomPage entity="ha:room" />, playing(), library);
     await screen.findByRole('button', { name: 'Play Dreams' });
     expect(getComputedStyle(rows()).overflowX).toBe('auto');
     expect(getComputedStyle(rows()).flexDirection).not.toBe('column');

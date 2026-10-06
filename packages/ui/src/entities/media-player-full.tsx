@@ -10,17 +10,11 @@ import { NowPlaying } from './now-playing.tsx';
 /** The artwork ring's diameter in a full-size player, against the usual 168px. */
 const FULL_SIZE = 260;
 
-/** The big player: the player centered at the top, and the library (or whatever `browser` is)
- * below it. This one layout is the drawer, at every width, and the full page, so the two are the
- * same thing and cannot drift apart. Not exported from the package; `MediaPlayerPage` and the
- * media cards' drawers draw it. */
-export function MediaPlayerBody({
-  entity,
-  browser,
-  wide,
-  name,
-}: {
+export interface MediaPlayerFullProps {
+  /** The media player, as a ref like `ma:living_room`. */
   entity: EntityRef | EntityHandle<'mediaPlayer'>;
+
+  /** What goes below the player, usually the player's library: `<MediaBrowser entity="ma:living_room" layout="theater" />`. Left out, only the player is drawn. */
   browser?: ReactNode;
 
   /** Calls the player this instead of the name it reports. */
@@ -28,7 +22,14 @@ export function MediaPlayerBody({
 
   /** Gives the library the whole width, for one laid out to use it (the theater layout). Defaults to whether the drawer is expanded. */
   wide?: boolean;
-}) {
+}
+
+/** The big player: the player centered at the top, and the library (or whatever `browser` is) below
+ * it. It is what the media cards' drawers show, at every width, and it is the widget a dashboard puts
+ * in a page of its own, around it whatever it likes (a surface that fills the space and scrolls, a
+ * heading, other cards beside it). It fills the height it is given, so the page that holds it
+ * decides how tall that is. */
+export function MediaPlayerFull({ entity, browser, wide, name }: MediaPlayerFullProps) {
   const handle = useEntityHandle('mediaPlayer', entity);
   const { detail } = useDetail();
   const full = wide ?? detail?.expanded === true;
