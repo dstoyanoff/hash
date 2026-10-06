@@ -20,7 +20,7 @@ const ROW = 56;
 /**
  * A player's queue: the tracks that have just played (dimmed), the one playing, and what comes next,
  * as a list that scrolls. Tap a track to jump to it, the cross takes it out, and Clear empties the
- * queue and stops what is playing. It is made to sit beside the player in a wide space (see `MediaPlayerFull`'s `queue`).
+ * queue and lets what is playing finish. It is made to sit beside the player in a wide space (see `MediaPlayerFull`'s `queue`).
  */
 export function MediaQueue({ entity }: MediaQueueProps) {
   const handle = useEntityHandle('mediaPlayer', entity);
@@ -53,7 +53,7 @@ export function MediaQueue({ entity }: MediaQueueProps) {
         {queue.total > 0 ? (
           <PlainButton
             aria-label="Clear the queue"
-            title="Clear the queue and stop"
+            title="Clear the queue; the track playing finishes"
             onClick={() => run('clearQueue')}
             align="center"
             gap={1}

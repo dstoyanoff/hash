@@ -739,14 +739,11 @@ test('the queue commands jump to an item, take it out, or empty the queue', asyn
 
   void ma.command('kitchen_speaker', 'clearQueue');
   await flush();
-  // Music Assistant's own clear: it also stops what plays (there is no way to keep that one and
-  // drop only what follows).
+  // Without the stop Music Assistant sends by default: what plays is left to finish.
   expect(socket().sent.at(-1)).toMatchObject({
     command: 'player_queues/clear',
-    args: { queue_id: 'kitchen_speaker' },
+    args: { queue_id: 'kitchen_speaker', skip_stop: true },
   });
-
-  expect(socket().sent.at(-1)!.args).not.toHaveProperty('skip_stop');
 
   await expect(ma.command('kitchen_speaker', 'playQueueItem', {})).rejects.toThrow(/queue item/);
 });

@@ -161,9 +161,10 @@ function commandFor(
     }
 
     case 'clearQueue':
-      // Music Assistant's own clear: the queue is emptied and what plays is stopped with it. It has no
-      // way to keep the playing track and drop only what follows.
-      return { command: 'player_queues/clear', idKey: 'queue_id' };
+      // Music Assistant's clear without the stop it sends by default: the queue is emptied and what
+      // plays is left to finish, with nothing after it. Depending on the state of the queue, the
+      // playing track may also leave the queue (and so the queue panel) while it plays on.
+      return { command: 'player_queues/clear', args: { skip_stop: true }, idKey: 'queue_id' };
 
     default:
       throw new Error(`A media player has no "${name}" command`);

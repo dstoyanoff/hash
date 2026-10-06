@@ -235,7 +235,7 @@ The library of a media player, in the app's own style: shelves, albums, playlist
 
 ### `MediaQueue`
 
-A player's queue: the tracks that have just played (dimmed), the one playing, and what comes next, as a list that scrolls. Tap a track to jump to it, the cross takes it out, and Clear empties the queue and stops what is playing. It is made to sit beside the player in a wide space (see `MediaPlayerFull`'s `queue`).
+A player's queue: the tracks that have just played (dimmed), the one playing, and what comes next, as a list that scrolls. Tap a track to jump to it, the cross takes it out, and Clear empties the queue and lets what is playing finish. It is made to sit beside the player in a wide space (see `MediaPlayerFull`'s `queue`).
 
 | Prop     | Type        | Required |                                                                                             |
 | -------- | ----------- | -------- | ------------------------------------------------------------------------------------------- |
