@@ -4,18 +4,16 @@ import { join, resolve } from 'node:path';
 
 const USAGE = `Usage: hashsome upgrade [--dry-run]
 
-Updates every @hashsome/* package your project depends on to the latest release, with the package
-manager the project uses (pnpm, npm, yarn or bun). They share one version, so they move together.
-Packages linked from a local checkout (workspace:, link:, file:) are left alone.
+Updates every @hashsome/* package your project depends on to the latest release with pnpm. They
+share one version, so they move together. Packages linked from a local checkout (workspace:, link:,
+file:) are left alone. A project on another package manager upgrades them by hand.
 
 Options:
   --dry-run   Show what would run, change nothing
 
-Afterwards run your typecheck, and read the changelog for what changed:
+Afterwards run your typecheck, and read the release notes for what changed:
   https://github.com/dstoyanoff/hashsome/releases
 `;
-
-export type PackageManager = 'pnpm' | 'npm' | 'yarn' | 'bun';
 
 export interface ProjectPackage {
   dependencies?: Record<string, string>;
@@ -41,18 +39,18 @@ export function hashsomeDependencies(pkg: ProjectPackage): { upgrade: string[]; 
   };
 }
 
-/** The package manager the project uses: the one it names in `packageManager`, else the one whose lockfile it has, else npm. */
-export function detectPackageManager(
+/** The other package manager the project uses, if it uses one: the one it names in `packageManager`, else the one whose lockfile it has. `undefined` for pnpm, or when it says nothing. */
+export function otherPackageManager(
   pkg: ProjectPackage,
   hasFile: (name: string) => boolean,
-): PackageManager {
+): 'npm' | 'yarn' | 'bun' | undefined {
   const named = pkg.packageManager?.split('@')[0];
-  if (named === 'pnpm' || named === 'npm' || named === 'yarn' || named === 'bun') {
+  if (named === 'npm' || named === 'yarn' || named === 'bun') {
     return named;
   }
 
-  if (hasFile('pnpm-lock.yaml')) {
-    return 'pnpm';
+  if (named === 'pnpm' || hasFile('pnpm-lock.yaml')) {
+    return undefined;
   }
 
   if (hasFile('yarn.lock')) {
@@ -63,22 +61,12 @@ export function detectPackageManager(
     return 'bun';
   }
 
-  return 'npm';
+  return hasFile('package-lock.json') ? 'npm' : undefined;
 }
 
-/** The command that moves `names` to their latest release. */
-export function upgradeCommand(manager: PackageManager, names: string[]): [string, ...string[]] {
-  const latest = names.map((name) => `${name}@latest`);
-  switch (manager) {
-    case 'pnpm':
-      return ['pnpm', 'update', '--latest', ...names];
-    case 'yarn':
-      return ['yarn', 'add', ...latest];
-    case 'bun':
-      return ['bun', 'add', ...latest];
-    default:
-      return ['npm', 'install', ...latest];
-  }
+/** The pnpm command that moves `names` to their latest release. */
+export function upgradeCommand(names: string[]): [string, ...string[]] {
+  return ['pnpm', 'update', '--latest', ...names];
 }
 
 /** One line per package whose version spec changed. */
@@ -131,8 +119,15 @@ export function upgradeCommandLine(args: string[], root: string = resolve(proces
     return;
   }
 
-  const manager = detectPackageManager(before, (name) => existsSync(join(root, name)));
-  const [command, ...rest] = upgradeCommand(manager, upgrade);
+  const other = otherPackageManager(before, (name) => existsSync(join(root, name)));
+  if (other) {
+    const add = other === 'npm' ? 'npm install' : `${other} add`;
+    throw new Error(
+      `This project uses ${other}, and hashsome upgrade only runs pnpm. Upgrade by hand:\n  ${add} ${upgrade.map((name) => `${name}@latest`).join(' ')}`,
+    );
+  }
+
+  const [command, ...rest] = upgradeCommand(upgrade);
   console.log(`$ ${[command, ...rest].join(' ')}`);
   if (args.includes('--dry-run')) {
     return;

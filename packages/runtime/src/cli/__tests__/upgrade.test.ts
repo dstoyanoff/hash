@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import {
   describeChanges,
-  detectPackageManager,
   hashsomeDependencies,
+  otherPackageManager,
   upgradeCommand,
 } from '../upgrade.ts';
 
@@ -39,38 +39,35 @@ describe('hashsomeDependencies', () => {
   });
 });
 
-describe('detectPackageManager', () => {
+describe('otherPackageManager', () => {
   const none = () => false;
 
-  test('the one the project names wins', () => {
-    expect(detectPackageManager({ packageManager: 'pnpm@12.6.0' }, none)).toBe('pnpm');
-    expect(
-      detectPackageManager({ packageManager: 'yarn@4.1.0' }, (f) => f === 'pnpm-lock.yaml'),
-    ).toBe('yarn');
+  test('pnpm, named or by lockfile, is not another manager', () => {
+    expect(otherPackageManager({ packageManager: 'pnpm@12.6.0' }, none)).toBeUndefined();
+    expect(otherPackageManager({}, (f) => f === 'pnpm-lock.yaml')).toBeUndefined();
+    expect(otherPackageManager({}, none)).toBeUndefined();
   });
 
-  test('otherwise its lockfile says, and npm is the fallback', () => {
-    expect(detectPackageManager({}, (f) => f === 'pnpm-lock.yaml')).toBe('pnpm');
-    expect(detectPackageManager({}, (f) => f === 'yarn.lock')).toBe('yarn');
-    expect(detectPackageManager({}, (f) => f === 'bun.lock')).toBe('bun');
-    expect(detectPackageManager({}, none)).toBe('npm');
+  test('another one is found by the name the project gives, or by its lockfile', () => {
+    expect(
+      otherPackageManager({ packageManager: 'yarn@4.1.0' }, (f) => f === 'pnpm-lock.yaml'),
+    ).toBe('yarn');
+
+    expect(otherPackageManager({}, (f) => f === 'yarn.lock')).toBe('yarn');
+    expect(otherPackageManager({}, (f) => f === 'bun.lock')).toBe('bun');
+    expect(otherPackageManager({}, (f) => f === 'package-lock.json')).toBe('npm');
   });
 });
 
 describe('upgradeCommand', () => {
-  const names = ['@hashsome/core', '@hashsome/ui'];
-
-  test('is each manager’s own command to the latest release', () => {
-    expect(upgradeCommand('pnpm', names)).toEqual(['pnpm', 'update', '--latest', ...names]);
-    expect(upgradeCommand('npm', names)).toEqual([
-      'npm',
-      'install',
-      '@hashsome/core@latest',
-      '@hashsome/ui@latest',
+  test('is pnpm update to the latest release', () => {
+    expect(upgradeCommand(['@hashsome/core', '@hashsome/ui'])).toEqual([
+      'pnpm',
+      'update',
+      '--latest',
+      '@hashsome/core',
+      '@hashsome/ui',
     ]);
-
-    expect(upgradeCommand('yarn', names)[1]).toBe('add');
-    expect(upgradeCommand('bun', names)[0]).toBe('bun');
   });
 });
 

@@ -208,9 +208,9 @@ How the release is built, and how to load the image on k3s, is in
 ## Staying up to date
 
 A project runs `pnpm hashsome:upgrade` (a script in its `package.json`, which calls `hashsome upgrade`)
-to move every `@hashsome/*` package to the latest release together, with whichever package manager it
-uses. Packages linked from a local checkout are left alone, and `--dry-run` shows the command without
-running it. Read the [release notes](https://github.com/dstoyanoff/hashsome/releases) for what changed, then run your typecheck.
+to move every `@hashsome/*` package to the latest release together, with pnpm. On another
+package manager the command prints what to run by hand. Packages linked from a local checkout are left
+alone, and `--dry-run` shows the command without running it. Read the [release notes](https://github.com/dstoyanoff/hashsome/releases) for what changed, then run your typecheck.
 
 ## Packages
 
