@@ -6,6 +6,7 @@ import {
   mockWeather,
   MockIntegration,
   type ForecastQuery,
+  type LogbookQuery,
   type ServerMessage,
 } from '@hashsome/core';
 import { describe, expect, test } from 'vitest';
@@ -240,6 +241,60 @@ describe('history queries', () => {
 
     await settle();
     expect(plain.sent.at(-1)).toMatchObject({ id: 4, ok: false });
+  });
+});
+
+describe('logbook queries', () => {
+  async function withLogbook() {
+    class WithLogbook extends MockIntegration {
+      readonly asked: unknown[] = [];
+
+      override logbook(entityId: string, query: LogbookQuery) {
+        this.asked.push([entityId, query]);
+        return Promise.resolve({ entries: [] });
+      }
+    }
+
+    const ha = new WithLogbook({ entities: { lamp: mockLight({ on: true }) } });
+    await ha.connect();
+    const socket = new FakeSocket();
+    new Proxy([ha]).handleConnection(socket);
+    return { ha, socket };
+  }
+
+  test('a limit is kept within bounds, and nothing else reaches the integration', async () => {
+    const { ha, socket } = await withLogbook();
+    socket.receive({
+      type: 'query',
+      id: 1,
+      ref: 'ha:lamp',
+      query: 'logbook',
+      args: { limit: 9999, evil: 'dropped' },
+    });
+
+    socket.receive({
+      type: 'query',
+      id: 2,
+      ref: 'ha:lamp',
+      query: 'logbook',
+      args: { limit: 'x' },
+    });
+
+    await settle();
+    expect(ha.asked).toEqual([
+      ['lamp', { limit: 100 }],
+      ['lamp', {}],
+    ]);
+
+    expect(socket.sent.at(-1)).toMatchObject({ id: 2, ok: true, data: { entries: [] } });
+  });
+
+  test('an integration that keeps no activity is an error', async () => {
+    const { ha, socket } = await withLogbook();
+    (ha as unknown as { logbook?: undefined }).logbook = undefined;
+    socket.receive({ type: 'query', id: 3, ref: 'ha:lamp', query: 'logbook' });
+    await settle();
+    expect(socket.sent.at(-1)).toMatchObject({ id: 3, ok: false });
   });
 });
 

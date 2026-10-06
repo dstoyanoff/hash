@@ -11,6 +11,7 @@ import type { WeatherCommands, WeatherEntity } from './weather.ts';
 export * from './base.ts';
 export * from './browse.ts';
 export * from './history.ts';
+export * from './logbook.ts';
 export * from './action.ts';
 export * from './climate.ts';
 export * from './generic.ts';

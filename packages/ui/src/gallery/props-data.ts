@@ -165,6 +165,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         optional: true,
         type: 'LogbookEntry[]',
       },
+      {
+        doc: "An entity whose recent activity to fetch from the backend when the drawer opens, for the same History section (Home Assistant's logbook). `history`, when given, is used instead. A backend that keeps none shows no section.",
+        name: 'logbook',
+        optional: true,
+        type: 'EntityRef',
+      },
     ],
   },
   IconButton: {
@@ -274,7 +280,7 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'EnergyChartProps',
       },
       {
-        doc: 'Recent activity, shown in the drawer. No default source yet — pass explicitly.',
+        doc: "Recent activity, shown in the drawer: who or what changed it, and when. Left out, it comes from the backend's own record when it keeps one (Home Assistant's logbook), fetched when the drawer opens.",
         name: 'history',
         optional: true,
         type: 'LogbookEntry[]',
@@ -315,7 +321,7 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'EnergyChartProps',
       },
       {
-        doc: 'Recent activity, shown in the drawer. No default source yet — pass explicitly.',
+        doc: "Recent activity, shown in the drawer: who or what changed it, and when. Left out, it comes from the backend's own record when it keeps one (Home Assistant's logbook), fetched when the drawer opens.",
         name: 'history',
         optional: true,
         type: 'LogbookEntry[]',

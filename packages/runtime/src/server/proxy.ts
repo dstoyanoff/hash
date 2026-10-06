@@ -7,6 +7,7 @@ import {
   type EntityRef,
   type ForecastQuery,
   type ForecastType,
+  type LogbookQuery,
   type HistoryBucket,
   type HistoryQuery,
   type HistoryRange,
@@ -55,6 +56,14 @@ function forecastArgs(args: Record<string, unknown> | undefined): ForecastQuery 
     : undefined;
 }
 
+/** A logbook query's one field, kept only when it is a sensible number: the rest came from a browser. */
+function logbookArgs(args: Record<string, unknown> | undefined): LogbookQuery {
+  const { limit } = args ?? {};
+  return typeof limit === 'number' && Number.isFinite(limit)
+    ? { limit: Math.max(1, Math.min(Math.floor(limit), 100)) }
+    : {};
+}
+
 /** The only fields a browse query has, kept only when they are strings: the rest came from a browser. */
 function browseArgs(args: Record<string, unknown> | undefined): BrowseQuery {
   return {
@@ -68,10 +77,15 @@ function runQuery(
   integration: Integration,
   integrationId: string,
   id: string,
-  query: 'browse' | 'history' | 'forecast',
+  query: 'browse' | 'history' | 'forecast' | 'logbook',
   args: Record<string, unknown> | undefined,
 ): Promise<unknown> {
   switch (query) {
+    case 'logbook':
+      return integration.logbook
+        ? integration.logbook(id, logbookArgs(args))
+        : Promise.reject(new Error(`"${integrationId}" keeps no activity`));
+
     case 'forecast': {
       const forecast = forecastArgs(args);
       if (!integration.forecast) {

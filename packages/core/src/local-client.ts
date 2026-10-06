@@ -9,6 +9,8 @@ import type {
   ForecastResult,
   HistoryQuery,
   HistoryResult,
+  LogbookQuery,
+  LogbookResult,
 } from './model/index.ts';
 
 /** In-process `Client` over integrations, with no runtime server. Used by the gallery and tests. */
@@ -150,6 +152,20 @@ export class LocalClient implements Client {
     }
 
     return source.forecast(id, query);
+  }
+
+  logbook(ref: EntityRef, query: LogbookQuery): Promise<LogbookResult> {
+    const { integration, id } = parseEntityRef(ref);
+    const source = this.#integrations.get(integration);
+    if (!source) {
+      return Promise.reject(new Error(`Unknown integration "${integration}"`));
+    }
+
+    if (!source.logbook) {
+      return Promise.reject(new Error(`"${integration}" keeps no activity`));
+    }
+
+    return source.logbook(id, query);
   }
 
   callRaw(integration: string, request: Record<string, unknown>): Promise<unknown> {

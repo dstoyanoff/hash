@@ -2,6 +2,7 @@ import { BaseIntegration } from './base-integration.ts';
 import { UnknownEntityError } from './entity.ts';
 import { mockForecast } from './mock-forecast.ts';
 import { mockHistory } from './mock-history.ts';
+import { mockLogbook } from './mock-logbook.ts';
 import {
   isCommandOf,
   type ActionEntity,
@@ -16,6 +17,8 @@ import {
   type GenericEntity,
   type HistoryQuery,
   type HistoryResult,
+  type LogbookQuery,
+  type LogbookResult,
   type LightEntity,
   type MediaPlayerEntity,
   type PersonEntity,
@@ -503,6 +506,16 @@ export class MockIntegration extends BaseIntegration {
     }
 
     return Promise.resolve(mockHistory(entityId, entity, query));
+  }
+
+  /** Made-up activity for a light, switch or heater (see `mockLogbook`); empty for anything else. */
+  logbook(entityId: string, query: LogbookQuery): Promise<LogbookResult> {
+    const entity = this.getEntity(entityId);
+    if (!entity) {
+      return Promise.reject(new UnknownEntityError(this.id, entityId));
+    }
+
+    return Promise.resolve(mockLogbook(entityId, entity, query));
   }
 
   /** Made-up forecast for a weather entity (see `mockForecast`); empty for anything else. */

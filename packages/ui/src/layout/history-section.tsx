@@ -1,25 +1,10 @@
 /** @jsxImportSource @emotion/react */
+import type { LogbookEntry } from '@hashsome/core';
 import { Flex, Typography } from 'e-prim';
 import { Icon } from '../icon.tsx';
 import { capitalize } from '../status.ts';
 
-export interface LogbookEntry {
-  id: string;
-
-  /** Lowercase, no actor prefix, e.g. "turned on", "brightness set to 60%" — capitalized when
-   * there's no `actor` to lead with ("Turned on"), left lowercase after one ("Dan turned on"). */
-  message: string;
-
-  /** ISO 8601. */
-  timestamp: string;
-
-  /** Who or what triggered it, e.g. "Dan" or "automation.bedtime". Omit for the system. */
-  actor?: string;
-
-  /** Only matters when `actor` is set: a person gets an initials avatar, an automation a robot
-   * icon. Default `'person'`. */
-  actorKind?: 'person' | 'automation';
-}
+export type { LogbookEntry };
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -50,25 +35,50 @@ function initials(name: string): string {
     .join('');
 }
 
-function Avatar({ actor, kind }: { actor: string; kind: 'person' | 'automation' }) {
-  const automation = kind === 'automation';
+/** The chip for a row nobody caused: a switch thrown the way it went for on and off, and a chip for
+ * the device coming or going or another mode. */
+const QUIET_ICON = {
+  on: 'lu:toggle-right',
+  off: 'lu:toggle-left',
+  state: 'lu:cpu',
+  availability: 'lu:cpu',
+} as const;
+
+/** The round picture at the start of a row: initials for a person, a workflow icon for an automation, and
+ * for nobody a quiet chip, so every row's text lines up: a switch for on and off (often someone at
+ * the device's own switch), a chip for the device coming or going. */
+function Avatar({
+  actor,
+  kind,
+  change,
+}: {
+  actor: string | undefined;
+  kind: 'person' | 'automation';
+  change: LogbookEntry['change'];
+}) {
+  const person = actor !== undefined && kind === 'person';
   return (
     <Flex
+      role="img"
+      aria-label={actor ?? 'System'}
       align="center"
       justify="center"
-      background={automation ? 'surfaceRaised' : 'accent'}
-      color={automation ? 'text' : 'accentText'}
+      background={person ? 'accent' : 'surfaceRaised'}
+      color={person ? 'accentText' : actor === undefined ? 'textMuted' : 'text'}
       radius="full"
       width={32}
       height={32}
       css={{ flex: 'none' }}
     >
-      {automation ? (
-        <Icon name="lu:bot" size={16} />
-      ) : (
+      {person ? (
         <Typography as="span" variant="eyebrow">
           {initials(actor)}
         </Typography>
+      ) : (
+        <Icon
+          name={actor !== undefined ? 'lu:workflow' : QUIET_ICON[change ?? 'availability']}
+          size={16}
+        />
       )}
     </Flex>
   );
@@ -93,7 +103,7 @@ export function HistorySection({ entries }: HistorySectionProps) {
       <Flex direction="column">
         {entries.map((entry) => (
           <Flex key={entry.id} align="center" gap={3} py={2}>
-            {entry.actor ? <Avatar actor={entry.actor} kind={entry.actorKind ?? 'person'} /> : null}
+            <Avatar actor={entry.actor} kind={entry.actorKind ?? 'person'} change={entry.change} />
             <Flex direction="column" minWidth={0}>
               <Typography as="span" variant="body" noWrap textOverflow="ellipsis" minWidth={0}>
                 {entry.actor ? (

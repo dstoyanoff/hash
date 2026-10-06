@@ -8,6 +8,8 @@ import type {
   ForecastResult,
   HistoryQuery,
   HistoryResult,
+  LogbookQuery,
+  LogbookResult,
 } from './model/index.ts';
 import { encodeMessage, parseServerMessage, type ClientMessage } from './protocol.ts';
 
@@ -58,6 +60,9 @@ export interface Client {
 
   /** A weather entity's forecast: days, hours or half-days ahead, soonest first. */
   forecast(ref: EntityRef, query: ForecastQuery): Promise<ForecastResult>;
+
+  /** What happened to an entity lately and who or what caused it, newest first. */
+  logbook(ref: EntityRef, query: LogbookQuery): Promise<LogbookResult>;
 
   /** Escape hatch: a backend-specific request, answered with whatever the integration returns. */
   callRaw(integration: string, request: Record<string, unknown>): Promise<unknown>;
@@ -192,6 +197,16 @@ export class RemoteClient implements Client {
       query: 'forecast',
       args: { ...query },
     }))) as ForecastResult;
+  }
+
+  async logbook(ref: EntityRef, query: LogbookQuery): Promise<LogbookResult> {
+    return (await this.#request((id) => ({
+      type: 'query',
+      id,
+      ref,
+      query: 'logbook',
+      args: { ...query },
+    }))) as LogbookResult;
   }
 
   callRaw(integration: string, request: Record<string, unknown>): Promise<unknown> {

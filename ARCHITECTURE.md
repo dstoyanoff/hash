@@ -202,7 +202,7 @@ interface Integration {
   history?(entityId: string, query: HistoryQuery): Promise<HistoryResult>; // bucketed past values
   forecast?(entityId: string, query: ForecastQuery): Promise<ForecastResult>; // a weather entity's days / hours ahead
   fetchAsset?(path: string): Promise<Response>; // artwork etc., fetched with the integration's credentials
-  logbook?(entityId: string, query: LogbookQuery): Promise<LogbookEntry[]>;
+  logbook?(entityId: string, query: LogbookQuery): Promise<LogbookResult>; // what happened to it, and who or what caused it
   browse?(entityId: string, query: { path?: string; search?: string }): Promise<BrowseResult>;
 
   // ── escape hatch ────────────────────────────────────────────────────────
@@ -306,8 +306,10 @@ the UI hides the feature.
   `twice_daily`. The weather entity lists the types its source supports in `forecasts`; Home Assistant
   answers from `weather.get_forecasts`, whichever provider sits behind the entity. Feeds the top bar's
   weather chip (today's high and low) and its forecast drawer.
-- **`logbook(id, { limit? })`** → recent activity entries (what changed, who or what caused it,
-  when), newest first.
+- **`logbook(id, { limit? })`** → recent activity entries (what happened, who or what caused it, when),
+  newest first. Home Assistant answers from the logbook (`logbook/get_events`, the last week), writing
+  the message from the state it changed to, and names a person from the `person` entity that carries
+  the Home Assistant user id. Feeds the History section of the light and climate drawers.
 - **`browse(id, { path?, search? })`** → one level of a player's media library, or a search of it, as
   `BrowseItem`s (`id`, `title`, `subtitle?`, `artworkUrl?`, `kind`, `playable`, `expandable`). The
   item `id` is opaque: it goes back to `browse` as `path` to open it, or to `playMedia` to play it.
@@ -433,7 +435,7 @@ every command of every kind runs and bad commands reject, and that no credential
 
 **Status:** built. `Integration`, `BaseIntegration`, the mock integration and `UnknownEntityError` live in
 `packages/core/src`; the runtime strips the prefix and defers subscriptions until an integration is
-connected. `browse`, `history` and `forecast` are built (below); `logbook` is not. The mock conformance suite is (below).
+connected. `browse`, `history`, `forecast` and `logbook` are built (below). The mock conformance suite is (below).
 
 ## Wire protocol
 
@@ -442,12 +444,12 @@ runtime talks to the integrations.
 
 Browser → runtime:
 
-| Message                                        | Meaning                                                           |
-| ---------------------------------------------- | ----------------------------------------------------------------- |
-| `{ type: 'subscribe', ref }` / `'unsubscribe'` | Start / stop receiving an entity                                  |
-| `{ type: 'command', id, ref, command, args? }` | Run a command; answered by `result`                               |
-| `{ type: 'query', id, ref, query, args? }`     | `history` / `forecast` / `browse`; answered by `result` with data |
-| `{ type: 'raw', id, integration, request }`    | The escape hatch                                                  |
+| Message                                        | Meaning                                                             |
+| ---------------------------------------------- | ------------------------------------------------------------------- |
+| `{ type: 'subscribe', ref }` / `'unsubscribe'` | Start / stop receiving an entity                                    |
+| `{ type: 'command', id, ref, command, args? }` | Run a command; answered by `result`                                 |
+| `{ type: 'query', id, ref, query, args? }`     | `history` / `forecast` / `logbook` / `browse`; answered by `result` |
+| `{ type: 'raw', id, integration, request }`    | The escape hatch                                                    |
 
 Runtime → browser:
 
@@ -471,7 +473,7 @@ When a browser connects, the runtime replays each integration's status and the c
 every entity it subscribes to, so a display that wakes up gets a full picture at once.
 
 **Status:** built for `subscribe`, `unsubscribe`, `command`, `raw`, `entity`, `status` and `result`;
-`query` carries `browse`, `history` and `forecast`; `logbook` will join it.
+`query` carries `browse`, `history`, `forecast` and `logbook`.
 
 ## The UI
 
@@ -624,17 +626,17 @@ against a fake; export a `./mock` with `createMock()` and run `runIntegrationCon
 Every card kind is on the generic model. HA-shaped `EntityState` and `callService` are gone from
 `@hashsome/core` and `@hashsome/ui`; Home Assistant's own shape lives only in its integration package.
 
-| Piece                                                                                    | Status                      |
-| ---------------------------------------------------------------------------------------- | --------------------------- |
-| Generic model in `@hashsome/core`                                                        | done                        |
-| `command` / `raw` on the contract and the wire                                           | done                        |
-| Media player (Music Assistant native, Home Assistant mapped)                             | done                        |
-| Light, climate, sensor, switch, action / scene, person                                   | done                        |
-| `history` / `logbook` (energy totals, sensor history, activity)                          | not started; demo data only |
-| `browse` / `search` / `playMedia` / `seek` (Music Assistant, Home Assistant, UI browser) | done                        |
-| Queue ("up next", Music Assistant only), image proxy, speaker transfer and grouping      | not started                 |
-| Integration mocks and the mock conformance suite                                         | done                        |
-| Typed refs per kind                                                                      | not started (optional)      |
+| Piece                                                                                    | Status                 |
+| ---------------------------------------------------------------------------------------- | ---------------------- |
+| Generic model in `@hashsome/core`                                                        | done                   |
+| `command` / `raw` on the contract and the wire                                           | done                   |
+| Media player (Music Assistant native, Home Assistant mapped)                             | done                   |
+| Light, climate, sensor, switch, action / scene, person                                   | done                   |
+| `history` (energy totals, sensor history) and `logbook` (activity, from Home Assistant)  | done                   |
+| `browse` / `search` / `playMedia` / `seek` (Music Assistant, Home Assistant, UI browser) | done                   |
+| Queue ("up next", Music Assistant only), image proxy, speaker transfer and grouping      | not started            |
+| Integration mocks and the mock conformance suite                                         | done                   |
+| Typed refs per kind                                                                      | not started (optional) |
 
 ## Decisions
 

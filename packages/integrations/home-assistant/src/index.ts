@@ -17,6 +17,8 @@ import {
   type ForecastResult,
   type HistoryQuery,
   type HistoryResult,
+  type LogbookQuery,
+  type LogbookResult,
   type Unsubscribe,
 } from '@hashsome/core';
 import { decodeItemId, toBrowseItem, type HaBrowseMedia } from './browse.ts';
@@ -29,6 +31,7 @@ import {
 } from './history.ts';
 import { toServiceRequest } from './commands.ts';
 import { toForecastPoints, type HaForecastResponse } from './forecast.ts';
+import { toLogbookEntries, type HaLogbookEvent } from './logbook.ts';
 import { mapEntity } from './mappers/index.ts';
 
 export interface HaArea {
@@ -91,6 +94,9 @@ export async function createHaClient(options: { url: string; token: string }): P
     close: () => connection.close(),
   };
 }
+
+/** How far back the logbook is read: enough for the latest handful of entries of most devices. */
+const LOGBOOK_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 export class HomeAssistantIntegration extends BaseIntegration {
   readonly id: string;
@@ -228,6 +234,43 @@ export class HomeAssistantIntegration extends BaseIntegration {
       ...(entity.windUnit ? { windUnit: entity.windUnit } : {}),
       ...(entity.precipitationUnit ? { precipitationUnit: entity.precipitationUnit } : {}),
       ...(entity.pressureUnit ? { pressureUnit: entity.pressureUnit } : {}),
+    };
+  }
+
+  /**
+   * What happened to an entity in the last week and who or what caused it, from the logbook
+   * (`logbook/get_events`), newest first. A change by a person is named from the `person` entities
+   * (each carries its Home Assistant user id), so no admin rights are needed to resolve it.
+   */
+  async logbook(entityId: string, query: LogbookQuery): Promise<LogbookResult> {
+    const client = this.#requireClient();
+    if (!this.getEntity(entityId)) {
+      throw new UnknownEntityError(this.id, entityId);
+    }
+
+    const end = Date.now();
+    const events = await client.sendCommand<HaLogbookEvent[]>({
+      type: 'logbook/get_events',
+      start_time: new Date(end - LOGBOOK_WINDOW_MS).toISOString(),
+      end_time: new Date(end).toISOString(),
+      entity_ids: [entityId],
+    });
+
+    const personByUserId = new Map<string, string>();
+    for (const entity of this.listEntities()) {
+      const userId = entity.kind === 'person' ? entity.raw?.attributes : undefined;
+      const id = (userId as { user_id?: unknown } | undefined)?.user_id;
+      if (typeof id === 'string') {
+        personByUserId.set(id, entity.name);
+      }
+    }
+
+    return {
+      entries: toLogbookEntries(
+        events,
+        { personByUserId, nameOf: (id) => this.getEntity(id)?.name },
+        query.limit ?? 20,
+      ),
     };
   }
 

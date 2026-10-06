@@ -1,4 +1,5 @@
 /** @jsxImportSource @emotion/react */
+import type { EntityRef } from '@hashsome/core';
 import { Box, Flex, Typography, useColorByKey } from 'e-prim';
 import { AnimatePresence, motion } from 'motion/react';
 import {
@@ -17,6 +18,7 @@ import { statusLabels, type EntityStatus } from '../status.ts';
 import { useDrawer } from './use-drawer.tsx';
 import { EnergyChart, type EnergyChartProps } from './energy-chart.tsx';
 import { HistorySection, type LogbookEntry } from './history-section.tsx';
+import { LogbookHistory } from './logbook-history.tsx';
 
 export interface TileProps {
   /** The tile's name. */
@@ -72,6 +74,13 @@ export interface TileProps {
    * type — whichever component has a way to fetch it just passes it through.
    */
   history?: LogbookEntry[];
+
+  /**
+   * An entity whose recent activity to fetch from the backend when the drawer opens, for the same
+   * History section (Home Assistant's logbook). `history`, when given, is used instead. A backend
+   * that keeps none shows no section.
+   */
+  logbook?: EntityRef;
 }
 
 const DRAG_THRESHOLD = 8;
@@ -103,19 +112,30 @@ export function Tile({
   kind,
   energy,
   history,
+  logbook,
 }: TileProps) {
   const ready = status === 'ready';
   const adjustable = fill !== undefined && onFillChange !== undefined && ready;
-  const holdable = (detail !== undefined || energy !== undefined || history !== undefined) && ready;
+  const holdable =
+    (detail !== undefined ||
+      energy !== undefined ||
+      history !== undefined ||
+      logbook !== undefined) &&
+    ready;
+
   const drawerBody = useMemo(
     () => (
       <>
         {detail}
         {energy ? <EnergyChart {...energy} /> : null}
-        {history ? <HistorySection entries={history} /> : null}
+        {history ? (
+          <HistorySection entries={history} />
+        ) : logbook ? (
+          <LogbookHistory entity={logbook} />
+        ) : null}
       </>
     ),
-    [detail, energy, history],
+    [detail, energy, history, logbook],
   );
 
   const [drag, setDrag] = useState<number | null>(null);

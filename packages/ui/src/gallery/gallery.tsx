@@ -213,8 +213,8 @@ function SubPreview({
   );
 }
 
-// No real integration exposes history data yet (see the "entity activity history" ticket) — this
-// stands in so the drawer's History section has something to demo in the meantime.
+// Hand-written activity, to show the drawer's History section through the `history` prop. Tiles
+// without it (and with a backend that keeps a record) fetch their own.
 const lampHistory: LogbookEntry[] = [
   {
     id: '1',

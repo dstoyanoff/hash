@@ -1,4 +1,4 @@
-import { LocalClient, MockIntegration } from '@hashsome/core';
+import { LocalClient, mockLight, MockIntegration } from '@hashsome/core';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { HashsomeProvider } from '../../provider.tsx';
@@ -221,4 +221,90 @@ test('the hold progress bar lives on the card, not inside the button, so it span
 
   expect(bar).toBeDefined();
   expect(tile.contains(bar as Element)).toBe(false);
+});
+
+test('a `logbook` entity fills the History section from the backend, and only once the drawer opens', async () => {
+  const { ha } = renderWithMock(<Tile label="lamp" logbook="ha:lamp" />, {
+    lamp: mockLight({ name: 'Lamp', on: true }),
+  });
+
+  const asked = vi.spyOn(ha, 'logbook');
+  expect(asked).not.toHaveBeenCalled();
+
+  const tile = screen.getByRole('button', { name: 'lamp' });
+  fireEvent.pointerDown(tile, { clientX: 0, pointerId: 1 });
+  act(() => vi.advanceTimersByTime(500));
+  await act(async () => {});
+  expect(asked).toHaveBeenCalledWith('lamp', { limit: 6 });
+  expect(screen.getByText('History')).toBeTruthy();
+  expect(screen.getAllByText(/turned (on|off)|became unavailable/).length).toBeGreaterThan(0);
+});
+
+test('a `history` prop wins over the backend, and a backend with no activity shows no section', async () => {
+  const { ha } = renderWithMock(
+    <Tile
+      label="lamp"
+      logbook="ha:lamp"
+      history={[{ id: '1', message: 'turned on', timestamp: new Date().toISOString() }]}
+    />,
+    { lamp: mockLight({ name: 'Lamp' }) },
+  );
+
+  const asked = vi.spyOn(ha, 'logbook');
+  const tile = screen.getByRole('button', { name: 'lamp' });
+  fireEvent.pointerDown(tile, { clientX: 0, pointerId: 1 });
+  act(() => vi.advanceTimersByTime(500));
+  await act(async () => {});
+  expect(asked).not.toHaveBeenCalled();
+  expect(screen.getByText('Turned on')).toBeTruthy();
+});
+
+test('an entity the backend has no activity for shows no History section', async () => {
+  const { ha } = renderWithMock(<Tile label="lamp" logbook="ha:lamp" />, {
+    lamp: mockLight({ name: 'Lamp' }),
+  });
+
+  // The mock invents activity for a light; this is a backend that keeps none.
+  (ha as unknown as { logbook?: undefined }).logbook = undefined;
+  const tile = screen.getByRole('button', { name: 'lamp' });
+  fireEvent.pointerDown(tile, { clientX: 0, pointerId: 1 });
+  act(() => vi.advanceTimersByTime(500));
+  await act(async () => {});
+  expect(screen.queryByText('History')).toBeNull();
+});
+
+test('every History row has a picture, so the text lines up: initials, a workflow chip for an automation, or a quiet system chip', () => {
+  renderWithMock(
+    <Tile
+      label="lamp"
+      history={[
+        { id: '1', message: 'turned on', actor: 'Dan', timestamp: new Date().toISOString() },
+        {
+          id: '2',
+          message: 'turned off',
+          actor: 'Bedtime',
+          actorKind: 'automation',
+          timestamp: new Date().toISOString(),
+        },
+        {
+          id: '3',
+          message: 'became unavailable',
+          change: 'availability',
+          timestamp: new Date().toISOString(),
+        },
+        { id: '4', message: 'turned on', change: 'on', timestamp: new Date().toISOString() },
+        { id: '5', message: 'turned off', change: 'off', timestamp: new Date().toISOString() },
+      ]}
+    />,
+  );
+
+  const tile = screen.getByRole('button', { name: 'lamp' });
+  fireEvent.pointerDown(tile, { clientX: 0, pointerId: 1 });
+  act(() => vi.advanceTimersByTime(500));
+  expect(screen.getByRole('img', { name: 'Dan' })).toBeTruthy();
+  expect(screen.getByRole('img', { name: 'Bedtime' })).toBeTruthy();
+  // Rows with no cause: a connection chip, and a switch thrown one way for on and the other for off.
+  const [lost, on, off] = screen.getAllByRole('img', { name: 'System' });
+  const icon = (el: HTMLElement | undefined) => el!.querySelector('svg')!.innerHTML;
+  expect(new Set([icon(lost), icon(on), icon(off)]).size).toBe(3);
 });
