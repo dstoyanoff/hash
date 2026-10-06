@@ -739,9 +739,10 @@ test('the queue commands jump to an item, take it out, or empty the queue', asyn
 
   void ma.command('kitchen_speaker', 'clearQueue');
   await flush();
+  // Without a stop: the track that plays is left to finish.
   expect(socket().sent.at(-1)).toMatchObject({
     command: 'player_queues/clear',
-    args: { queue_id: 'kitchen_speaker' },
+    args: { queue_id: 'kitchen_speaker', skip_stop: true },
   });
 
   await expect(ma.command('kitchen_speaker', 'playQueueItem', {})).rejects.toThrow(/queue item/);

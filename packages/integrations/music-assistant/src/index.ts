@@ -161,7 +161,8 @@ function commandFor(
     }
 
     case 'clearQueue':
-      return { command: 'player_queues/clear', idKey: 'queue_id' };
+      // Empty the queue but do not send a stop: the track playing is left to finish, and nothing follows.
+      return { command: 'player_queues/clear', args: { skip_stop: true }, idKey: 'queue_id' };
 
     default:
       throw new Error(`A media player has no "${name}" command`);
