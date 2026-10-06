@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0 (2026-10-06)
+
+### Features
+
+- **ui:** the weather's hours are one scrolling row, without a box each (#50) ([ac68b8b](https://github.com/dstoyanoff/hashsome/commit/ac68b8bbc7c822405eed0a8e885521895f2ea556))
+- **ui:** the weather readings are outlined boxes with a smaller radius (#49) ([e0d6a3d](https://github.com/dstoyanoff/hashsome/commit/e0d6a3df5b5f33ee2e5f500769f93536323f6784))
+- the queue beside the player, and play, play next and add to queue in the library (#47) ([9ccabe9](https://github.com/dstoyanoff/hashsome/commit/9ccabe94715c7379f56b37cab92f80587d0f3478))
+
+### Fixes
+
+- **ui:** chart grid lines are lighter, and the bottom one is solid (#48) ([dec2734](https://github.com/dstoyanoff/hashsome/commit/dec27342247c9662de7b35cca89cf9cc8851da45))
+
 ## 0.2.0 (2026-10-06)
 
 ### ⚠ Breaking changes
