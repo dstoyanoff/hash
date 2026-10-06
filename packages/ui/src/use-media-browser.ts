@@ -1,5 +1,6 @@
 import type { BrowseItem, EntityRef } from '@hashsome/core';
 import { useCallback, useEffect, useState } from 'react';
+import { useReconnects } from './hooks.ts';
 import { useClient } from './provider.tsx';
 
 interface Level {
@@ -65,6 +66,8 @@ const messageOf = (error: unknown) => (error instanceof Error ? error.message : 
  * the browser was. */
 export function useMediaBrowser(ref: EntityRef): MediaBrowserState {
   const client = useClient();
+  // A level that could not be read because the connection was not there is asked for again when it is.
+  const reconnects = useReconnects();
   const [trail, setTrail] = useState<Level[]>([{}]);
   const [text, setText] = useState('');
   const [tab, setTab] = useState<string | undefined>();
@@ -82,7 +85,9 @@ export function useMediaBrowser(ref: EntityRef): MediaBrowserState {
     return () => {
       current = false;
     };
-  }, [client, ref]);
+    // `reconnects` is not read inside: the connection coming back is the reason to ask again.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
+  }, [client, ref, reconnects]);
 
   const needle = text.trim();
   const searching = needle !== '';
@@ -119,7 +124,8 @@ export function useMediaBrowser(ref: EntityRef): MediaBrowserState {
       current = false;
       clearTimeout(timer);
     };
-  }, [client, ref, key, searching, needle, path]);
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
+  }, [client, ref, key, searching, needle, path, reconnects]);
 
   const open = useCallback(
     (item: BrowseItem) =>

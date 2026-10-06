@@ -128,3 +128,59 @@ test('browse sends a query and resolves with the library level it is answered wi
   socket().receive({ type: 'result', id: 2, ok: false, error: 'no library' });
   await expect(failed).rejects.toThrow('no library');
 });
+
+test('a read made while the socket is still opening waits for it and is answered', async () => {
+  const { client, socket } = make();
+  // The page asked the moment it appeared, before the connection was open.
+  const library = client.browse(lamp, {});
+  expect(socket().sent).toEqual([]);
+  socket().open();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(socket().sent.at(-1)).toMatchObject({ type: 'query', query: 'browse' });
+  socket().receive({ type: 'result', id: 1, ok: true, data: { items: [] } });
+  await expect(library).resolves.toEqual({ items: [] });
+});
+
+test('every kind of read waits, and a read made while it is reconnecting is sent once it is back', async () => {
+  const { client, socket } = make();
+  socket().open();
+  socket().close();
+  // Dropped: a new socket is on its way after the backoff.
+  const history = client.history(lamp, { range: '1d' });
+  const forecast = client.forecast(lamp, { type: 'daily' });
+  const logbook = client.logbook(lamp, {});
+  const queue = client.queue(lamp, {});
+  await vi.advanceTimersByTimeAsync(150);
+  socket().open();
+  await vi.advanceTimersByTimeAsync(0);
+  const sent = socket().sent as { query: string; id: number }[];
+  expect(sent.map((message) => message.query)).toEqual(['history', 'forecast', 'logbook', 'queue']);
+  for (const message of sent) {
+    socket().receive({ type: 'result', id: message.id, ok: true, data: {} });
+  }
+
+  await expect(Promise.all([history, forecast, logbook, queue])).resolves.toHaveLength(4);
+});
+
+test('a read gives up when the connection does not come, and the caller can ask again', async () => {
+  const { client } = make();
+  const outcome = client.browse(lamp, {}).catch((error: Error) => error);
+  await vi.advanceTimersByTimeAsync(10_500);
+  expect(await outcome).toMatchObject({ message: 'Not connected to runtime' });
+});
+
+test('a command never waits: made while the connection is down it fails at once, not late', async () => {
+  const { client, socket } = make();
+  await expect(client.command(lamp, 'toggle')).rejects.toThrow('Not connected to runtime');
+  await expect(client.callRaw('ha', {})).rejects.toThrow('Not connected to runtime');
+  socket().open();
+  // Nothing was queued to go out now that it is open.
+  expect(socket().sent).toEqual([]);
+});
+
+test('closing the client gives up the reads that are waiting', async () => {
+  const { client } = make();
+  const outcome = client.browse(lamp, {}).catch((error: Error) => error);
+  client.close();
+  expect(await outcome).toMatchObject({ message: 'Connection closed' });
+});

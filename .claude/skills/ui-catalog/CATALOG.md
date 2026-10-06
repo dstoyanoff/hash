@@ -363,6 +363,14 @@ Connection between this browser and the runtime.
 function useConnectionStatus(): LinkStatus;
 ```
 
+### `useReconnects`
+
+How many times the connection to the runtime has opened. A hook that asked for something while it was down (and got an error) depends on this, so it asks again when the connection is back: a read that failed because the page was ahead of the connection, or because it dropped, is not final.
+
+```ts
+function useReconnects(): number;
+```
+
 ### `useIntegrationStatus`
 
 Status of the runtime's connection to a backend (`ha`, `ma`, ...).
