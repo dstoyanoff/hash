@@ -9,6 +9,7 @@ import { MediaBrowser } from '../entities/media-browser.tsx';
 import { MediaPlayerBar } from '../entities/media-player-bar.tsx';
 import { MediaPlayerColumn } from '../entities/media-player-column.tsx';
 import { MediaPlayerPage } from '../entities/media-player-page.tsx';
+import { WeatherForecast } from '../entities/weather-forecast.tsx';
 import { NavDock } from '../entities/nav-dock.tsx';
 import { NavRail } from '../entities/nav-rail.tsx';
 import { Page } from '../layout/page.tsx';
@@ -797,6 +798,19 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
                 it shows, with no spare room under it. */}
             <Flex direction="column">
               <MediaPlayerPage entity="ha:media_player.living_room" />
+            </Flex>
+          </ComponentDoc>
+
+          <ComponentDoc
+            title="Weather Forecast"
+            components={['WeatherForecast']}
+            description="A weather entity's forecast: the weather now, the next 24 hours as a chart (hover it for everything about an hour) and the days ahead. The top bar's weather chip shows it in a drawer; a dashboard can put it in a page of its own. Narrow, then with `expanded` (readings tiles, a card for each hour)."
+          >
+            <Flex direction="column" gap={6}>
+              <Flex direction="column" width={380}>
+                <WeatherForecast entity="ha:weather.home" expanded={false} />
+              </Flex>
+              <WeatherForecast entity="ha:weather.home" expanded />
             </Flex>
           </ComponentDoc>
 

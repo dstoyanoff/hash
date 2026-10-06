@@ -676,6 +676,23 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
       },
     ],
   },
+  WeatherForecast: {
+    doc: "A weather entity's forecast: the weather now, the next 24 hours as a chart (hover it for everything about an hour) and the days ahead. The top bar's weather chip shows it in a drawer; a dashboard can put it in a page of its own, with `expanded` for the full-size layout. Wide, it adds the current readings and a card for each hour. A source with no forecast shows only the weather now.",
+    props: [
+      {
+        doc: 'A weather entity, as a ref like `ha:weather.forecast_home`. The forecasts it offers (hourly, daily) are read through the runtime.',
+        name: 'entity',
+        optional: false,
+        type: 'EntityRef',
+      },
+      {
+        doc: 'Lay it out for a wide space (readings tiles, a card for each hour, more columns for the days) or for a narrow one. Left out, it follows the drawer it is in.',
+        name: 'expanded',
+        optional: true,
+        type: 'boolean',
+      },
+    ],
+  },
   HashsomeProvider: {
     doc: 'Connects the tree to the runtime proxy. Render only on the client.',
     props: [

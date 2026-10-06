@@ -71,6 +71,7 @@ const sections: Section[] = [
       'entities/nav-rail.tsx',
       'entities/nav-dock.tsx',
       'entities/top-bar.tsx',
+      'entities/weather-forecast.tsx',
     ],
   },
   {

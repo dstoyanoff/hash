@@ -169,11 +169,19 @@ function currentReadings(weather: WeatherEntity | undefined, soon: ForecastPoint
   };
 }
 
-/** A weather entity's forecast, for its drawer: the weather now, the next day hour by hour, and the
- * days ahead with how cold and warm each gets. Narrow, it is the essentials with the detail in the
- * chart's hover; expanded, there are cards for each hour and more readings throughout. A source
- * with no forecast shows only the weather now. */
-export function WeatherForecast({ entity }: { entity: EntityRef }) {
+export interface WeatherForecastProps {
+  /** A weather entity, as a ref like `ha:weather.forecast_home`. The forecasts it offers (hourly, daily) are read through the runtime. */
+  entity: EntityRef;
+
+  /** Lay it out for a wide space (readings tiles, a card for each hour, more columns for the days) or for a narrow one. Left out, it follows the drawer it is in. */
+  expanded?: boolean;
+}
+
+/** A weather entity's forecast: the weather now, the next 24 hours as a chart (hover it for everything
+ * about an hour) and the days ahead. The top bar's weather chip shows it in a drawer; a dashboard can
+ * put it in a page of its own, with `expanded` for the full-size layout. Wide, it adds the current
+ * readings and a card for each hour. A source with no forecast shows only the weather now. */
+export function WeatherForecast({ entity, expanded: layout }: WeatherForecastProps) {
   const handle = useEntityHandle('weather', entity);
   const weather = handle.entity;
   const hourly = useWeatherForecast(
@@ -187,7 +195,7 @@ export function WeatherForecast({ entity }: { entity: EntityRef }) {
   );
 
   const { detail } = useDetail();
-  const expanded = detail?.expanded ?? false;
+  const expanded = layout ?? detail?.expanded ?? false;
   const now = new Date();
   const hours = (hourly.result?.points ?? []).slice(0, HOURS);
   const along = hours.filter((_, index) => index % EVERY === 0);

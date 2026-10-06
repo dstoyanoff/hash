@@ -287,6 +287,15 @@ Overlapping avatar circles for a handful of `person.*` entities.
 | `entities` | `EntityRef[]`       | yes      | People, as refs like `ha:person.dan`: one avatar each (their picture, or a colored initial). Someone who is away is dimmed and grayscale. |
 | `colors`   | `readonly string[]` | no       | Only colors the initial of people without a picture; each gets one, always the same. Optional: a built-in set of six is used by default.  |
 
+### `WeatherForecast`
+
+A weather entity's forecast: the weather now, the next 24 hours as a chart (hover it for everything about an hour) and the days ahead. The top bar's weather chip shows it in a drawer; a dashboard can put it in a page of its own, with `expanded` for the full-size layout. Wide, it adds the current readings and a card for each hour. A source with no forecast shows only the weather now.
+
+| Prop       | Type        | Required |                                                                                                                                                              |
+| ---------- | ----------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `entity`   | `EntityRef` | yes      | A weather entity, as a ref like `ha:weather.forecast_home`. The forecasts it offers (hourly, daily) are read through the runtime.                            |
+| `expanded` | `boolean`   | no       | Lay it out for a wide space (readings tiles, a card for each hour, more columns for the days) or for a narrow one. Left out, it follows the drawer it is in. |
+
 ## Hooks and provider
 
 ### `useThemeToggle`
