@@ -1,18 +1,45 @@
 import type { Integration } from '@hashsome/core';
 import express, { type Express } from 'express';
 import { createServer } from 'node:http';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { VERSION_FILE, VERSION_PATH } from '../build-id.ts';
 import type { ResolvedConfig } from '../config.ts';
 import { serveAsset } from './assets.ts';
 import { Proxy } from './proxy.ts';
 import { startIntegrations } from './integrations.ts';
 import { attachWebSocket } from './websocket.ts';
 
+/** The id the build left in the client directory; none for a client built without one. */
+function readVersion(clientDir: string): string | undefined {
+  try {
+    const { id } = JSON.parse(readFileSync(join(clientDir, VERSION_FILE), 'utf8')) as {
+      id?: unknown;
+    };
+
+    return typeof id === 'string' && id !== '' ? id : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function createApp(clientDir: string, integrations: Integration[] = []): Express {
   const app = express();
   app.disable('x-powered-by');
   app.get('/healthz', (_req, res) => {
     res.json({ status: 'ok' });
+  });
+
+  // Which build this is, for a page that has been open a while to compare with its own and reload.
+  // Never cached: a stale answer is exactly what it is there to avoid.
+  const version = readVersion(clientDir);
+  app.get(VERSION_PATH, (_req, res) => {
+    res.setHeader('cache-control', 'no-store');
+    if (version) {
+      res.json({ id: version });
+    } else {
+      res.status(404).end();
+    }
   });
 
   app.use((req, res, next) => {
