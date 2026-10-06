@@ -3,6 +3,5 @@ packages:
   - packages/integrations/*
   - example
   - demo
-  - templates/*
 
 saveExact: true
