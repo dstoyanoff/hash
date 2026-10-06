@@ -317,6 +317,28 @@ describe('weather', () => {
     );
   });
 
+  test('maps UV, cloud cover, feels-like, pressure and the units of the forecast', () => {
+    expect(
+      map(
+        hass('weather.home', 'sunny', {
+          uv_index: 2.9,
+          cloud_coverage: 64,
+          apparent_temperature: 18.5,
+          pressure: 1013,
+          pressure_unit: 'hPa',
+          precipitation_unit: 'mm',
+        }),
+      ),
+    ).toMatchObject({
+      uvIndex: 2.9,
+      cloudCoverage: 64,
+      apparentTemperature: 18.5,
+      pressure: 1013,
+      pressureUnit: 'hPa',
+      precipitationUnit: 'mm',
+    });
+  });
+
   test('lists the forecasts the weather source supports', () => {
     expect(map(hass('weather.home', 'sunny', { supported_features: 1 | 2 }))).toMatchObject({
       forecasts: ['daily', 'hourly'],

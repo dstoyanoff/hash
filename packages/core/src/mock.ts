@@ -148,6 +148,12 @@ export function mockWeather(init: Init<WeatherEntity> = {}): EntityInput {
     windSpeed: 14,
     windBearing: 225,
     windUnit: 'km/h',
+    uvIndex: 3,
+    cloudCoverage: 40,
+    apparentTemperature: 18,
+    pressure: 1015,
+    pressureUnit: 'hPa',
+    precipitationUnit: 'mm',
     forecasts: ['daily', 'hourly'],
     ...init,
   };

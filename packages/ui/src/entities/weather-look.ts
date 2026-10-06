@@ -78,3 +78,20 @@ const COMPASS = [
 export function compass(degrees: number): string {
   return COMPASS[Math.round((((degrees % 360) + 360) % 360) / 22.5) % 16]!;
 }
+
+/** How strong a UV index is, in words. */
+export function uvLevel(index: number): string {
+  if (index < 3) {
+    return 'low';
+  }
+
+  if (index < 6) {
+    return 'moderate';
+  }
+
+  if (index < 8) {
+    return 'high';
+  }
+
+  return index < 11 ? 'very high' : 'extreme';
+}

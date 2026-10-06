@@ -16,6 +16,12 @@ export function mapWeather(entity: HassEntity): EntityInput {
   const windSpeed = num(a.wind_speed);
   const windBearing = bearing(a.wind_bearing);
   const windUnit = str(a.wind_speed_unit);
+  const uvIndex = num(a.uv_index);
+  const cloudCoverage = num(a.cloud_coverage);
+  const apparentTemperature = num(a.apparent_temperature);
+  const pressure = num(a.pressure);
+  const pressureUnit = str(a.pressure_unit);
+  const precipitationUnit = str(a.precipitation_unit);
   const forecasts = forecastsOf(num(a.supported_features));
   return {
     kind: 'weather',
@@ -27,6 +33,12 @@ export function mapWeather(entity: HassEntity): EntityInput {
     ...(windSpeed !== undefined ? { windSpeed } : {}),
     ...(windBearing !== undefined ? { windBearing } : {}),
     ...(windUnit ? { windUnit } : {}),
+    ...(uvIndex !== undefined ? { uvIndex } : {}),
+    ...(cloudCoverage !== undefined ? { cloudCoverage } : {}),
+    ...(apparentTemperature !== undefined ? { apparentTemperature } : {}),
+    ...(pressure !== undefined ? { pressure } : {}),
+    ...(pressureUnit ? { pressureUnit } : {}),
+    ...(precipitationUnit ? { precipitationUnit } : {}),
     ...(forecasts.length > 0 ? { forecasts } : {}),
   };
 }

@@ -50,6 +50,24 @@ export interface WeatherEntity extends EntityBase<'weather'> {
   /** `km/h`, `mph`, `m/s`, ... */
   windUnit?: string;
 
+  /** UV index: 0 to 11 and more. */
+  uvIndex?: number;
+
+  /** Percent of the sky covered by cloud. */
+  cloudCoverage?: number;
+
+  /** What it feels like, in `unit`: the temperature with the wind and humidity counted in. */
+  apparentTemperature?: number;
+
+  /** Air pressure, in `pressureUnit`. */
+  pressure?: number;
+
+  /** `hPa`, `inHg`, ... */
+  pressureUnit?: string;
+
+  /** `mm` or `in`: the unit of the rain a forecast gives. */
+  precipitationUnit?: string;
+
   /** The forecasts the weather source can give, if any. Ask for one with `Client.forecast`. */
   forecasts?: ForecastType[];
 }
@@ -73,7 +91,7 @@ export interface ForecastPoint {
   /** Percent chance of rain or snow. */
   precipitationProbability?: number;
 
-  /** Expected rain or snow, in mm. */
+  /** Expected rain or snow, in the result's `precipitationUnit`. */
   precipitation?: number;
 
   /** In the result's `windUnit`. */
@@ -81,6 +99,24 @@ export interface ForecastPoint {
 
   /** Where the wind comes from, in degrees: 0 is north, 90 east. */
   windBearing?: number;
+
+  /** The strongest gusts, in the result's `windUnit`. */
+  windGustSpeed?: number;
+
+  /** Percent. */
+  humidity?: number;
+
+  /** Percent of the sky covered by cloud. */
+  cloudCoverage?: number;
+
+  /** UV index. */
+  uvIndex?: number;
+
+  /** What it feels like, in the result's `unit`. */
+  apparentTemperature?: number;
+
+  /** Air pressure, in the result's `pressureUnit`. */
+  pressure?: number;
 
   /** For `twice_daily`: whether this step is the day (true) or the night. */
   daytime?: boolean;
@@ -97,6 +133,12 @@ export interface ForecastResult {
 
   /** The unit of `windSpeed`: `km/h`, `mph`, ... */
   windUnit?: string;
+
+  /** The unit of `precipitation`: `mm` or `in`. */
+  precipitationUnit?: string;
+
+  /** The unit of `pressure`: `hPa`, `inHg`, ... */
+  pressureUnit?: string;
 }
 
 export type WeatherCommands = Record<string, never>;

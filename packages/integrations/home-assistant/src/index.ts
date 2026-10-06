@@ -226,6 +226,8 @@ export class HomeAssistantIntegration extends BaseIntegration {
       points: toForecastPoints(answer.response?.[entityId]?.forecast),
       ...(entity.unit ? { unit: entity.unit } : {}),
       ...(entity.windUnit ? { windUnit: entity.windUnit } : {}),
+      ...(entity.precipitationUnit ? { precipitationUnit: entity.precipitationUnit } : {}),
+      ...(entity.pressureUnit ? { pressureUnit: entity.pressureUnit } : {}),
     };
   }
 

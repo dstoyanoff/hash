@@ -43,6 +43,38 @@ describe('toForecastPoints', () => {
     ]);
   });
 
+  test('maps humidity, cloud cover, UV, feels-like, pressure and gusts', () => {
+    expect(
+      toForecastPoints([
+        {
+          datetime: '2026-10-06T08:00:00+00:00',
+          condition: 'partlycloudy',
+          temperature: 19.1,
+          humidity: 30,
+          cloud_coverage: 64.1,
+          uv_index: 2.9,
+          apparent_temperature: 18,
+          pressure: 1013.2,
+          wind_gust_speed: 12.4,
+          precipitation: 0,
+        },
+      ]),
+    ).toEqual([
+      {
+        timestamp: '2026-10-06T08:00:00.000Z',
+        condition: 'partlycloudy',
+        temperature: 19.1,
+        humidity: 30,
+        cloudCoverage: 64.1,
+        uvIndex: 2.9,
+        apparentTemperature: 18,
+        pressure: 1013.2,
+        windGustSpeed: 12.4,
+        precipitation: 0,
+      },
+    ]);
+  });
+
   test('maps where the wind comes from, as degrees or a compass name', () => {
     expect(
       toForecastPoints([

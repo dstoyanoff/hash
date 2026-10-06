@@ -318,10 +318,30 @@ describe('weather', () => {
     expect(await screen.findByText('10 days')).toBeTruthy();
     expect(screen.getByText('Today')).toBeTruthy();
     expect(screen.getByText('Tomorrow')).toBeTruthy();
-    expect(screen.getByText('Rain · 70% humidity')).toBeTruthy();
+    // The sky, the humidity and the UV, which the mock gives as 3.
+    expect(screen.getByText('Rain · 70% humidity · UV 3 (moderate)')).toBeTruthy();
     // Wind now, and how it blows through the day: 225 degrees is a wind from the south-west.
     expect(screen.getByText(/Wind 14 km\/h from SW/)).toBeTruthy();
-    expect(screen.getByText(/wind in km\/h/)).toBeTruthy();
+  });
+
+  test('expanded, it adds the current readings and a card for each hour', async () => {
+    renderWithMock(<TopBar title="Home" weather="ha:sky" />, {
+      sky: mockWeather({ name: 'Home weather', condition: 'sunny', temperature: 12 }),
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Home weather: forecast' }));
+    await screen.findByText(/^Next 24 hours/);
+    // Narrow, those readings are not shown...
+    expect(screen.queryByText('Feels like')).toBeNull();
+    expect(screen.queryByText('Pressure')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
+    expect(await screen.findByText('Feels like')).toBeTruthy();
+    expect(screen.getByText('Pressure')).toBeTruthy();
+    expect(screen.getByText('Cloud cover')).toBeTruthy();
+    expect(screen.getByText('1015 hPa')).toBeTruthy();
+    // ...and each of the 24 hours is a card with its wind and humidity.
+    expect((await screen.findAllByText(/^UV \d/)).length).toBeGreaterThan(0);
   });
 
   test('a weather source with no forecasts stays a plain pill', () => {

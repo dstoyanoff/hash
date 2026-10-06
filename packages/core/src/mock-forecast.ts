@@ -34,6 +34,18 @@ const RAIN: Partial<Record<WeatherCondition, number>> = {
   'snowy-rainy': 80,
 };
 
+/** How much of the sky is cloud under each condition, percent. */
+const CLOUD: Partial<Record<WeatherCondition, number>> = {
+  sunny: 4,
+  'clear-night': 4,
+  partlycloudy: 50,
+  cloudy: 90,
+  fog: 100,
+  rainy: 95,
+  pouring: 100,
+  'lightning-rainy': 100,
+};
+
 const STEPS: Record<ForecastType, number> = { daily: 10, hourly: 48, twice_daily: 14 };
 
 const round = (value: number) => Math.round(value * 10) / 10;
@@ -116,10 +128,35 @@ export function mockForecast(
     }
   }
 
+  // What else a weather source gives for a step, made up from the step itself: it is more humid when
+  // cold and cloudy, the sun peaks at noon (or at its day's best, for a whole day) and is dimmed by cloud,
+  // and gusts and the feels-like follow the wind.
+  const enrich = (point: ForecastPoint): ForecastPoint => {
+    const cloud = CLOUD[point.condition] ?? 50;
+    const temperature = point.temperature ?? base;
+    const hour = new Date(point.timestamp).getHours();
+    const sun = query.type === 'daily' ? 1 : Math.max(0, Math.sin(((hour - 6) / 12) * Math.PI));
+    const rain = RAIN[point.condition] ?? 0;
+    return {
+      ...point,
+      humidity: Math.min(100, Math.max(20, Math.round(85 - (temperature - 5) * 2 + cloud * 0.1))),
+      cloudCoverage: cloud,
+      uvIndex: point.daytime === false ? 0 : round(sun * 8 * (1 - cloud / 140)),
+      apparentTemperature: round(temperature - 1 - (point.windSpeed ?? 0) * 0.05),
+      pressure: Math.round(1015 - rain * 0.12 + Math.sin(hour / 4)),
+      ...(point.windSpeed !== undefined ? { windGustSpeed: round(point.windSpeed * 1.6) } : {}),
+      ...(rain > 50 && point.precipitation === undefined
+        ? { precipitation: round(rain / 70) }
+        : {}),
+    };
+  };
+
   return {
     type: query.type,
-    points,
+    points: points.map(enrich),
     ...(entity.unit ? { unit: entity.unit } : {}),
+    ...(entity.precipitationUnit ? { precipitationUnit: entity.precipitationUnit } : {}),
+    ...(entity.pressureUnit ? { pressureUnit: entity.pressureUnit } : {}),
     ...(entity.windUnit ? { windUnit: entity.windUnit } : {}),
   };
 }

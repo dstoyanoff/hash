@@ -1,22 +1,26 @@
 /** @jsxImportSource @emotion/react */
-import type { EntityRef, ForecastPoint } from '@hashsome/core';
+import type { EntityRef, ForecastPoint, ForecastResult, WeatherEntity } from '@hashsome/core';
 import { Box, Flex, Typography } from 'e-prim';
+import type { ReactNode } from 'react';
+import type { IconName } from '../icon-data.ts';
 import { useEntityHandle } from '../hooks.ts';
 import { Icon } from '../icon.tsx';
 import { useDetail } from '../layout/detail-provider.tsx';
 import { SeriesChart } from '../layout/series-chart.tsx';
 import { useWeatherForecast } from '../use-weather-forecast.ts';
 import { WeatherIcon } from './weather-icon.tsx';
-import { compass, CONDITION_LABEL } from './weather-look.ts';
+import { compass, CONDITION_LABEL, uvLevel } from './weather-look.ts';
 
-/** How many hours the chart covers. */
+/** How many hours the chart and the hourly cards cover. */
 const HOURS = 24;
 
-/** Hours between the labelled points under the chart: more of them in the wide, expanded drawer. */
-const EVERY = { collapsed: 4, expanded: 2 };
+/** Hours between the labelled points under the chart in the narrow drawer. */
+const EVERY = 4;
 
 const degrees = (value: number | undefined) =>
   value === undefined ? '–' : `${Math.round(value)}°`;
+
+const tenths = (value: number) => Math.round(value * 10) / 10;
 
 const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 
@@ -29,6 +33,61 @@ function dayName(iso: string, now: Date): string {
   const tomorrow = new Date(now);
   tomorrow.setDate(now.getDate() + 1);
   return sameDay(date, tomorrow) ? 'Tomorrow' : date.toLocaleDateString([], { weekday: 'long' });
+}
+
+const hourName = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: 'numeric' });
+
+/** `15 km/h from WNW`, with what there is of it. */
+function windText(speed: number, bearing: number | undefined, unit: string | undefined): string {
+  return `${Math.round(speed)}${unit ? ` ${unit}` : ''}${bearing !== undefined ? ` from ${compass(bearing)}` : ''}`;
+}
+
+/** `60% · 0.4 mm`, for the rain a step has: a chance, an amount, or both. Nothing for a dry step. */
+function rainText(point: ForecastPoint, unit: string | undefined): string | undefined {
+  const parts = [
+    ...(point.precipitationProbability ? [`${Math.round(point.precipitationProbability)}%`] : []),
+    ...(point.precipitation ? [`${tenths(point.precipitation)} ${unit ?? 'mm'}`] : []),
+  ];
+
+  return parts.length > 0 ? parts.join(' · ') : undefined;
+}
+
+/** Everything a step knows, a line each, for the chart's hover: the sky, the wind, the rain, the
+ * air, the sun and the pressure. What the source did not give is left out. */
+function describeStep(point: ForecastPoint, result: ForecastResult | undefined): string[] {
+  const rain = rainText(point, result?.precipitationUnit);
+  const air = [
+    ...(point.humidity !== undefined ? [`Humidity ${Math.round(point.humidity)}%`] : []),
+    ...(point.cloudCoverage !== undefined
+      ? [`Cloud cover ${Math.round(point.cloudCoverage)}%`]
+      : []),
+  ];
+
+  const sun = [
+    ...(point.uvIndex !== undefined
+      ? [`UV ${tenths(point.uvIndex)} (${uvLevel(point.uvIndex)})`]
+      : []),
+    ...(point.apparentTemperature !== undefined
+      ? [`Feels like ${degrees(point.apparentTemperature)}`]
+      : []),
+  ];
+
+  return [
+    CONDITION_LABEL[point.condition],
+    ...(point.windSpeed !== undefined
+      ? [
+          `Wind ${windText(point.windSpeed, point.windBearing, result?.windUnit)}${point.windGustSpeed !== undefined ? `, gusts ${Math.round(point.windGustSpeed)}` : ''}`,
+        ]
+      : []),
+    ...(rain ? [`Rain ${rain}`] : []),
+    ...(air.length > 0 ? [air.join(' · ')] : []),
+    ...(sun.length > 0 ? [sun.join(' · ')] : []),
+    ...(point.pressure !== undefined
+      ? [
+          `Pressure ${Math.round(point.pressure)}${result?.pressureUnit ? ` ${result.pressureUnit}` : ''}`,
+        ]
+      : []),
+  ];
 }
 
 function ConditionIcon({
@@ -54,8 +113,66 @@ function WindArrow({ bearing, size }: { bearing: number; size: number }) {
   );
 }
 
+/** One small reading with an icon in front of it. */
+function Metric({ icon, children }: { icon: ReactNode | IconName; children: ReactNode }) {
+  return (
+    <Flex align="center" gap={1} color="textMuted">
+      {typeof icon === 'string' ? <Icon name={icon as IconName} size={12} /> : icon}
+      <Typography as="span" variant="secondary" color="textMuted" noWrap>
+        {children}
+      </Typography>
+    </Flex>
+  );
+}
+
+/** The wind as a metric: an arrow the way it blows, and its speed. */
+function WindMetric({ point, unit }: { point: ForecastPoint; unit?: string | undefined }) {
+  return point.windSpeed === undefined ? null : (
+    <Metric
+      icon={
+        point.windBearing !== undefined ? (
+          <WindArrow bearing={point.windBearing} size={12} />
+        ) : (
+          'lu:wind'
+        )
+      }
+    >
+      {Math.round(point.windSpeed)}
+      {unit ? ` ${unit}` : ''}
+    </Metric>
+  );
+}
+
+/** A tile with a label and a value, for the current readings of the expanded drawer. */
+function Stat({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Flex direction="column" gap={0.5} background="surfaceRaised" radius="card" px={3} py={2.5}>
+      <Typography as="span" variant="secondary" color="textMuted">
+        {label}
+      </Typography>
+      <Typography as="span" variant="bodyStrong">
+        {children}
+      </Typography>
+    </Flex>
+  );
+}
+
+/** The readings the weather has now, from the entity and, for what it lacks, the hour that is
+ * under way (a source may give UV or cloud cover only in its forecast). */
+function currentReadings(weather: WeatherEntity | undefined, soon: ForecastPoint | undefined) {
+  return {
+    uv: weather?.uvIndex ?? soon?.uvIndex,
+    cloud: weather?.cloudCoverage ?? soon?.cloudCoverage,
+    feels: weather?.apparentTemperature ?? soon?.apparentTemperature,
+    pressure: weather?.pressure ?? soon?.pressure,
+    humidity: weather?.humidity ?? soon?.humidity,
+  };
+}
+
 /** A weather entity's forecast, for its drawer: the weather now, the next day hour by hour, and the
- * days ahead with how cold and warm each gets. A source with no forecast shows only the weather now. */
+ * days ahead with how cold and warm each gets. Narrow, it is the essentials with the detail in the
+ * chart's hover; expanded, there are cards for each hour and more readings throughout. A source
+ * with no forecast shows only the weather now. */
 export function WeatherForecast({ entity }: { entity: EntityRef }) {
   const handle = useEntityHandle('weather', entity);
   const weather = handle.entity;
@@ -73,9 +190,9 @@ export function WeatherForecast({ entity }: { entity: EntityRef }) {
   const expanded = detail?.expanded ?? false;
   const now = new Date();
   const hours = (hourly.result?.points ?? []).slice(0, HOURS);
-  const along = hours.filter(
-    (_, index) => index % EVERY[expanded ? 'expanded' : 'collapsed'] === 0,
-  );
+  const along = hours.filter((_, index) => index % EVERY === 0);
+  const reading = currentReadings(weather, hours[0]);
+  const windUnit = hourly.result?.windUnit ?? weather?.windUnit;
 
   const days = daily.result?.points ?? [];
   const lows = days.flatMap((day) => (day.low !== undefined ? [day.low] : []));
@@ -87,14 +204,15 @@ export function WeatherForecast({ entity }: { entity: EntityRef }) {
   return (
     <Flex direction="column" gap={5}>
       <Flex align="center" gap={3}>
-        <ConditionIcon condition={weather?.condition ?? 'unknown'} size={40} />
+        <ConditionIcon condition={weather?.condition ?? 'unknown'} size={expanded ? 56 : 40} />
         <Flex direction="column">
           <Typography as="span" variant="heading">
             {degrees(weather?.temperature)}
           </Typography>
           <Typography as="span" variant="secondary" color="textMuted">
             {CONDITION_LABEL[weather?.condition ?? 'unknown']}
-            {weather?.humidity !== undefined ? ` · ${Math.round(weather.humidity)}% humidity` : ''}
+            {reading.humidity !== undefined ? ` · ${Math.round(reading.humidity)}% humidity` : ''}
+            {reading.uv !== undefined ? ` · UV ${tenths(reading.uv)} (${uvLevel(reading.uv)})` : ''}
           </Typography>
           {weather?.windSpeed !== undefined ? (
             <Flex align="center" gap={1} color="textMuted">
@@ -102,25 +220,55 @@ export function WeatherForecast({ entity }: { entity: EntityRef }) {
                 <WindArrow bearing={weather.windBearing} size={12} />
               ) : null}
               <Typography as="span" variant="secondary" color="textMuted">
-                Wind {Math.round(weather.windSpeed)}
-                {weather.windUnit ? ` ${weather.windUnit}` : ''}
-                {weather.windBearing !== undefined ? ` from ${compass(weather.windBearing)}` : ''}
+                Wind {windText(weather.windSpeed, weather.windBearing, weather.windUnit)}
               </Typography>
             </Flex>
           ) : null}
         </Flex>
       </Flex>
 
+      {expanded ? (
+        <Box
+          css={{
+            display: 'grid',
+            gap: 12,
+            gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+          }}
+        >
+          {reading.feels !== undefined ? (
+            <Stat label="Feels like">{degrees(reading.feels)}</Stat>
+          ) : null}
+          {reading.humidity !== undefined ? (
+            <Stat label="Humidity">{Math.round(reading.humidity)}%</Stat>
+          ) : null}
+          {weather?.windSpeed !== undefined ? (
+            <Stat label="Wind">
+              {windText(weather.windSpeed, weather.windBearing, weather.windUnit)}
+            </Stat>
+          ) : null}
+          {reading.uv !== undefined ? (
+            <Stat label="UV index">
+              {tenths(reading.uv)} · {uvLevel(reading.uv)}
+            </Stat>
+          ) : null}
+          {reading.cloud !== undefined ? (
+            <Stat label="Cloud cover">{Math.round(reading.cloud)}%</Stat>
+          ) : null}
+          {reading.pressure !== undefined ? (
+            <Stat label="Pressure">
+              {Math.round(reading.pressure)}
+              {weather?.pressureUnit ? ` ${weather.pressureUnit}` : ''}
+            </Stat>
+          ) : null}
+        </Box>
+      ) : null}
+
       {hours.length > 0 ? (
         <Flex direction="column" gap={1}>
           <Typography as="h3" variant="label" color="textMuted" m={0}>
             Next 24 hours
-            {hourly.result?.windUnit && along.some((hour) => hour.windSpeed !== undefined)
-              ? ` · wind in ${hourly.result.windUnit}`
-              : ''}
           </Typography>
-          {/* The temperature as a curve, and under it a few hours along it with their sky and rain
-              chance: a day's worth in a strip about as tall as a line of text, not a row of 24 cards. */}
+          {/* The temperature as a curve; hover it for everything about that hour. */}
           <SeriesChart
             samples={hours.flatMap((hour) =>
               hour.temperature !== undefined
@@ -128,14 +276,7 @@ export function WeatherForecast({ entity }: { entity: EntityRef }) {
                     {
                       timestamp: hour.timestamp,
                       value: hour.temperature,
-                      notes: [
-                        CONDITION_LABEL[hour.condition],
-                        ...(hour.windSpeed !== undefined
-                          ? [
-                              `Wind ${Math.round(hour.windSpeed)}${hourly.result?.windUnit ? ` ${hourly.result.windUnit}` : ''}${hour.windBearing !== undefined ? ` from ${compass(hour.windBearing)}` : ''}`,
-                            ]
-                          : []),
-                      ],
+                      notes: describeStep(hour, hourly.result),
                     },
                   ]
                 : [],
@@ -146,41 +287,72 @@ export function WeatherForecast({ entity }: { entity: EntityRef }) {
             fitDomain
             height={expanded ? 180 : 88}
           />
-          <Flex justify="space-between" mt={1}>
-            {along.map((hour) => (
-              <Flex
-                key={hour.timestamp}
-                direction="column"
-                align="center"
-                gap={1}
-                grow={1}
-                css={{ flexBasis: 0 }}
-              >
-                <Typography as="span" variant="secondary" color="textMuted">
-                  {new Date(hour.timestamp).toLocaleTimeString([], { hour: 'numeric' })}
-                </Typography>
-                <ConditionIcon condition={hour.condition} size={18} />
-                <Typography as="span" variant="label">
-                  {degrees(hour.temperature)}
-                </Typography>
-                <Typography as="span" variant="secondary" color="textMuted">
-                  {hour.precipitationProbability
-                    ? `${Math.round(hour.precipitationProbability)}%`
-                    : '\u00a0'}
-                </Typography>
-                {hour.windSpeed !== undefined ? (
-                  <Flex align="center" gap={0.5} color="textMuted">
-                    {hour.windBearing !== undefined ? (
-                      <WindArrow bearing={hour.windBearing} size={11} />
-                    ) : null}
+          {expanded ? (
+            <Box
+              mt={2}
+              css={{
+                display: 'grid',
+                gap: 10,
+                gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+              }}
+            >
+              {hours.map((hour) => {
+                const rain = rainText(hour, hourly.result?.precipitationUnit);
+                return (
+                  <Flex
+                    key={hour.timestamp}
+                    direction="column"
+                    align="center"
+                    gap={1.5}
+                    background="surfaceRaised"
+                    radius="card"
+                    px={2}
+                    py={3}
+                  >
                     <Typography as="span" variant="secondary" color="textMuted">
-                      {Math.round(hour.windSpeed)}
+                      {hourName(hour.timestamp)}
                     </Typography>
+                    <ConditionIcon condition={hour.condition} size={26} />
+                    <Typography as="span" variant="bodyStrong">
+                      {degrees(hour.temperature)}
+                    </Typography>
+                    <Flex direction="column" align="center" gap={0.5}>
+                      {rain ? <Metric icon="lu:umbrella">{rain}</Metric> : null}
+                      <WindMetric point={hour} unit={windUnit} />
+                      {hour.humidity !== undefined ? (
+                        <Metric icon="lu:droplets">{Math.round(hour.humidity)}%</Metric>
+                      ) : null}
+                      {hour.uvIndex !== undefined && hour.uvIndex > 0 ? (
+                        <Metric icon="lu:sun">UV {tenths(hour.uvIndex)}</Metric>
+                      ) : null}
+                    </Flex>
                   </Flex>
-                ) : null}
-              </Flex>
-            ))}
-          </Flex>
+                );
+              })}
+            </Box>
+          ) : (
+            // A few hours along the curve, with their sky and temperature.
+            <Flex justify="space-between" mt={1}>
+              {along.map((hour) => (
+                <Flex
+                  key={hour.timestamp}
+                  direction="column"
+                  align="center"
+                  gap={1}
+                  grow={1}
+                  css={{ flexBasis: 0 }}
+                >
+                  <Typography as="span" variant="secondary" color="textMuted">
+                    {hourName(hour.timestamp)}
+                  </Typography>
+                  <ConditionIcon condition={hour.condition} size={18} />
+                  <Typography as="span" variant="label">
+                    {degrees(hour.temperature)}
+                  </Typography>
+                </Flex>
+              ))}
+            </Flex>
+          )}
         </Flex>
       ) : null}
 
@@ -190,51 +362,75 @@ export function WeatherForecast({ entity }: { entity: EntityRef }) {
             {days.length} days
           </Typography>
           <Flex as="ul" direction="column" gap={1} m={0} p={0} css={{ listStyle: 'none' }}>
-            {days.map((day) => (
-              <Flex as="li" key={day.timestamp} align="center" gap={3} py={1.5}>
-                <Typography as="span" variant="body" width={104} noWrap>
-                  {dayName(day.timestamp, now)}
-                </Typography>
-                <ConditionIcon condition={day.condition} size={20} />
-                <Typography as="span" variant="secondary" color="textMuted" width={40}>
-                  {day.precipitationProbability
-                    ? `${Math.round(day.precipitationProbability)}%`
-                    : ''}
-                </Typography>
-                <Typography
-                  as="span"
-                  variant="label"
-                  color="textMuted"
-                  width={36}
-                  css={{ textAlign: 'right' }}
-                >
-                  {degrees(day.low)}
-                </Typography>
-                <Box
-                  grow={1}
-                  height={6}
-                  radius="full"
-                  background="surfaceRaised"
-                  position="relative"
-                >
-                  {span > 0 && day.low !== undefined && day.temperature !== undefined ? (
-                    <Box
-                      position="absolute"
-                      height={6}
-                      radius="full"
-                      background="accent"
-                      css={{
-                        left: `${((day.low - coldest) / span) * 100}%`,
-                        width: `${((day.temperature - day.low) / span) * 100}%`,
-                      }}
-                    />
+            {days.map((day) => {
+              const rain = rainText(day, daily.result?.precipitationUnit);
+              return (
+                <Flex as="li" key={day.timestamp} align="center" gap={3} py={1.5}>
+                  <Typography as="span" variant="body" width={104} noWrap>
+                    {dayName(day.timestamp, now)}
+                  </Typography>
+                  <ConditionIcon condition={day.condition} size={20} />
+                  <Typography
+                    as="span"
+                    variant="secondary"
+                    color="textMuted"
+                    width={expanded ? 90 : 40}
+                    noWrap
+                  >
+                    {rain ?? ''}
+                  </Typography>
+                  <Typography
+                    as="span"
+                    variant="label"
+                    color="textMuted"
+                    width={36}
+                    css={{ textAlign: 'right' }}
+                  >
+                    {degrees(day.low)}
+                  </Typography>
+                  <Box
+                    grow={1}
+                    height={6}
+                    radius="full"
+                    background="surfaceRaised"
+                    position="relative"
+                  >
+                    {span > 0 && day.low !== undefined && day.temperature !== undefined ? (
+                      <Box
+                        position="absolute"
+                        height={6}
+                        radius="full"
+                        background="accent"
+                        css={{
+                          left: `${((day.low - coldest) / span) * 100}%`,
+                          width: `${((day.temperature - day.low) / span) * 100}%`,
+                        }}
+                      />
+                    ) : null}
+                  </Box>
+                  <Typography as="span" variant="label" width={36}>
+                    {degrees(day.temperature)}
+                  </Typography>
+                  {expanded ? (
+                    <Flex gap={4} css={{ flex: 'none' }}>
+                      <Box width={84}>
+                        <WindMetric point={day} unit={daily.result?.windUnit} />
+                      </Box>
+                      <Box width={64}>
+                        {day.humidity !== undefined ? (
+                          <Metric icon="lu:droplets">{Math.round(day.humidity)}%</Metric>
+                        ) : null}
+                      </Box>
+                      <Box width={72}>
+                        {day.uvIndex !== undefined ? (
+                          <Metric icon="lu:sun">UV {tenths(day.uvIndex)}</Metric>
+                        ) : null}
+                      </Box>
+                    </Flex>
                   ) : null}
-                </Box>
-                <Typography as="span" variant="label" width={36}>
-                  {degrees(day.temperature)}
-                </Typography>
-              </Flex>
-            ))}
+                </Flex>
+              );
+            })}
           </Flex>
         </Flex>
       ) : null}

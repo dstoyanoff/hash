@@ -26,6 +26,12 @@ export interface HaForecastRow {
   precipitation_probability?: number | null;
   wind_speed?: number | null;
   wind_bearing?: number | string | null;
+  wind_gust_speed?: number | null;
+  humidity?: number | null;
+  cloud_coverage?: number | null;
+  uv_index?: number | null;
+  apparent_temperature?: number | null;
+  pressure?: number | null;
   is_daytime?: boolean | null;
 }
 
@@ -51,6 +57,12 @@ export function toForecastPoints(rows: HaForecastRow[] | undefined): ForecastPoi
     const precipitation = number(row.precipitation);
     const wind = number(row.wind_speed);
     const windBearing = bearing(row.wind_bearing);
+    const gust = number(row.wind_gust_speed);
+    const humidity = number(row.humidity);
+    const clouds = number(row.cloud_coverage);
+    const uv = number(row.uv_index);
+    const feels = number(row.apparent_temperature);
+    const pressure = number(row.pressure);
     return [
       {
         timestamp: new Date(row.datetime).toISOString(),
@@ -61,6 +73,12 @@ export function toForecastPoints(rows: HaForecastRow[] | undefined): ForecastPoi
         ...(precipitation !== undefined ? { precipitation } : {}),
         ...(wind !== undefined ? { windSpeed: wind } : {}),
         ...(windBearing !== undefined ? { windBearing } : {}),
+        ...(gust !== undefined ? { windGustSpeed: gust } : {}),
+        ...(humidity !== undefined ? { humidity } : {}),
+        ...(clouds !== undefined ? { cloudCoverage: clouds } : {}),
+        ...(uv !== undefined ? { uvIndex: uv } : {}),
+        ...(feels !== undefined ? { apparentTemperature: feels } : {}),
+        ...(pressure !== undefined ? { pressure } : {}),
         ...(typeof row.is_daytime === 'boolean' ? { daytime: row.is_daytime } : {}),
       },
     ];

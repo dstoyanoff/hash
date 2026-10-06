@@ -59,6 +59,33 @@ describe('mockForecast', () => {
     );
   });
 
+  test('each step has what else a source gives: humidity, cloud, UV, feels-like, pressure and gusts', () => {
+    const { points, pressureUnit, precipitationUnit } = mockForecast(
+      weather,
+      { type: 'hourly' },
+      NOW,
+    );
+
+    expect(pressureUnit).toBe('hPa');
+    expect(precipitationUnit).toBe('mm');
+    for (const point of points) {
+      expect(point.humidity).toBeGreaterThanOrEqual(20);
+      expect(point.humidity).toBeLessThanOrEqual(100);
+      expect(point.cloudCoverage).toBeGreaterThan(0);
+      expect(point.uvIndex).toBeGreaterThanOrEqual(0);
+      expect(point.windGustSpeed).toBeGreaterThan(point.windSpeed!);
+      expect(point.pressure).toBeGreaterThan(900);
+      expect(point.apparentTemperature).toBeLessThan(point.temperature!);
+    }
+
+    // The sun is up at noon and down at midnight.
+    const at = (hour: number) =>
+      points.find((point) => new Date(point.timestamp).getHours() === hour)!;
+
+    expect(at(12).uvIndex).toBeGreaterThanOrEqual(at(0).uvIndex!);
+    expect(at(0).uvIndex).toBe(0);
+  });
+
   test('has nothing for what is not a weather entity', () => {
     expect(mockForecast(undefined, { type: 'daily' }, NOW).points).toEqual([]);
   });
