@@ -66,13 +66,21 @@ export function SeriesChart({
     <Box height={height ?? (expanded ? 220 : 48)} mt={3}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={samples} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
-          {expanded ? <CartesianGrid stroke={line} strokeDasharray="3 3" vertical={false} /> : null}
+          {expanded ? (
+            <CartesianGrid
+              stroke={line}
+              strokeOpacity={0.3}
+              strokeDasharray="3 3"
+              vertical={false}
+            />
+          ) : null}
           {expanded ? (
             <XAxis
               dataKey="timestamp"
               tickFormatter={(value: string) => formatTick(range, value)}
               tick={{ fontSize: tickSize, fill: textMuted }}
-              axisLine={false}
+              // The bottom of the chart is a solid line; the grid above it is dashed and lighter.
+              axisLine={{ stroke: line, strokeOpacity: 0.5 }}
               tickLine={false}
               minTickGap={24}
             />
