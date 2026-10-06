@@ -111,7 +111,7 @@ export function SeriesChart({
               tickFormatter={(value: string) => formatTick(range, value)}
               tick={{ fontSize: tickSize, fill: textMuted }}
               // The bottom of the chart is a solid line; the grid above it is dashed and lighter.
-              axisLine={{ stroke: line, strokeOpacity: 0.5 }}
+              axisLine={{ stroke: line, strokeOpacity: 0.5, strokeWidth: 0.5 }}
               tickLine={false}
               minTickGap={24}
             />
