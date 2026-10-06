@@ -73,6 +73,7 @@ export function toMediaPlayer(player: MaPlayer): EntityInput {
       search: true,
       seek: true,
       shuffle: true,
+      queue: true,
       transfer: false,
       group: false,
     },

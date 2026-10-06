@@ -215,12 +215,13 @@ The player as an upright card for a narrow column beside a dashboard (a quarter 
 
 The big player: the player centered at the top, and the library (or whatever `browser` is) below it. It is what the media cards' drawers show, at every width, and it is the widget a dashboard puts in a page of its own, around it whatever it likes (a surface that fills the space and scrolls, a heading, other cards beside it). It fills the height it is given, so the page that holds it decides how tall that is.
 
-| Prop      | Type                                       | Required |                                                                                                                                                            |
-| --------- | ------------------------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `entity`  | `EntityRef \| EntityHandle<'mediaPlayer'>` | yes      | The media player, as a ref like `ma:living_room`.                                                                                                          |
-| `browser` | `ReactNode`                                | no       | What goes below the player, usually the player's library: `<MediaBrowser entity="ma:living_room" layout="theater" />`. Left out, only the player is drawn. |
-| `name`    | `string`                                   | no       | Calls the player this instead of the name it reports.                                                                                                      |
-| `wide`    | `boolean`                                  | no       | Gives the library the whole width, for one laid out to use it (the theater layout). Defaults to whether the drawer is expanded.                            |
+| Prop      | Type                                       | Required |                                                                                                                                                                                                            |
+| --------- | ------------------------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `entity`  | `EntityRef \| EntityHandle<'mediaPlayer'>` | yes      | The media player, as a ref like `ma:living_room`.                                                                                                                                                          |
+| `browser` | `ReactNode`                                | no       | What goes below the player, usually the player's library: `<MediaBrowser entity="ma:living_room" layout="theater" />`. Left out, only the player is drawn.                                                 |
+| `queue`   | `ReactNode`                                | no       | What goes beside the player in a wide space, usually the player's queue: `<MediaQueue entity="ma:living_room" />`. Only used when `wide` and the player has a queue; the narrow layout has no room for it. |
+| `name`    | `string`                                   | no       | Calls the player this instead of the name it reports.                                                                                                                                                      |
+| `wide`    | `boolean`                                  | no       | Gives the library the whole width, for one laid out to use it (the theater layout). Defaults to whether the drawer is expanded.                                                                            |
 
 ### `MediaBrowser`
 
@@ -231,6 +232,14 @@ The library of a media player, in the app's own style: shelves, albums, playlist
 | `entity` | `EntityRef`                     | yes      | The media player whose own library to browse, as a ref like `ma:living_room`. The backend that owns the player is the media source, so a Music Assistant player lists Music Assistant's library and a Home Assistant player Home Assistant's.         |
 | `onPlay` | `(item: BrowseItem) => void`    | no       | Called after something is started, e.g. to close a drawer the browser sits in.                                                                                                                                                                        |
 | `layout` | `'list' \| 'theater' \| 'auto'` | no       | How items are laid out. `list` is rows, compact enough for a narrow drawer. `theater` is a single row of large cards that scrolls sideways, for a wide space. `auto` is `theater` inside an expanded drawer and `list` anywhere else. Default `list`. |
+
+### `MediaQueue`
+
+A player's queue: the tracks that have just played (dimmed), the one playing, and what comes next, as a list that scrolls. Tap a track to jump to it, the cross takes it out, and Clear takes out everything after the track that is playing, which carries on. What comes next can be put in another order by dragging a track by its handle (or with the arrow keys on the handle). Once the last track has played and the player has stopped, that track is shown as played, not as playing. It is made to sit beside the player in a wide space (see `MediaPlayerFull`'s `queue`).
+
+| Prop     | Type        | Required |                                                                                             |
+| -------- | ----------- | -------- | ------------------------------------------------------------------------------------------- |
+| `entity` | `EntityRef` | yes      | The media player, as a ref like `ma:living_room`. Shows nothing for a player with no queue. |
 
 ### `NavRail`
 
@@ -352,6 +361,14 @@ Connection between this browser and the runtime.
 
 ```ts
 function useConnectionStatus(): LinkStatus;
+```
+
+### `useReconnects`
+
+How many times the connection to the runtime has opened. A hook that asked for something while it was down (and got an error) depends on this, so it asks again when the connection is back: a read that failed because the page was ahead of the connection, or because it dropped, is not final.
+
+```ts
+function useReconnects(): number;
 ```
 
 ### `useIntegrationStatus`

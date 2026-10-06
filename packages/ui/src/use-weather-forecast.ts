@@ -1,5 +1,6 @@
 import type { Client, EntityRef, ForecastResult, ForecastType } from '@hashsome/core';
 import { useEffect, useState } from 'react';
+import { useReconnects } from './hooks.ts';
 import { useClient } from './provider.tsx';
 
 export interface WeatherForecastState {
@@ -39,6 +40,7 @@ export function useWeatherForecast(
   type: ForecastType,
 ): WeatherForecastState {
   const client = useClient();
+  const reconnects = useReconnects();
   const [state, setState] = useState<{ key: string; result: ForecastResult | undefined }>();
   const key = ref ? `${ref}|${type}` : undefined;
 
@@ -56,7 +58,9 @@ export function useWeatherForecast(
     return () => {
       current = false;
     };
-  }, [client, ref, type, key]);
+    // `reconnects` is not read inside: the connection coming back is the reason to ask again.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
+  }, [client, ref, type, key, reconnects]);
 
   const answered = state !== undefined && state.key === key;
   return { result: answered ? state.result : undefined, loading: key !== undefined && !answered };

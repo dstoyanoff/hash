@@ -72,6 +72,7 @@ export function mapMediaPlayer(
       search: false,
       seek: has(FEATURE.seek, false),
       shuffle: has(FEATURE.shuffle, false),
+      queue: false,
       transfer: false,
       group: false,
     },

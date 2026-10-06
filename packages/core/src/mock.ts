@@ -3,6 +3,7 @@ import { UnknownEntityError } from './entity.ts';
 import { mockForecast } from './mock-forecast.ts';
 import { mockHistory } from './mock-history.ts';
 import { mockLogbook } from './mock-logbook.ts';
+import { mockQueue } from './mock-queue.ts';
 import {
   isCommandOf,
   type ActionEntity,
@@ -19,6 +20,8 @@ import {
   type HistoryResult,
   type LogbookQuery,
   type LogbookResult,
+  type QueueQuery,
+  type QueueResult,
   type LightEntity,
   type MediaPlayerEntity,
   type PersonEntity,
@@ -57,6 +60,7 @@ export function mockMediaPlayer(
       search: false,
       seek: false,
       shuffle: false,
+      queue: false,
       transfer: false,
       group: false,
       ...capabilities,
@@ -236,6 +240,13 @@ export function mockLibrary(): MockLibrary {
         libraryFolder('pl-morning', 'Morning coffee', 'playlist', '24 tracks'),
         libraryFolder('pl-dinner', 'Dinner party', 'playlist', '41 tracks'),
         libraryFolder('pl-focus', 'Deep focus', 'playlist', '60 tracks'),
+        // A title far too long for any tile, to see how a layout copes with one.
+        libraryFolder(
+          'pl-bass',
+          'BASS BOOSTED SONGS 2026 🔊 REMIXES 🔊 🔊',
+          'playlist',
+          'A playlist with a very, very long name to show how titles are held to their room',
+        ),
       ],
     },
     albums: {
@@ -271,6 +282,13 @@ export function mockLibrary(): MockLibrary {
         libraryTrack('t-dreams', 'Dreams', 'Fleetwood Mac'),
         libraryTrack('t-kids', 'Kids', 'MGMT'),
         libraryTrack('t-blank-space', 'Blank Space', 'Taylor Swift'),
+      ],
+    },
+    'pl-bass': {
+      title: 'BASS BOOSTED SONGS 2026 🔊 REMIXES 🔊 🔊',
+      items: [
+        libraryTrack('t-electric', 'Electric Feel', 'MGMT'),
+        libraryTrack('t-borderline', 'Borderline', 'Tame Impala'),
       ],
     },
     'al-1989': {
@@ -506,6 +524,16 @@ export class MockIntegration extends BaseIntegration {
     }
 
     return Promise.resolve(mockHistory(entityId, entity, query));
+  }
+
+  /** A made-up queue for a player that has one (see `mockQueue`); empty for anything else. */
+  queue(entityId: string, query: QueueQuery): Promise<QueueResult> {
+    const entity = this.getEntity(entityId);
+    if (!entity) {
+      return Promise.reject(new UnknownEntityError(this.id, entityId));
+    }
+
+    return Promise.resolve(mockQueue(entity, this.#library, query));
   }
 
   /** Made-up activity for a light, switch or heater (see `mockLogbook`); empty for anything else. */

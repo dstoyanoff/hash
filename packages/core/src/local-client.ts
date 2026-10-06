@@ -11,6 +11,8 @@ import type {
   HistoryResult,
   LogbookQuery,
   LogbookResult,
+  QueueQuery,
+  QueueResult,
 } from './model/index.ts';
 
 /** In-process `Client` over integrations, with no runtime server. Used by the gallery and tests. */
@@ -166,6 +168,20 @@ export class LocalClient implements Client {
     }
 
     return source.logbook(id, query);
+  }
+
+  queue(ref: EntityRef, query: QueueQuery): Promise<QueueResult> {
+    const { integration, id } = parseEntityRef(ref);
+    const source = this.#integrations.get(integration);
+    if (!source) {
+      return Promise.reject(new Error(`Unknown integration "${integration}"`));
+    }
+
+    if (!source.queue) {
+      return Promise.reject(new Error(`"${integration}" has no queue`));
+    }
+
+    return source.queue(id, query);
   }
 
   callRaw(integration: string, request: Record<string, unknown>): Promise<unknown> {

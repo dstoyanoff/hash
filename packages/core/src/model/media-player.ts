@@ -40,6 +40,9 @@ export interface MediaPlayerEntity extends EntityBase<'mediaPlayer'> {
     /** Shuffle can be turned on and off (`setShuffle`). */
     shuffle: boolean;
 
+    /** Has a queue that can be read (`Integration.queue`) and changed (`playQueueItem`, `removeQueueItem`, `moveQueueItem`, `clearQueue`). */
+    queue: boolean;
+
     /** Playback can be moved to another player. */
     transfer: boolean;
 
@@ -64,6 +67,29 @@ export interface MediaPlayerCommands {
   setShuffle: { shuffle: boolean };
 
   /** Plays a `BrowseItem` from this player's own library: `item` is its `id`. `mode` defaults to
-   * `play`: start it now. `replace` clears the queue first, `next` and `add` queue it. */
-  playMedia: { item: string; mode?: 'play' | 'replace' | 'next' | 'add' };
+   * `play`: start it now and leave the queue after it. `replace` clears the queue first, `next` and
+   * `add` queue it. `context` is the album or playlist the `item` (a track) is in: a player that can
+   * queues the whole of it and starts at the track, instead of the track alone. `shuffle` plays what
+   * is queued in a random order, or in order when `false`; a player that cannot ignores it. */
+  playMedia: {
+    item: string;
+    mode?: 'play' | 'replace' | 'next' | 'add';
+    context?: string;
+    shuffle?: boolean;
+  };
+
+  /** Jumps to a track in the queue and plays it: `item` is a `QueueItem`'s `id`. */
+  playQueueItem: { item: string };
+
+  /** Takes a track out of the queue: `item` is a `QueueItem`'s `id`. */
+  removeQueueItem: { item: string };
+
+  /** Moves a track in the queue: `item` is a `QueueItem`'s `id`, `shift` is by how many places, later
+   * when positive and earlier when negative (never 0). */
+  moveQueueItem: { item: string; shift: number };
+
+  /** Empties the queue after the track playing, which stays in the queue and on the player and plays
+   * to its end. A track the player has already loaded cannot be taken out and may follow. With nothing
+   * playing, the whole queue goes. */
+  clearQueue: void;
 }

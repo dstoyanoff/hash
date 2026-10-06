@@ -1,5 +1,6 @@
 import type { Client, EntityRef, HistoryQuery, HistoryResult } from '@hashsome/core';
 import { useEffect, useState } from 'react';
+import { useReconnects } from './hooks.ts';
 import { useClient } from './provider.tsx';
 
 export interface EntityHistoryState {
@@ -39,6 +40,7 @@ export function useEntityHistory(
   query: HistoryQuery | undefined,
 ): EntityHistoryState {
   const client = useClient();
+  const reconnects = useReconnects();
   const range = query?.range;
   const bucket = query?.bucket;
   const [state, setState] = useState<{ key: string; result: HistoryResult | undefined }>();
@@ -58,7 +60,9 @@ export function useEntityHistory(
     return () => {
       current = false;
     };
-  }, [client, ref, range, bucket, key]);
+    // `reconnects` is not read inside: the connection coming back is the reason to ask again.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
+  }, [client, ref, range, bucket, key, reconnects]);
 
   const answered = state !== undefined && state.key === key;
   return { result: answered ? state.result : undefined, loading: key !== undefined && !answered };

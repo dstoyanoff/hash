@@ -5,9 +5,12 @@ import {
   type BrowseQuery,
   type BrowseResult,
   type EntityInput,
+  type QueueQuery,
+  type QueueResult,
 } from '@hashsome/core';
 import { parseUri, SHELVES, toBrowseItem, type MaItem } from './browse.ts';
 import { toMediaPlayer, type MaPlayer } from './mapper.ts';
+import { toQueueItems, type MaQueueItem } from './queue.ts';
 import { onPlayback, onQueue, positionOf, type Position } from './position.ts';
 
 /**
@@ -45,6 +48,10 @@ export interface MusicAssistantOptions {
   reconnectMinMs?: number;
   reconnectMaxMs?: number;
 }
+
+/** The most tracks Clear looks for after the one that plays, and how many it takes out at once. */
+const UPCOMING_LIMIT = 5000;
+const DELETE_BATCH = 50;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
@@ -120,12 +127,65 @@ function commandFor(
         throw new Error('"mode" must be play, replace, next or add');
       }
 
+      const { context, shuffle } = args;
+      if (context !== undefined && (typeof context !== 'string' || context === '')) {
+        throw new Error('"context" must be the id of an album or playlist');
+      }
+
+      if (shuffle !== undefined && typeof shuffle !== 'boolean') {
+        throw new Error('"shuffle" must be true or false');
+      }
+
       return {
         command: 'player_queues/play_media',
-        args: { media: args.item, option: mode },
+        args: {
+          // A track in an album or playlist: queue all of it and start at the track.
+          media: context ?? args.item,
+          option: mode,
+          ...(context !== undefined ? { start_item: args.item } : {}),
+          ...(shuffle !== undefined ? { shuffle } : {}),
+        },
         idKey: 'queue_id',
       };
     }
+
+    case 'playQueueItem':
+    case 'removeQueueItem': {
+      if (typeof args?.item !== 'string' || args.item === '') {
+        throw new Error(`${name} needs the id of a queue item`);
+      }
+
+      return name === 'playQueueItem'
+        ? { command: 'player_queues/play_index', args: { index: args.item }, idKey: 'queue_id' }
+        : {
+            command: 'player_queues/delete_item',
+            args: { item_id_or_index: args.item },
+            idKey: 'queue_id',
+          };
+    }
+
+    case 'moveQueueItem': {
+      if (typeof args?.item !== 'string' || args.item === '') {
+        throw new Error('moveQueueItem needs the id of a queue item');
+      }
+
+      // Music Assistant reads a shift of 0 as "play it next", which is not a move: ask for a real one.
+      if (!Number.isInteger(args.shift) || args.shift === 0) {
+        throw new Error('"shift" must be a whole number of places, not 0');
+      }
+
+      return {
+        command: 'player_queues/move_item',
+        args: { queue_item_id: args.item, pos_shift: args.shift },
+        idKey: 'queue_id',
+      };
+    }
+
+    case 'clearQueue':
+      // Not reached through `command()` while something plays: that takes out only what follows the
+      // playing track, one by one (`#clearUpcoming`). This is for a player with nothing playing,
+      // where the whole queue goes (and Music Assistant's own clear stops what is left).
+      return { command: 'player_queues/clear', idKey: 'queue_id' };
 
     default:
       throw new Error(`A media player has no "${name}" command`);
@@ -235,8 +295,88 @@ export class MusicAssistantIntegration extends BaseIntegration {
       throw new UnknownEntityError(this.id, entityId);
     }
 
+    if (name === 'clearQueue') {
+      await this.#clearUpcoming(entityId);
+      return;
+    }
+
     const { command, args: commandArgs, idKey = 'player_id' } = commandFor(name, args);
     await this.#send(command, { [idKey]: entityId, ...commandArgs });
+  }
+
+  /**
+   * Empties the queue after the track that plays, which stays where it is (in the queue and on the
+   * player) and plays to its end. Music Assistant has no command for that: its `clear` takes the
+   * playing track out of the queue too, and either stops it or, with `skip_stop`, leaves the player
+   * playing what it had buffered for a few seconds. So the tracks after it are taken out by id,
+   * last first, several at a time. A track Music Assistant has already loaded into the player's
+   * buffer cannot be taken out and stays, so one more may follow. With nothing playing there is
+   * nothing to keep, and the whole queue goes.
+   */
+  async #clearUpcoming(entityId: string): Promise<void> {
+    const queue = await this.#send('player_queues/get', { queue_id: entityId });
+    const playing = isRecord(queue) ? queue.current_index : undefined;
+    const active = isRecord(queue) && (queue.state === 'playing' || queue.state === 'paused');
+    if (!active || typeof playing !== 'number') {
+      await this.#send('player_queues/clear', { queue_id: entityId });
+      return;
+    }
+
+    const after = await this.#send('player_queues/items', {
+      queue_id: entityId,
+      offset: playing + 1,
+      limit: UPCOMING_LIMIT,
+    });
+
+    const ids = (Array.isArray(after) ? (after as MaQueueItem[]) : [])
+      .flatMap((item) => (typeof item.queue_item_id === 'string' ? [item.queue_item_id] : []))
+      .toReversed();
+
+    // By id, so they do not disturb one another, and one that cannot be taken out leaves the rest.
+    for (let from = 0; from < ids.length; from += DELETE_BATCH) {
+      await Promise.allSettled(
+        ids
+          .slice(from, from + DELETE_BATCH)
+          .map((id) =>
+            this.#send('player_queues/delete_item', { queue_id: entityId, item_id_or_index: id }),
+          ),
+      );
+    }
+  }
+
+  /**
+   * The player's queue: a window of `limit` tracks starting two before the one playing, with how many
+   * the whole queue has (it can be thousands, left over from earlier playback), so a panel shows
+   * what has just played and what is coming without pulling all of it.
+   */
+  async queue(entityId: string, query: QueueQuery): Promise<QueueResult> {
+    if (!this.getEntity(entityId)) {
+      throw new UnknownEntityError(this.id, entityId);
+    }
+
+    const queue = await this.#send('player_queues/get', { queue_id: entityId });
+    if (!isRecord(queue)) {
+      return { items: [], total: 0, offset: 0 };
+    }
+
+    const total = typeof queue.items === 'number' ? queue.items : 0;
+    const playing = typeof queue.current_index === 'number' ? queue.current_index : 0;
+    const offset = Math.max(0, playing - 2);
+    const raw = await this.#send('player_queues/items', {
+      queue_id: entityId,
+      limit: query.limit ?? 30,
+      offset,
+    });
+
+    const current = isRecord(queue.current_item) ? queue.current_item.queue_item_id : undefined;
+    return {
+      items: toQueueItems(
+        Array.isArray(raw) ? (raw as MaQueueItem[]) : [],
+        typeof current === 'string' ? current : undefined,
+      ),
+      total,
+      offset,
+    };
   }
 
   /** One level of the library, or a search across it, through Music Assistant's own API. */

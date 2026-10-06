@@ -1,11 +1,13 @@
 import type { BrowseItem, EntityRef } from '@hashsome/core';
 import { useCallback, useEffect, useState } from 'react';
+import { useReconnects } from './hooks.ts';
 import { useClient } from './provider.tsx';
 
 interface Level {
   /** The item that was opened to get here; `undefined` for the top level. */
   path?: string;
   title?: string;
+  item?: BrowseItem;
 }
 
 interface Answer {
@@ -18,6 +20,9 @@ interface Answer {
 export interface MediaBrowserState {
   /** What is listed now. */
   items: BrowseItem[];
+
+  /** Which list that is: it changes when another one is shown (another tab, an album opened, a search), so a view can tell the same list updating from a new one arriving. */
+  listKey: string;
 
   /** A name for the list: the opened folder's, or what was searched for. Absent on a tab. */
   title: string | undefined;
@@ -34,6 +39,9 @@ export interface MediaBrowserState {
 
   /** Goes to a shelf: leaves whatever was open inside one, and any search. */
   selectTab(id: string): void;
+
+  /** The album, playlist or artist that is open: what a "play all" would play, and what the tracks in the list belong to. Absent at the top, on a shelf and in search results. */
+  inside: BrowseItem | undefined;
 
   /** Opened a folder (or searching), so there is somewhere to go back to. */
   canGoBack: boolean;
@@ -61,6 +69,8 @@ const messageOf = (error: unknown) => (error instanceof Error ? error.message : 
  * the browser was. */
 export function useMediaBrowser(ref: EntityRef): MediaBrowserState {
   const client = useClient();
+  // A level that could not be read because the connection was not there is asked for again when it is.
+  const reconnects = useReconnects();
   const [trail, setTrail] = useState<Level[]>([{}]);
   const [text, setText] = useState('');
   const [tab, setTab] = useState<string | undefined>();
@@ -78,7 +88,9 @@ export function useMediaBrowser(ref: EntityRef): MediaBrowserState {
     return () => {
       current = false;
     };
-  }, [client, ref]);
+    // `reconnects` is not read inside: the connection coming back is the reason to ask again.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
+  }, [client, ref, reconnects]);
 
   const needle = text.trim();
   const searching = needle !== '';
@@ -115,10 +127,12 @@ export function useMediaBrowser(ref: EntityRef): MediaBrowserState {
       current = false;
       clearTimeout(timer);
     };
-  }, [client, ref, key, searching, needle, path]);
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
+  }, [client, ref, key, searching, needle, path, reconnects]);
 
   const open = useCallback(
-    (item: BrowseItem) => setTrail((levels) => [...levels, { path: item.id, title: item.title }]),
+    (item: BrowseItem) =>
+      setTrail((levels) => [...levels, { path: item.id, title: item.title, item }]),
     [],
   );
 
@@ -141,6 +155,7 @@ export function useMediaBrowser(ref: EntityRef): MediaBrowserState {
   const listing = !searching && atTop && !tabs ? top : result;
   return {
     items: listing?.items ?? [],
+    listKey: searching ? 'search' : `path:${path ?? 'top'}`,
     title: searching
       ? (result?.title ?? `Results for “${needle}”`)
       : atTop
@@ -151,6 +166,7 @@ export function useMediaBrowser(ref: EntityRef): MediaBrowserState {
     tabs,
     activeTab: searching ? undefined : selected,
     selectTab,
+    inside: searching || atTop ? undefined : here.item,
     canGoBack: searching || !atTop,
     searching,
     open,

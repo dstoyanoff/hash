@@ -17,6 +17,9 @@ export interface MediaPlayerFullProps {
   /** What goes below the player, usually the player's library: `<MediaBrowser entity="ma:living_room" layout="theater" />`. Left out, only the player is drawn. */
   browser?: ReactNode;
 
+  /** What goes beside the player in a wide space, usually the player's queue: `<MediaQueue entity="ma:living_room" />`. Only used when `wide` and the player has a queue; the narrow layout has no room for it. */
+  queue?: ReactNode;
+
   /** Calls the player this instead of the name it reports. */
   name?: string;
 
@@ -29,7 +32,7 @@ export interface MediaPlayerFullProps {
  * in a page of its own, around it whatever it likes (a surface that fills the space and scrolls, a
  * heading, other cards beside it). It fills the height it is given, so the page that holds it
  * decides how tall that is. */
-export function MediaPlayerFull({ entity, browser, wide, name }: MediaPlayerFullProps) {
+export function MediaPlayerFull({ entity, browser, queue, wide, name }: MediaPlayerFullProps) {
   const handle = useEntityHandle('mediaPlayer', entity);
   const { detail } = useDetail();
   const full = wide ?? detail?.expanded === true;
@@ -37,16 +40,38 @@ export function MediaPlayerFull({ entity, browser, wide, name }: MediaPlayerFull
     <Flex direction="column" gap={5} grow={1} minHeight={0}>
       {/* Full size, the player is larger and centered in whatever room the library leaves, with the
           library docked to the bottom. In the narrower drawer everything just stacks from the top. */}
-      <Flex align="center" justify="center" {...(full ? { grow: 1 } : {})} css={{ flexShrink: 0 }}>
-        <Box width="100%" maxWidth={full ? 560 : 420}>
-          <NowPlaying
-            handle={handle}
-            fallback={fallbackName(entity)}
-            {...(name !== undefined ? { name } : {})}
-            shuffle="title"
-            {...(full ? { size: FULL_SIZE } : {})}
-          />
-        </Box>
+      <Flex
+        align="stretch"
+        justify="center"
+        gap={6}
+        {...(full ? { grow: 1 } : {})}
+        css={{ flexShrink: 0 }}
+      >
+        <Flex align="center" justify="center" grow={1} minWidth={0}>
+          <Box width="100%" maxWidth={full ? 560 : 420}>
+            <NowPlaying
+              handle={handle}
+              fallback={fallbackName(entity)}
+              {...(name !== undefined ? { name } : {})}
+              shuffle="title"
+              {...(full ? { size: FULL_SIZE } : {})}
+            />
+          </Box>
+        </Flex>
+        {full && queue !== undefined && handle.entity?.capabilities.queue === true ? (
+          // Beside the player, the whole height of the room it has, with a quiet line between them. The
+          // queue is laid over that room rather than in it, so a long one scrolls inside it and never
+          // makes the room taller.
+          <Flex
+            position="relative"
+            width={400}
+            css={({ palette }) => ({ flex: 'none', borderLeft: `1px solid ${palette.border}` })}
+          >
+            <Flex direction="column" position="absolute" pl={5} css={{ inset: 0 }}>
+              {queue}
+            </Flex>
+          </Flex>
+        ) : null}
       </Flex>
       {browser !== undefined ? (
         <>

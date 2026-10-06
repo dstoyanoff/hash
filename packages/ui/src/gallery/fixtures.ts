@@ -9,6 +9,8 @@ import {
   mockSensor,
   mockWeather,
   MockIntegration,
+  type BrowseQuery,
+  type BrowseResult,
   type EntityInput,
 } from '@hashsome/core';
 
@@ -22,9 +24,19 @@ const power = (watts: string): EntityInput =>
 const energy = (kwh: string): EntityInput =>
   mockSensor({ name: 'Energy', value: kwh, unit: 'kWh', measurement: 'energy' });
 
+/** The gallery's backend: the mock, with one player whose shelves never finish loading, to show the
+ * loading state of the library. */
+class GalleryIntegration extends MockIntegration {
+  override browse(entityId: string, query: BrowseQuery): Promise<BrowseResult> {
+    return entityId === 'media_player.loading' && query.path !== undefined
+      ? new Promise(() => {})
+      : super.browse(entityId, query);
+  }
+}
+
 /** Mock entities covering every state the components handle. Refs are `ha:<id>`. */
 export function createGalleryIntegration() {
-  return new MockIntegration({
+  return new GalleryIntegration({
     library: mockLibrary(),
     entities: {
       'light.plain_on': mockLight({ name: 'Lamp', on: true }),
@@ -126,7 +138,11 @@ export function createGalleryIntegration() {
         duration: 231,
         positionUpdatedAt: new Date().toISOString(),
         shuffle: false,
-        capabilities: { browse: true, search: true, seek: true, shuffle: true },
+        capabilities: { browse: true, search: true, seek: true, shuffle: true, queue: true },
+      }),
+      'media_player.loading': mockMediaPlayer({
+        name: 'Slow library',
+        capabilities: { browse: true, search: true },
       }),
       'media_player.off': mockMediaPlayer({
         name: 'Kitchen Speaker',

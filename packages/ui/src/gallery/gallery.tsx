@@ -9,6 +9,7 @@ import { MediaBrowser } from '../entities/media-browser.tsx';
 import { MediaPlayerBar } from '../entities/media-player-bar.tsx';
 import { MediaPlayerColumn } from '../entities/media-player-column.tsx';
 import { MediaPlayerFull } from '../entities/media-player-full.tsx';
+import { MediaQueue } from '../entities/media-queue.tsx';
 import { WeatherForecast } from '../entities/weather-forecast.tsx';
 import { NavDock } from '../entities/nav-dock.tsx';
 import { NavRail } from '../entities/nav-rail.tsx';
@@ -791,8 +792,8 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
 
           <ComponentDoc
             title="Media Player Full"
-            components={['MediaPlayerFull']}
-            description="The big player: the player centered, and its library below it, so songs are picked right there instead of in a drawer. The media cards' drawers show it too. A dashboard puts it in a page of its own, around it whatever it likes."
+            components={['MediaPlayerFull', 'MediaQueue']}
+            description="The big player: the player centered with its queue beside it (`MediaQueue`: tap a track to jump to it, the cross takes it out, Clear empties it), and its library below, where every track can be played, played next or added to the queue, and an open album or playlist can be played, shuffled or added whole. The media cards' drawers show the player and library too. A dashboard puts it in a page of its own, around it whatever it likes."
           >
             {/* No fixed height: it fills whatever it is given, so here it is as tall as what it shows,
                 with no spare room under it. */}
@@ -800,6 +801,7 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
               <MediaPlayerFull
                 entity="ha:media_player.living_room"
                 wide
+                queue={<MediaQueue entity="ha:media_player.living_room" />}
                 browser={<MediaBrowser entity="ha:media_player.living_room" layout="theater" />}
               />
             </Flex>
@@ -821,13 +823,16 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
           <ComponentDoc
             title="Media Browser"
             components={['MediaBrowser']}
-            description="A player's own library in the app's style: tap a folder to open it, a track or station to play it, or the play button on an album, playlist or artist for all of it. The search box appears when the library can be searched. The `theater` layout (second demo) is one row of large cards that scrolls sideways, for a wide space; `list` is the compact default."
+            description="A player's own library in the app's style: tap a folder to open it, a track or station to play it, or the play button on an album, playlist or artist for all of it. The search box appears when the library can be searched. The `theater` layout (second demo) is one row of large cards that scrolls sideways, for a wide space; `list` is the compact default. While a shelf loads, placeholders take the room the cards will (third demo, a shelf that never arrives), so nothing moves."
           >
             <Flex direction="column" gap={6}>
               <Flex direction="column" maxHeight={420} overflow="auto">
                 <MediaBrowser entity="ha:media_player.living_room" />
               </Flex>
               <MediaBrowser entity="ha:media_player.living_room" layout="theater" />
+              {/* Changing tab shows placeholders in the room the cards will take, so the library does not
+                  change height while it loads. Here the shelf never arrives. */}
+              <MediaBrowser entity="ha:media_player.loading" layout="theater" />
             </Flex>
           </ComponentDoc>
 

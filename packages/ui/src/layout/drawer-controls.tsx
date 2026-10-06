@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import { Box, Flex, Typography } from 'e-prim';
 import { motion } from 'motion/react';
+import { MarqueeText } from './marquee-text.tsx';
 import { useEffect, useRef, type ElementType, type KeyboardEvent, type PointerEvent } from 'react';
 import type { IconName } from '../icon-data.ts';
 import { Icon } from '../icon.tsx';
@@ -220,6 +221,9 @@ export function PowerButton({ on, onToggle }: { on: boolean; onToggle: () => voi
   );
 }
 
+/** The height of every chip, whatever its label holds. */
+export const CHIP_HEIGHT = 28;
+
 /** A wrapping row of pill choices (modes, presets) with the selected one filled. With `tabs` it is
  * a tab list (the selected chip is the open tab) that never wraps: too many to fit scroll sideways. */
 export function ChipRow({
@@ -259,21 +263,21 @@ export function ChipRow({
             gap={1.5}
             radius="full"
             cursor="pointer"
-            py={1.5}
+            // A fixed height, not the text's: an emoji is drawn from another font with a taller line,
+            // which would make this one chip taller than the rest.
+            height={CHIP_HEIGHT}
             px={3}
             background={selected ? 'accent' : 'surface'}
             color={selected ? 'accentText' : 'text'}
-            css={{ flex: 'none', whiteSpace: 'nowrap' }}
+            css={{
+              flex: 'none',
+              whiteSpace: 'nowrap',
+              transition: 'background-color 160ms ease, color 160ms ease',
+            }}
           >
             {option.icon ? <Icon name={option.icon} size={14} /> : null}
-            <Typography
-              as="span"
-              variant="body"
-              noWrap
-              textOverflow="ellipsis"
-              css={{ maxWidth: 220 }}
-            >
-              {option.label}
+            <Typography as="span" variant="body" css={{ minWidth: 0, maxWidth: 220 }}>
+              <MarqueeText>{option.label}</MarqueeText>
             </Typography>
           </Flex>
         );

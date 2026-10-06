@@ -184,6 +184,72 @@ test('dragging around the ring moves the time under the title with it', () => {
   box.mockRestore();
 });
 
+describe('the ring stops at the start and the end instead of wrapping round the top', () => {
+  // A 168px ring centred on (84, 84), 120 seconds long: 12 o'clock is both the start and the end.
+  const AT = {
+    justAfterTop: { clientX: 100, clientY: 10, pointerId: 1 },
+    top: { clientX: 84, clientY: 8, pointerId: 1 },
+    justBeforeTop: { clientX: 60, clientY: 10, pointerId: 1 },
+  };
+
+  const setup = () => {
+    const box = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      top: 0,
+      right: 168,
+      bottom: 168,
+      width: 168,
+      height: 168,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+
+    const view = renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing(), library);
+    return { ...view, ring: screen.getByRole('slider', { name: 'Position' }), box };
+  };
+
+  test('dragging back past the start holds it at the start, not near the end', () => {
+    const { ha, ring, box } = setup();
+    fireEvent.pointerDown(ring, AT.justAfterTop);
+    expect(screen.getByText('0:04 / 2:00')).toBeTruthy();
+    fireEvent.pointerMove(ring, AT.top);
+    expect(screen.getByText('0:00 / 2:00')).toBeTruthy();
+    // Past the top the other way: used to be 1:54, nearly the end.
+    fireEvent.pointerMove(ring, AT.justBeforeTop);
+    expect(screen.getByText('0:00 / 2:00')).toBeTruthy();
+    fireEvent.pointerUp(ring, AT.justBeforeTop);
+    expect(ha.calls.at(-1)).toMatchObject({ command: 'seek', args: { position: 0 } });
+    box.mockRestore();
+  });
+
+  test('and it only moves again once the pointer is back round, so it stays under the pointer', () => {
+    const { ring, box } = setup();
+    fireEvent.pointerDown(ring, AT.justAfterTop);
+    fireEvent.pointerMove(ring, AT.justBeforeTop);
+    expect(screen.getByText('0:00 / 2:00')).toBeTruthy();
+    // Back to the top: still the start. Past it: it moves.
+    fireEvent.pointerMove(ring, AT.top);
+    expect(screen.getByText('0:00 / 2:00')).toBeTruthy();
+    fireEvent.pointerMove(ring, AT.justAfterTop);
+    expect(screen.getByText('0:04 / 2:00')).toBeTruthy();
+    box.mockRestore();
+  });
+
+  test('dragging on past the end holds it at the end, not back at the start', () => {
+    const { ha, ring, box } = setup();
+    fireEvent.pointerDown(ring, AT.justBeforeTop);
+    expect(screen.getByText('1:54 / 2:00')).toBeTruthy();
+    fireEvent.pointerMove(ring, AT.top);
+    expect(screen.getByText('2:00 / 2:00')).toBeTruthy();
+    fireEvent.pointerMove(ring, AT.justAfterTop);
+    expect(screen.getByText('2:00 / 2:00')).toBeTruthy();
+    fireEvent.pointerUp(ring, AT.justAfterTop);
+    expect(ha.calls.at(-1)).toMatchObject({ command: 'seek', args: { position: 120 } });
+    box.mockRestore();
+  });
+});
+
 test('the bar leaves the browse button out for browse={false} and for a player with no library', () => {
   const { unmount } = renderWithMock(
     <MediaPlayerBar entity="ha:room" browse={false} />,
@@ -613,13 +679,16 @@ function layoutOf(volume: HTMLElement) {
     body = body.parentElement as HTMLElement;
   }
 
+  // The top of the body is a row (the player, and the queue beside it when there is one) whose first
+  // child is the box that centers the player.
   const area = Array.from(body.children).find((child) => child.contains(volume)) as HTMLElement;
-  const player = area.firstElementChild as HTMLElement;
+  const centering = area.firstElementChild as HTMLElement;
+  const player = centering.firstElementChild as HTMLElement;
   return {
     direction: getComputedStyle(body).flexDirection,
     playerCentered:
-      getComputedStyle(area).justifyContent === 'center' &&
-      getComputedStyle(area).alignItems === 'center',
+      getComputedStyle(centering).justifyContent === 'center' &&
+      getComputedStyle(centering).alignItems === 'center',
     playerMaxWidth: getComputedStyle(player).maxWidth,
     libraryBelow: Boolean(area.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING),
   };
@@ -652,5 +721,66 @@ describe('the library’s layout follows the space it has', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Browse media' }));
     await screen.findAllByRole('button', { name: 'Play Dreams' });
     expect(getComputedStyle(rows()).overflowX).toBe('auto');
+  });
+});
+
+describe('the queue beside the player', () => {
+  const queue = <div>the queue</div>;
+
+  test('a wide player puts the queue beside it, not below it', () => {
+    renderWithMock(
+      <MediaPlayerFull entity="ha:room" wide queue={queue} />,
+      playing({ queue: true }),
+      library,
+    );
+
+    const beside = screen.getByText('the queue');
+    const volume = screen.getByRole('slider', { name: 'Volume level' });
+    // Both are in the same row at the top: the closest thing that holds both is a row.
+    let row = beside;
+    while (!row.contains(volume)) {
+      row = row.parentElement!;
+    }
+
+    expect(getComputedStyle(row).flexDirection).not.toBe('column');
+    // The queue's own column is as tall as the row, with a line on its left.
+    const column = beside.parentElement!.parentElement!;
+    expect(getComputedStyle(column).borderLeftWidth).toBe('1px');
+    expect(getComputedStyle(column).flexShrink).toBe('0');
+  });
+
+  test('a narrow one has no room for it', () => {
+    renderWithMock(
+      <MediaPlayerFull entity="ha:room" wide={false} queue={queue} />,
+      playing({ queue: true }),
+      library,
+    );
+
+    expect(screen.queryByText('the queue')).toBeNull();
+  });
+});
+
+describe('the queue in the expanded drawer of a media card', () => {
+  test('the vertical card’s expanded drawer shows the queue beside the player, when the player has one', async () => {
+    renderWithMock(<MediaPlayerColumn entity="ha:room" />, playing({ queue: true }), library);
+    fireEvent.click(screen.getByRole('button', { name: 'Open media browser' }));
+    // Collapsed, there is no room for it.
+    expect(screen.queryByText(/ tracks$/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
+    expect(await screen.findByText(/24 tracks/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Clear the queue' })).toBeTruthy();
+  });
+
+  test('the bar’s browse button opens the drawer expanded, with the queue too, and a player with no queue has no empty column', async () => {
+    renderWithMock(<MediaPlayerBar entity="ha:room" />, playing({ queue: true }), library);
+    fireEvent.click(screen.getByRole('button', { name: 'Browse media' }));
+    expect(await screen.findByText(/24 tracks/)).toBeTruthy();
+    cleanup();
+
+    renderWithMock(<MediaPlayerBar entity="ha:room" />, playing({ queue: false }), library);
+    fireEvent.click(screen.getByRole('button', { name: 'Browse media' }));
+    await screen.findAllByRole('button', { name: 'Play Dreams' });
+    expect(screen.queryByText(/ tracks$/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Clear the queue' })).toBeNull();
   });
 });

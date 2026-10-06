@@ -1,5 +1,5 @@
 import type { ConnectionStatus, Entity, EntityKind, EntityRef, LinkStatus } from '@hashsome/core';
-import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { toHandle, type CommandSender, type EntityHandle } from './entity-handle.ts';
 import { useClient } from './provider.tsx';
 
@@ -53,6 +53,26 @@ export function useConnectionStatus(): LinkStatus {
     () => client.link,
     () => 'closed' as const,
   );
+}
+
+/**
+ * How many times the connection to the runtime has opened. A hook that asked for something while it
+ * was down (and got an error) depends on this, so it asks again when the connection is back: a read
+ * that failed because the page was ahead of the connection, or because it dropped, is not final.
+ */
+export function useReconnects(): number {
+  const link = useConnectionStatus();
+  const [opened, setOpened] = useState(0);
+  const was = useRef(link);
+  useEffect(() => {
+    if (link === 'open' && was.current !== 'open') {
+      setOpened((count) => count + 1);
+    }
+
+    was.current = link;
+  }, [link]);
+
+  return opened;
 }
 
 /** Status of the runtime's connection to a backend (`ha`, `ma`, ...). */

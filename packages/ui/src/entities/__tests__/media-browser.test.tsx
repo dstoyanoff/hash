@@ -11,6 +11,13 @@ const rooms = {
   }),
 };
 
+const queueRoom = () => ({
+  room: mockMediaPlayer({
+    name: 'Room',
+    capabilities: { browse: true, search: true, queue: true },
+  }),
+});
+
 const render = (entities = rooms) =>
   renderWithMock(<MediaBrowser entity="ha:room" />, entities, { library: mockLibrary() });
 
@@ -52,26 +59,24 @@ test('opening something changes only what is below the tabs, and the selected ta
   expect(screen.getByRole('tab', { name: 'Albums' }).getAttribute('aria-selected')).toBe('true');
 });
 
-test('nothing is inserted between the tabs and the content when something is opened', async () => {
-  render();
+test('opening an album adds its actions to the row of tabs and inserts nothing, so nothing moves', async () => {
+  renderWithMock(<MediaBrowser entity="ha:room" />, queueRoom(), { library: mockLibrary() });
   fireEvent.click(await screen.findByRole('tab', { name: 'Albums' }));
   const list = async () => (await screen.findAllByRole('list')).at(-1) as HTMLElement;
-  const before = await list();
-  // What sits between the tab row and the list of items: nothing, before or after.
-  const between = (el: HTMLElement) => {
-    const tabs = screen.getByRole('tablist');
-    let count = 0;
-    for (let node = tabs.nextElementSibling; node && node !== el; node = node.nextElementSibling) {
-      count += 1;
-    }
+  // The one element between the search box and the list: the tabs, and the album's actions at their end.
+  const row = (el: HTMLElement) => el.previousElementSibling as HTMLElement;
+  const before = row(await list());
+  expect(before.contains(screen.getByRole('tablist'))).toBe(true);
+  expect(screen.queryByRole('button', { name: 'Play' })).toBeNull();
 
-    return count;
-  };
-
-  expect(between(before)).toBe(0);
   fireEvent.click(screen.getByRole('button', { name: 'Open Rumours' }));
   await screen.findByRole('button', { name: 'Play Go Your Own Way' });
-  expect(between(await list())).toBe(0);
+  const after = row(await list());
+  // The same row, now with the album's actions in it; no extra row came between.
+  expect(after).toBe(before);
+  expect(after.contains(screen.getByRole('button', { name: 'Play' }))).toBe(true);
+  expect(after.contains(screen.getByRole('button', { name: 'Shuffle' }))).toBe(true);
+  expect(after.contains(screen.getByRole('tablist'))).toBe(true);
 });
 
 test('picking another tab from inside a shelf leaves what was open', async () => {
@@ -214,11 +219,12 @@ describe('layouts', () => {
   });
 
   test.each(['list', 'theater'] as const)(
-    'a long title is cut with an ellipsis instead of running over the next item (%s)',
+    'a long title is held to its room and rolls (or ends in an ellipsis) instead of running over the next item (%s)',
     async (layout) => {
       show(layout);
       await screen.findByRole('button', { name: 'Play Dreams' });
-      const title = screen.getAllByText('Dreams')[0] as HTMLElement;
+      // The title sits in a frame that clips it to the room it has.
+      const title = (screen.getAllByText('Dreams')[0] as HTMLElement).parentElement as HTMLElement;
       const style = getComputedStyle(title);
       expect(style.whiteSpace).toBe('nowrap');
       expect(style.textOverflow).toBe('ellipsis');
@@ -276,4 +282,95 @@ describe('layouts', () => {
     expect(card.querySelector('img')).toBeNull();
     expect(card.querySelector('svg')).not.toBeNull();
   });
+});
+
+describe('playing, queueing and the queue', () => {
+  const queueRooms = {
+    room: mockMediaPlayer({
+      name: 'Room',
+      capabilities: { browse: true, search: true, queue: true },
+    }),
+  };
+
+  const openRumours = async (entities = queueRooms) => {
+    const view = render(entities);
+    fireEvent.click(await screen.findByRole('tab', { name: 'Albums' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Open Rumours' }));
+    await screen.findByRole('button', { name: 'Play Go Your Own Way' });
+    return view;
+  };
+
+  test('a track in an album plays the whole album from there, replacing the queue', async () => {
+    const { ha } = await openRumours();
+    fireEvent.click(screen.getByRole('button', { name: 'Play Go Your Own Way' }));
+    expect(ha.calls.at(-1)).toMatchObject({
+      command: 'playMedia',
+      args: { item: 't-go-your-own-way', mode: 'replace', context: 'al-rumours' },
+    });
+  });
+
+  test('a track on a shelf plays on its own, replacing the queue, with no album around it', async () => {
+    const { ha } = render(queueRooms);
+    fireEvent.click(await screen.findByRole('button', { name: 'Play Dreams' }));
+    expect(ha.calls.at(-1)).toMatchObject({
+      command: 'playMedia',
+      args: { item: 't-dreams', mode: 'replace' },
+    });
+
+    expect(ha.calls.at(-1)!.args).not.toHaveProperty('context');
+  });
+
+  test('an open album can be played, shuffled or added whole, from its own buttons', async () => {
+    const { ha } = await openRumours();
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    expect(ha.calls.at(-1)).toMatchObject({
+      command: 'playMedia',
+      args: { item: 'al-rumours', mode: 'replace' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Shuffle' }));
+    expect(ha.calls.at(-1)).toMatchObject({
+      args: { item: 'al-rumours', mode: 'replace', shuffle: true },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add to queue' }));
+    expect(ha.calls.at(-1)).toMatchObject({ args: { item: 'al-rumours', mode: 'add' } });
+  });
+
+  test('every track can be played next or added to the queue', async () => {
+    const { ha } = await openRumours();
+    fireEvent.click(screen.getByRole('button', { name: 'Play Go Your Own Way next' }));
+    expect(ha.calls.at(-1)).toMatchObject({
+      args: { item: 't-go-your-own-way', mode: 'next' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Go Your Own Way to the queue' }));
+    expect(ha.calls.at(-1)).toMatchObject({
+      args: { item: 't-go-your-own-way', mode: 'add' },
+    });
+  });
+
+  test('a player with no queue can only play: no queue buttons, and no shuffle or add for an album', async () => {
+    await openRumours(rooms);
+    expect(screen.getByRole('button', { name: 'Play' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Shuffle' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add to queue' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /next$/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /to the queue$/ })).toBeNull();
+  });
+});
+
+test('every tab is the same height, whatever its label holds, so opening a playlist with an emoji in its name moves nothing', async () => {
+  render();
+  fireEvent.click(await screen.findByRole('tab', { name: 'Playlists' }));
+  const heights = () => screen.getAllByRole('tab').map((tab) => getComputedStyle(tab).height);
+
+  const before = heights();
+  expect(new Set(before)).toEqual(new Set(['28px']));
+
+  // The playlist with an emoji in its name: its title becomes the selected tab.
+  fireEvent.click(await screen.findByRole('button', { name: /^Open BASS BOOSTED SONGS/ }));
+  await screen.findByRole('button', { name: 'Play Electric Feel' });
+  expect(screen.getByRole('tab', { name: 'Back' }).textContent).toContain('\u{1F50A}');
+  expect(heights()).toEqual(before);
 });

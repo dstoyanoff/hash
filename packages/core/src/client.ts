@@ -10,6 +10,8 @@ import type {
   HistoryResult,
   LogbookQuery,
   LogbookResult,
+  QueueQuery,
+  QueueResult,
 } from './model/index.ts';
 import { encodeMessage, parseServerMessage, type ClientMessage } from './protocol.ts';
 
@@ -64,6 +66,9 @@ export interface Client {
   /** What happened to an entity lately and who or what caused it, newest first. */
   logbook(ref: EntityRef, query: LogbookQuery): Promise<LogbookResult>;
 
+  /** A media player's queue, in the order it plays. */
+  queue(ref: EntityRef, query: QueueQuery): Promise<QueueResult>;
+
   /** Escape hatch: a backend-specific request, answered with whatever the integration returns. */
   callRaw(integration: string, request: Record<string, unknown>): Promise<unknown>;
 }
@@ -73,6 +78,9 @@ export interface Client {
  * subscriptions, resubscribes and reconnects with backoff. Listeners receive
  * `undefined` until the server has answered, then an entity or `null` (unknown entity).
  */
+/** How long a request waits for the connection to open before it fails, in ms. */
+const WAIT_MS = 10_000;
+
 export class RemoteClient implements Client {
   #options: RemoteClientOptions;
   #socket: WebSocket | undefined;
@@ -88,6 +96,14 @@ export class RemoteClient implements Client {
     { resolve: (data: unknown) => void; reject: (error: Error) => void }
   >();
   #nextId = 1;
+
+  /** Requests made while the connection was not open yet (opening, or back after a drop): each is
+   * sent when it opens, or given up on after a while. */
+  #waiting = new Set<{
+    open: () => void;
+    fail: (error: Error) => void;
+    timer: ReturnType<typeof setTimeout>;
+  }>();
   #retry = 0;
   #timer: ReturnType<typeof setTimeout> | undefined;
   #stopped = true;
@@ -112,6 +128,7 @@ export class RemoteClient implements Client {
   close(): void {
     this.#stopped = true;
     clearTimeout(this.#timer);
+    this.#giveUpWaiting(new Error('Connection closed'));
     this.#socket?.close();
     this.#socket = undefined;
     this.#setLink('closed');
@@ -170,50 +187,127 @@ export class RemoteClient implements Client {
   }
 
   async browse(ref: EntityRef, query: BrowseQuery): Promise<BrowseResult> {
-    return (await this.#request((id) => ({
-      type: 'query',
-      id,
-      ref,
-      query: 'browse',
-      args: { ...query },
-    }))) as BrowseResult;
+    return (await this.#request(
+      (id) => ({
+        type: 'query',
+        id,
+        ref,
+        query: 'browse',
+        args: { ...query },
+      }),
+      true,
+    )) as BrowseResult;
   }
 
   async history(ref: EntityRef, query: HistoryQuery): Promise<HistoryResult> {
-    return (await this.#request((id) => ({
-      type: 'query',
-      id,
-      ref,
-      query: 'history',
-      args: { ...query },
-    }))) as HistoryResult;
+    return (await this.#request(
+      (id) => ({
+        type: 'query',
+        id,
+        ref,
+        query: 'history',
+        args: { ...query },
+      }),
+      true,
+    )) as HistoryResult;
   }
 
   async forecast(ref: EntityRef, query: ForecastQuery): Promise<ForecastResult> {
-    return (await this.#request((id) => ({
-      type: 'query',
-      id,
-      ref,
-      query: 'forecast',
-      args: { ...query },
-    }))) as ForecastResult;
+    return (await this.#request(
+      (id) => ({
+        type: 'query',
+        id,
+        ref,
+        query: 'forecast',
+        args: { ...query },
+      }),
+      true,
+    )) as ForecastResult;
   }
 
   async logbook(ref: EntityRef, query: LogbookQuery): Promise<LogbookResult> {
-    return (await this.#request((id) => ({
-      type: 'query',
-      id,
-      ref,
-      query: 'logbook',
-      args: { ...query },
-    }))) as LogbookResult;
+    return (await this.#request(
+      (id) => ({
+        type: 'query',
+        id,
+        ref,
+        query: 'logbook',
+        args: { ...query },
+      }),
+      true,
+    )) as LogbookResult;
+  }
+
+  async queue(ref: EntityRef, query: QueueQuery): Promise<QueueResult> {
+    return (await this.#request(
+      (id) => ({
+        type: 'query',
+        id,
+        ref,
+        query: 'queue',
+        args: { ...query },
+      }),
+      true,
+    )) as QueueResult;
   }
 
   callRaw(integration: string, request: Record<string, unknown>): Promise<unknown> {
     return this.#request((id) => ({ type: 'raw', id, integration, request }));
   }
 
-  #request(build: (id: number) => ClientMessage): Promise<unknown> {
+  /** Resolves once the connection is open: now if it is, else when it opens. The page asks for things
+   * the moment it appears, which can be before the socket has finished opening, and a request made
+   * then waits for it instead of failing. It fails if the connection does not come within
+   * `WAIT_MS` (or the client was closed), and the caller can ask again later. */
+  #whenOpen(): Promise<void> {
+    if (this.#socket?.readyState === 1) {
+      return Promise.resolve();
+    }
+
+    if (this.#stopped) {
+      return Promise.reject(new Error('Not connected to runtime'));
+    }
+
+    return new Promise((resolve, reject) => {
+      const waiter = {
+        open: () => {
+          clearTimeout(waiter.timer);
+          resolve();
+        },
+        fail: (error: Error) => {
+          clearTimeout(waiter.timer);
+          reject(error);
+        },
+        timer: setTimeout(() => {
+          this.#waiting.delete(waiter);
+          reject(new Error('Not connected to runtime'));
+        }, WAIT_MS),
+      };
+
+      this.#waiting.add(waiter);
+    });
+  }
+
+  #giveUpWaiting(error: Error) {
+    for (const waiter of Array.from(this.#waiting)) {
+      waiter.fail(error);
+    }
+
+    this.#waiting.clear();
+  }
+
+  /** Sends a request and resolves with its answer. A read (`wait`) made before the connection is open
+   * waits for it; a command or a raw request never does, since doing it late, after the person has
+   * seen it fail, would be a surprise. */
+  #request(build: (id: number) => ClientMessage, wait = false): Promise<unknown> {
+    if (!wait || this.#socket?.readyState === 1) {
+      return this.#sendRequest(build);
+    }
+
+    return this.#whenOpen().then(() => this.#sendRequest(build));
+  }
+
+  #sendRequest(build: (id: number) => ClientMessage): Promise<unknown> {
     const id = this.#nextId++;
     return new Promise((resolve, reject) => {
       if (this.#socket?.readyState !== 1) {
@@ -251,6 +345,11 @@ export class RemoteClient implements Client {
     socket.addEventListener('open', () => {
       this.#retry = 0;
       this.#setLink('open');
+      for (const waiter of Array.from(this.#waiting)) {
+        waiter.open();
+      }
+
+      this.#waiting.clear();
       for (const ref of this.#listeners.keys()) {
         this.#send({ type: 'subscribe', ref });
       }

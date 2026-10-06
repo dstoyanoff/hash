@@ -1,5 +1,6 @@
 import type { Client, EntityRef, LogbookEntry } from '@hashsome/core';
 import { useEffect, useState } from 'react';
+import { useReconnects } from './hooks.ts';
 import { useClient } from './provider.tsx';
 
 export interface EntityLogbookState {
@@ -39,6 +40,7 @@ function load(client: Client, ref: EntityRef): Promise<LogbookEntry[]> {
  */
 export function useEntityLogbook(ref: EntityRef | undefined): EntityLogbookState {
   const client = useClient();
+  const reconnects = useReconnects();
   const [state, setState] = useState<{ ref: string; entries: LogbookEntry[] | undefined }>();
 
   useEffect(() => {
@@ -55,7 +57,9 @@ export function useEntityLogbook(ref: EntityRef | undefined): EntityLogbookState
     return () => {
       current = false;
     };
-  }, [client, ref]);
+    // `reconnects` is not read inside: the connection coming back is the reason to ask again.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
+  }, [client, ref, reconnects]);
 
   const answered = state !== undefined && state.ref === ref;
   return { entries: answered ? state.entries : undefined, loading: ref !== undefined && !answered };
