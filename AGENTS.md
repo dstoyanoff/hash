@@ -12,12 +12,11 @@ Read [ARCHITECTURE.md](ARCHITECTURE.md) before adding a component, a device kind
 - `packages/runtime` — `@hashsome/runtime`: the `hashsome` CLI (`dev`/`build`/`start`) plus reusable pieces (`createLayout`, entry files) that a project's own `app/` imports. It renders no chrome: a dashboard owns its whole layout. Pure library — it has no knowledge of any specific home.
 - `example` — `@hashsome/example`: **this is the one real consumer project in this repo**, not a framework piece. It's what a real user's own repo looks like: `hashsome.config.ts` (integrations), `e-prim` and `@emotion/react` as its own dependencies (the styling layer `@hashsome/ui` is built on, available to the app's code too), a real `app/` (React Router: `root.tsx` and `routes.ts`, which lists every route), `shared/` (conventions the dashboards here reuse — e.g. one `HomeTopBar` and the switcher's dashboard list; not wired into `@hash`), and `dashboards/<id>/` — plain folders (`layout.tsx`, `pages/*.tsx`), not separate packages and not covered by this repo's tests (see Rules below). `example/dashboards/{home,second-floor,kitchen,hello}` are the dogfood dashboards.
 - `demo` — `@hashsome/demo`: the example's dashboards (its `routes.ts` points at `example/dashboards/*`) built as a static site with the mock devices running in the browser (`example/shared/mock-entities.ts`), published to GitHub Pages under `/demo/` by `.github/workflows/pages.yml`. A new example dashboard that should be in the demo needs its `route()` added to `demo/app/routes.ts` too.
-- `templates/dashboard/` — copy-me template `create-dashboard` scaffolds a new `dashboards/<id>/` folder from.
 
 ## Commands
 
 `pnpm install`, `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm test`,
-`pnpm generate:catalog`. A project is deployed with `hashsome package <plain|compose|helm|image>` (README "Deploying"; mechanics in ARCHITECTURE.md "Packaging and deployment"): the server is bundled into one file and shipped as an image you load onto the host, never built there, and secrets stay in the host's environment. `pnpm dev`/`build`/`start` at the root are thin
+`pnpm generate:catalog`. A project updates its `@hashsome/*` packages with `hashsome upgrade` (its `hashsome:upgrade` script). A project is deployed with `hashsome package <plain|compose|helm|image>` (README "Deploying"; mechanics in ARCHITECTURE.md "Packaging and deployment"): the server is bundled into one file and shipped as an image you load onto the host, never built there, and secrets stay in the host's environment. `pnpm dev`/`build`/`start` at the root are thin
 `pnpm --filter @hashsome/example <script>` passthroughs — real work happens in that package, same
 as it would in a real consumer's own repo.
 

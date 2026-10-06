@@ -205,6 +205,13 @@ How the release is built, and how to load the image on k3s, is in
   release files. Where you can, give Home Assistant a dedicated non-admin user for the token.
 - To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
+## Staying up to date
+
+A project runs `pnpm hashsome:upgrade` (a script in its `package.json`, which calls `hashsome upgrade`)
+to move every `@hashsome/*` package to the latest release together, with pnpm. On another
+package manager the command prints what to run by hand. Packages linked from a local checkout are left
+alone, and `--dry-run` shows the command without running it. Read the [release notes](https://github.com/dstoyanoff/hashsome/releases) for what changed, then run your typecheck.
+
 ## Packages
 
 Published to npm under the `@hashsome` scope, all at the same version.
@@ -226,7 +233,6 @@ those, and you only import it yourself to write an integration.
 packages/        the packages above, one folder each (integrations under packages/integrations/)
 example/         a complete project you can run, and the template for your own
 demo/            the example's dashboards as a static site on mock data (the live demo)
-templates/       scaffolds for new dashboards
 docs/            screenshots
 ```
 

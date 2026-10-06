@@ -45,7 +45,7 @@ example/dashboards/<id>/
 - `<id>` is kebab-case (`^[a-z0-9][a-z0-9-]*$`) and matches its URL: `route('<id>', …)` in
   `example/app/routes.ts`, the one file that lists every route. There is no manifest: the tab
   title is the entry module's `meta` export, and the switcher's list lives in `shared/dashboards.ts`.
-- Use `create-dashboard` to scaffold this from `templates/dashboard/` — including the
+- Use `create-dashboard` to start this from an existing dashboard — including the
   project-level registration step, not just the `dashboards/<id>/` folder. Don't hand-roll it.
 - Layouts are responsive; there is no per-dashboard viewport. Ask what device it targets only to
   choose density and how much fits on screen.

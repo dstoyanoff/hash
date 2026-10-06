@@ -520,7 +520,6 @@ example/                     @hashsome/example          a complete project: the 
   shared/                      conventions the dashboards reuse (top bar, the switcher's list)
   dashboards/<id>/             one folder per dashboard: layout.tsx, pages/*.tsx
 demo/                        @hashsome/demo             the example's dashboards as a static site on mock data (GitHub Pages)
-templates/dashboard/         the scaffold a new dashboards/<id>/ folder is made from
 docs/screenshots/            the images the README shows
 ```
 
@@ -653,6 +652,14 @@ Every card kind is on the generic model. HA-shaped `EntityState` and `callServic
   against its own mock. It covers the mock and the model-level checks; the connection-level items
   (reconnect, idempotent `connect`, timers) need a transport fake per integration and are not
   asserted yet.
+
+## Upgrading a project
+
+`hashsome upgrade` (run through a project's `hashsome:upgrade` script: `upgrade` alone would be taken
+by the package manager's own command) reads the project's `package.json`, finds its `@hashsome/*`
+dependencies, skips any linked from a checkout (`workspace:`, `link:`, `file:`), and runs `pnpm update --latest`
+on the rest. pnpm is the one supported manager: a project that names or has the lockfile of another gets
+the command to run by hand. All packages share one version, so they move together. It is `packages/runtime/src/cli/upgrade.ts`.
 
 ## Releasing
 
