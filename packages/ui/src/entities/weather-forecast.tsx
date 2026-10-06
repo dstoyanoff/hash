@@ -288,47 +288,59 @@ export function WeatherForecast({ entity }: { entity: EntityRef }) {
             height={expanded ? 180 : 88}
           />
           {expanded ? (
-            <Box
-              mt={2}
-              css={{
-                display: 'grid',
-                gap: 10,
-                gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
-              }}
-            >
-              {hours.map((hour) => {
-                const rain = rainText(hour, hourly.result?.precipitationUnit);
-                return (
-                  <Flex
-                    key={hour.timestamp}
-                    direction="column"
-                    align="center"
-                    gap={1.5}
-                    background="surfaceRaised"
-                    radius="card"
-                    px={2}
-                    py={3}
-                  >
-                    <Typography as="span" variant="secondary" color="textMuted">
-                      {hourName(hour.timestamp)}
-                    </Typography>
-                    <ConditionIcon condition={hour.condition} size={26} />
-                    <Typography as="span" variant="bodyStrong">
-                      {degrees(hour.temperature)}
-                    </Typography>
-                    <Flex direction="column" align="center" gap={0.5}>
-                      {rain ? <Metric icon="lu:umbrella">{rain}</Metric> : null}
-                      <WindMetric point={hour} unit={windUnit} />
-                      {hour.humidity !== undefined ? (
-                        <Metric icon="lu:droplets">{Math.round(hour.humidity)}%</Metric>
-                      ) : null}
-                      {hour.uvIndex !== undefined && hour.uvIndex > 0 ? (
-                        <Metric icon="lu:sun">UV {tenths(hour.uvIndex)}</Metric>
-                      ) : null}
+            // 24 hours in whole rows: 12 across, or fewer where the drawer is narrower. Every
+            // count here divides 24, so there is never a short last row.
+            <Box mt={2} css={{ containerType: 'inline-size' }}>
+              <Box
+                css={{
+                  display: 'grid',
+                  gap: 10,
+                  gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
+                  '@container (max-width: 1000px)': {
+                    gridTemplateColumns: 'repeat(8, minmax(0, 1fr))',
+                  },
+                  '@container (max-width: 640px)': {
+                    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+                  },
+                  '@container (max-width: 420px)': {
+                    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                  },
+                }}
+              >
+                {hours.map((hour) => {
+                  const rain = rainText(hour, hourly.result?.precipitationUnit);
+                  return (
+                    <Flex
+                      key={hour.timestamp}
+                      direction="column"
+                      align="center"
+                      gap={1.5}
+                      background="surfaceRaised"
+                      radius="card"
+                      px={2}
+                      py={3}
+                    >
+                      <Typography as="span" variant="secondary" color="textMuted">
+                        {hourName(hour.timestamp)}
+                      </Typography>
+                      <ConditionIcon condition={hour.condition} size={26} />
+                      <Typography as="span" variant="bodyStrong">
+                        {degrees(hour.temperature)}
+                      </Typography>
+                      <Flex direction="column" align="center" gap={0.5}>
+                        {rain ? <Metric icon="lu:umbrella">{rain}</Metric> : null}
+                        <WindMetric point={hour} unit={windUnit} />
+                        {hour.humidity !== undefined ? (
+                          <Metric icon="lu:droplets">{Math.round(hour.humidity)}%</Metric>
+                        ) : null}
+                        {hour.uvIndex !== undefined && hour.uvIndex > 0 ? (
+                          <Metric icon="lu:sun">UV {tenths(hour.uvIndex)}</Metric>
+                        ) : null}
+                      </Flex>
                     </Flex>
-                  </Flex>
-                );
-              })}
+                  );
+                })}
+              </Box>
             </Box>
           ) : (
             // A few hours along the curve, with their sky and temperature.
