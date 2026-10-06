@@ -1,5 +1,6 @@
 import { BaseIntegration } from './base-integration.ts';
 import { UnknownEntityError } from './entity.ts';
+import { mockForecast } from './mock-forecast.ts';
 import { mockHistory } from './mock-history.ts';
 import {
   isCommandOf,
@@ -10,6 +11,8 @@ import {
   type ClimateEntity,
   type Entity,
   type EntityInput,
+  type ForecastQuery,
+  type ForecastResult,
   type GenericEntity,
   type HistoryQuery,
   type HistoryResult,
@@ -142,6 +145,7 @@ export function mockWeather(init: Init<WeatherEntity> = {}): EntityInput {
     condition: 'sunny',
     temperature: 20,
     unit: '°C',
+    forecasts: ['daily', 'hourly'],
     ...init,
   };
 }
@@ -490,6 +494,16 @@ export class MockIntegration extends BaseIntegration {
     }
 
     return Promise.resolve(mockHistory(entityId, entity, query));
+  }
+
+  /** Made-up forecast for a weather entity (see `mockForecast`); empty for anything else. */
+  forecast(entityId: string, query: ForecastQuery): Promise<ForecastResult> {
+    const entity = this.getEntity(entityId);
+    if (!entity) {
+      return Promise.reject(new UnknownEntityError(this.id, entityId));
+    }
+
+    return Promise.resolve(mockForecast(entity, query));
   }
 
   browse(entityId: string, query: BrowseQuery): Promise<BrowseResult> {

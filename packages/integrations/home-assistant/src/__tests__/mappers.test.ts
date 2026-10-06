@@ -297,6 +297,14 @@ describe('weather', () => {
     });
   });
 
+  test('lists the forecasts the weather source supports', () => {
+    expect(map(hass('weather.home', 'sunny', { supported_features: 1 | 2 }))).toMatchObject({
+      forecasts: ['daily', 'hourly'],
+    });
+
+    expect(map(hass('weather.home', 'sunny', {}))).not.toHaveProperty('forecasts');
+  });
+
   test('a condition it does not know is unknown, and an unavailable entity says so', () => {
     expect(map(hass('weather.home', 'volcanic-ash'))).toMatchObject({ condition: 'unknown' });
     expect(map(hass('weather.home', 'unavailable'))).toMatchObject({

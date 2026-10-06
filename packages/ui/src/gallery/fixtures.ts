@@ -7,6 +7,7 @@ import {
   mockMediaPlayer,
   mockPerson,
   mockSensor,
+  mockWeather,
   MockIntegration,
   type EntityInput,
 } from '@hashsome/core';
@@ -79,6 +80,12 @@ export function createGalleryIntegration() {
       'sensor.lamp_energy': energy('1.64'),
       'sensor.led_power': power('7'),
       'sensor.led_energy': energy('3.2'),
+      'weather.home': mockWeather({
+        name: 'Home',
+        condition: 'partlycloudy',
+        temperature: 12.3,
+        humidity: 71,
+      }),
       'sensor.temperature': mockSensor({ value: '18.04', unit: '°C', measurement: 'temperature' }),
       'sensor.humidity': mockSensor({ value: '64.41', unit: '%', measurement: 'humidity' }),
       'sensor.bedroom_humidity': mockSensor({

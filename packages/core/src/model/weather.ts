@@ -22,6 +22,12 @@ export const WEATHER_CONDITIONS = [
 
 export type WeatherCondition = (typeof WEATHER_CONDITIONS)[number];
 
+/** What a forecast looks ahead in: `daily` is a day per point, `hourly` an hour, and `twice_daily` a
+ * day and a night. A weather source supports some of them. */
+export const FORECAST_TYPES = ['daily', 'hourly', 'twice_daily'] as const;
+
+export type ForecastType = (typeof FORECAST_TYPES)[number];
+
 /** Current weather for a place. */
 export interface WeatherEntity extends EntityBase<'weather'> {
   condition: WeatherCondition;
@@ -34,6 +40,48 @@ export interface WeatherEntity extends EntityBase<'weather'> {
 
   /** Percent. */
   humidity?: number;
+
+  /** The forecasts the weather source can give, if any. Ask for one with `Client.forecast`. */
+  forecasts?: ForecastType[];
+}
+
+export interface ForecastQuery {
+  type: ForecastType;
+}
+
+/** One step of a forecast: a day, an hour, or half a day. */
+export interface ForecastPoint {
+  /** When the step starts, ISO 8601. */
+  timestamp: string;
+  condition: WeatherCondition;
+
+  /** The temperature, or the day's high; in the result's `unit`. */
+  temperature?: number;
+
+  /** The day's low, for a forecast that covers a whole day. */
+  low?: number;
+
+  /** Percent chance of rain or snow. */
+  precipitationProbability?: number;
+
+  /** Expected rain or snow, in mm. */
+  precipitation?: number;
+
+  /** In the unit the source uses (km/h for most). */
+  windSpeed?: number;
+
+  /** For `twice_daily`: whether this step is the day (true) or the night. */
+  daytime?: boolean;
+}
+
+export interface ForecastResult {
+  type: ForecastType;
+
+  /** Soonest first; empty when the source has no forecast of that type. */
+  points: ForecastPoint[];
+
+  /** `°C` or `°F`. */
+  unit?: string;
 }
 
 export type WeatherCommands = Record<string, never>;

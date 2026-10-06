@@ -3,7 +3,9 @@ import {
   mockLight,
   mockMediaPlayer,
   mockSensor,
+  mockWeather,
   MockIntegration,
+  type ForecastQuery,
   type ServerMessage,
 } from '@hashsome/core';
 import { describe, expect, test } from 'vitest';
@@ -238,5 +240,65 @@ describe('history queries', () => {
 
     await settle();
     expect(plain.sent.at(-1)).toMatchObject({ id: 4, ok: false });
+  });
+});
+
+describe('forecast queries', () => {
+  async function withForecast() {
+    class WithForecast extends MockIntegration {
+      readonly asked: unknown[] = [];
+
+      override forecast(entityId: string, query: ForecastQuery) {
+        this.asked.push([entityId, query]);
+        return Promise.resolve({ type: query.type, points: [] });
+      }
+    }
+
+    const ha = new WithForecast({ entities: { sky: mockWeather() } });
+    await ha.connect();
+    const socket = new FakeSocket();
+    new Proxy([ha]).handleConnection(socket);
+    return { ha, socket };
+  }
+
+  test('a known type reaches the integration, and nothing else does', async () => {
+    const { ha, socket } = await withForecast();
+    socket.receive({
+      type: 'query',
+      id: 1,
+      ref: 'ha:sky',
+      query: 'forecast',
+      args: { type: 'hourly', evil: 'dropped' },
+    });
+
+    await settle();
+    expect(ha.asked).toEqual([['sky', { type: 'hourly' }]]);
+    expect(socket.sent.at(-1)).toMatchObject({ id: 1, ok: true, data: { type: 'hourly' } });
+  });
+
+  test('a missing or unknown type, or an integration without forecasts, is an error', async () => {
+    const { ha, socket } = await withForecast();
+    socket.receive({ type: 'query', id: 2, ref: 'ha:sky', query: 'forecast', args: { type: 'x' } });
+    socket.receive({ type: 'query', id: 3, ref: 'ha:sky', query: 'forecast' });
+    await settle();
+    expect(ha.asked).toEqual([]);
+    expect(socket.sent.slice(-2)).toMatchObject([
+      { id: 2, ok: false },
+      { id: 3, ok: false },
+    ]);
+
+    const { ha: plain, socket: plainSocket } = await withForecast();
+    // The mock gives forecasts; this one does not.
+    (plain as unknown as { forecast?: undefined }).forecast = undefined;
+    plainSocket.receive({
+      type: 'query',
+      id: 4,
+      ref: 'ha:sky',
+      query: 'forecast',
+      args: { type: 'daily' },
+    });
+
+    await settle();
+    expect(plainSocket.sent.at(-1)).toMatchObject({ id: 4, ok: false });
   });
 });

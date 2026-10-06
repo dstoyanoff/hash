@@ -272,10 +272,10 @@ Hashsome is **alpha**. It runs a real home today, but expect rough edges, and ex
 | Action       | `SceneButton`, `ActionButton`, top bar | `scene`, `script`, `button`, `automation`, `vacuum`   | Trigger it, with pending, done and error feedback                                                                                      |
 | Media player | `MediaPlayerBar`, `Column`, `Page`     | `media_player` (and Music Assistant players directly) | Play/pause, previous/next, volume, mute, seek, shuffle; the library with browse and search; artwork                                    |
 | Person       | top bar                                | `person`                                              | Presence avatars: who is home, with their picture                                                                                      |
-| Weather      | top bar                                | `weather`                                             | The current condition and temperature (no forecast yet)                                                                                |
+| Weather      | top bar                                | `weather`                                             | The current condition and temperature, today's high and low, and a forecast drawer (next 24 hours, days ahead)                         |
 
 Other kinds of device, such as blinds and covers, cameras, alarm panels, locks with their own
-controls, fans with speeds, `select` and `number` entities, and weather forecasts, are not built
+controls, fans with speeds, `select` and `number` entities, are not built
 yet. They are modelled generically where the backend allows it, and have no dedicated component.
 New device types are welcome: see [ARCHITECTURE.md](ARCHITECTURE.md#adding-things).
 

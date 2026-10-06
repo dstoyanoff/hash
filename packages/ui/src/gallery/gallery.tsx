@@ -836,7 +836,7 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
           <ComponentDoc
             title="Top Bar"
             components={['TopBar']}
-            description="Page chrome above a dashboard's content: a title (a dropdown to switch dashboards, once there's more than one to switch to), scene shortcuts, weather, presence, and a clock."
+            description="Page chrome above a dashboard's content: a title (a dropdown to switch dashboards, once there's more than one to switch to), scene shortcuts, weather (tap it for the forecast), presence, and a clock."
           >
             <TopBar
               title="Living Room"
@@ -846,7 +846,7 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
                 { id: 'bathroom', title: 'Bathroom', icon: 'tb:bath' },
               ]}
               scenes={[{ entity: 'ha:scene.tv_time', icon: 'lu:tv' }]}
-              weather="ha:sensor.temperature"
+              weather="ha:weather.home"
               people={['ha:person.dan', 'ha:person.alex']}
             />
           </ComponentDoc>

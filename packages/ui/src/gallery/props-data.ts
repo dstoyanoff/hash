@@ -575,7 +575,7 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: '(EntityRef | TopBarScene)[]',
       },
       {
-        doc: 'Current weather as a pill with an icon for the sky and a rounded whole-degree reading. A weather entity, like `ha:weather.forecast_home`, shows its real condition; a plain sensor, e.g. an outdoor temperature, gets a fixed sun.',
+        doc: "Current weather as a pill with an icon for the sky and a rounded whole-degree reading. A weather entity, like `ha:weather.forecast_home`, shows its real condition, today's high and low once its forecast has loaded, and opens the forecast (the next 24 hours and the days ahead) when tapped, if its source has one; a plain sensor, e.g. an outdoor temperature, gets a fixed sun and no forecast.",
         name: 'weather',
         optional: true,
         type: 'EntityRef',

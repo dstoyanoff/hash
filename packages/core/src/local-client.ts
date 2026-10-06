@@ -5,6 +5,8 @@ import type {
   BrowseQuery,
   BrowseResult,
   Entity,
+  ForecastQuery,
+  ForecastResult,
   HistoryQuery,
   HistoryResult,
 } from './model/index.ts';
@@ -134,6 +136,20 @@ export class LocalClient implements Client {
     }
 
     return source.history(id, query);
+  }
+
+  forecast(ref: EntityRef, query: ForecastQuery): Promise<ForecastResult> {
+    const { integration, id } = parseEntityRef(ref);
+    const source = this.#integrations.get(integration);
+    if (!source) {
+      return Promise.reject(new Error(`Unknown integration "${integration}"`));
+    }
+
+    if (!source.forecast) {
+      return Promise.reject(new Error(`"${integration}" has no forecasts`));
+    }
+
+    return source.forecast(id, query);
   }
 
   callRaw(integration: string, request: Record<string, unknown>): Promise<unknown> {
