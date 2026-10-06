@@ -35,25 +35,29 @@ function initials(name: string): string {
     .join('');
 }
 
-function Avatar({ actor, kind }: { actor: string; kind: 'person' | 'automation' }) {
-  const automation = kind === 'automation';
+/** The round picture at the start of a row: initials for a person, a robot for an automation, and
+ * for nobody (the system, a device going offline) a quiet chip, so every row's text lines up. */
+function Avatar({ actor, kind }: { actor: string | undefined; kind: 'person' | 'automation' }) {
+  const person = actor !== undefined && kind === 'person';
   return (
     <Flex
+      role="img"
+      aria-label={actor ?? 'System'}
       align="center"
       justify="center"
-      background={automation ? 'surfaceRaised' : 'accent'}
-      color={automation ? 'text' : 'accentText'}
+      background={person ? 'accent' : 'surfaceRaised'}
+      color={person ? 'accentText' : actor === undefined ? 'textMuted' : 'text'}
       radius="full"
       width={32}
       height={32}
       css={{ flex: 'none' }}
     >
-      {automation ? (
-        <Icon name="lu:bot" size={16} />
-      ) : (
+      {person ? (
         <Typography as="span" variant="eyebrow">
           {initials(actor)}
         </Typography>
+      ) : (
+        <Icon name={actor === undefined ? 'lu:cpu' : 'lu:bot'} size={16} />
       )}
     </Flex>
   );
@@ -78,7 +82,7 @@ export function HistorySection({ entries }: HistorySectionProps) {
       <Flex direction="column">
         {entries.map((entry) => (
           <Flex key={entry.id} align="center" gap={3} py={2}>
-            {entry.actor ? <Avatar actor={entry.actor} kind={entry.actorKind ?? 'person'} /> : null}
+            <Avatar actor={entry.actor} kind={entry.actorKind ?? 'person'} />
             <Flex direction="column" minWidth={0}>
               <Typography as="span" variant="body" noWrap textOverflow="ellipsis" minWidth={0}>
                 {entry.actor ? (

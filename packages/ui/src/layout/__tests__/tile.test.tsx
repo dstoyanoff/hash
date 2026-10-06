@@ -272,3 +272,29 @@ test('an entity the backend has no activity for shows no History section', async
   await act(async () => {});
   expect(screen.queryByText('History')).toBeNull();
 });
+
+test('every History row has a picture, so the text lines up: initials, a robot, or a quiet system chip', () => {
+  renderWithMock(
+    <Tile
+      label="lamp"
+      history={[
+        { id: '1', message: 'turned on', actor: 'Dan', timestamp: new Date().toISOString() },
+        {
+          id: '2',
+          message: 'turned off',
+          actor: 'Bedtime',
+          actorKind: 'automation',
+          timestamp: new Date().toISOString(),
+        },
+        { id: '3', message: 'became unavailable', timestamp: new Date().toISOString() },
+      ]}
+    />,
+  );
+
+  const tile = screen.getByRole('button', { name: 'lamp' });
+  fireEvent.pointerDown(tile, { clientX: 0, pointerId: 1 });
+  act(() => vi.advanceTimersByTime(500));
+  expect(screen.getByRole('img', { name: 'Dan' })).toBeTruthy();
+  expect(screen.getByRole('img', { name: 'Bedtime' })).toBeTruthy();
+  expect(screen.getByRole('img', { name: 'System' })).toBeTruthy();
+});
