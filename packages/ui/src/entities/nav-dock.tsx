@@ -32,7 +32,7 @@ export function NavDock({ items, base, showThemeToggle }: NavDockProps) {
       background="rail"
       radius="full"
       p={1.5}
-      shadow="drawer"
+      shadow="dock"
       position="fixed"
       css={({ spacing }) => ({
         bottom: spacing(5),
@@ -55,7 +55,7 @@ export function NavDock({ items, base, showThemeToggle }: NavDockProps) {
               justify="center"
               width={44}
               height={44}
-              radius="chrome"
+              radius="full"
               cursor="pointer"
               color={isActive ? 'accentText' : 'line'}
               {...(isActive ? { background: 'accent' } : {})}
@@ -83,7 +83,7 @@ function ThemeToggleButton() {
       justify="center"
       width={44}
       height={44}
-      radius="chrome"
+      radius="full"
       cursor="pointer"
       color="line"
       css={{ background: 'none' }}

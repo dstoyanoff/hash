@@ -46,6 +46,7 @@ const shared = {
   },
   shadow: {
     drawer: '0 20px 48px rgba(0, 0, 0, 0.5)',
+    dock: '0 6px 20px rgba(0, 0, 0, 0.16)',
   },
   radius: {
     full: '999px',
