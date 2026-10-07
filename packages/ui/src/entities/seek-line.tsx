@@ -62,6 +62,18 @@ export function SeekLine({
                 seek.commit(positionAt(event));
               }
             },
+            // A touch the browser took (a gesture, a scroll) or lost never ends with a release: give
+            // the position back to the player instead of leaving it where the finger was.
+            onPointerCancel: () => {
+              dragging.current = false;
+              seek.cancel();
+            },
+            onLostPointerCapture: () => {
+              if (dragging.current) {
+                dragging.current = false;
+                seek.cancel();
+              }
+            },
           }
         : { role: 'progressbar' })}
       aria-label="Position"
