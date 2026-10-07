@@ -750,6 +750,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         optional: false,
         type: 'EntityRef',
       },
+      {
+        doc: "Tapping a weather entity's pill opens its forecast in a drawer. `false` builds none and the pill is only what it shows, which is lighter on a small display. Default `true`.",
+        name: 'drawer',
+        optional: true,
+        type: 'boolean',
+      },
     ],
   },
   PresenceStack: {

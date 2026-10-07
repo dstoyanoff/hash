@@ -368,6 +368,17 @@ describe('weather', () => {
     expect((await screen.findAllByText(/^UV \d/)).length).toBeGreaterThan(0);
   });
 
+  test('drawer={false}: the pill still shows the weather and the day’s range, but is not a button', async () => {
+    renderWithMock(<WeatherChip entity="ha:sky" drawer={false} />, {
+      sky: mockWeather({ name: 'Home weather', condition: 'rainy', temperature: 12 }),
+    });
+
+    expect(screen.getByText('12°')).toBeTruthy();
+    // The range comes from the forecast and is still shown; only the drawer is gone.
+    expect(await screen.findByText(/^\d+° \/ -?\d+°$/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Home weather: forecast' })).toBeNull();
+  });
+
   test('a weather source with no forecasts stays a plain pill', () => {
     renderWithMock(<TopBar title="Home" weather="ha:sky" />, {
       sky: mockWeather({ condition: 'sunny', temperature: 12, forecasts: [] }),

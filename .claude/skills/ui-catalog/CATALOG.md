@@ -308,9 +308,10 @@ One dot summarising the runtime link and every integration — green when all ar
 
 Current weather, as a pill: an icon for the sky and a rounded whole-degree reading. A `weather` entity gives the real condition, today's high and low once its forecast has loaded, and opens the forecast when tapped (if its source has one); a plain `sensor.*` (an outdoor temperature) gets a fixed sun and no forecast, since a sensor says nothing about the sky. The top bar's weather pill, for a dashboard that builds its own header instead of using `TopBar`.
 
-| Prop     | Type        | Required |                                                                                   |
-| -------- | ----------- | -------- | --------------------------------------------------------------------------------- |
-| `entity` | `EntityRef` | yes      | A weather entity, like `ha:weather.forecast_home`, or a plain temperature sensor. |
+| Prop     | Type        | Required |                                                                                                                                                                              |
+| -------- | ----------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `entity` | `EntityRef` | yes      | A weather entity, like `ha:weather.forecast_home`, or a plain temperature sensor.                                                                                            |
+| `drawer` | `boolean`   | no       | Tapping a weather entity's pill opens its forecast in a drawer. `false` builds none and the pill is only what it shows, which is lighter on a small display. Default `true`. |
 
 ### `PresenceStack`
 
