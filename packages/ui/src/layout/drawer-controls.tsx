@@ -104,6 +104,7 @@ export function ValueBar({
   onCommit: (value: number) => void;
 }) {
   const dragging = useRef(false);
+  const lastDrag = useRef<number | null>(null);
   const fraction = max === min ? 0 : (value - min) / (max - min);
   const pct = Math.min(1, Math.max(0, fraction)) * 100;
   const clampValue = (v: number) => Math.min(max, Math.max(min, v));
@@ -153,17 +154,33 @@ export function ValueBar({
       onPointerDown={(event: PointerEvent<HTMLDivElement>) => {
         dragging.current = true;
         event.currentTarget.setPointerCapture?.(event.pointerId);
-        onDrag(valueAt(event));
+        lastDrag.current = valueAt(event);
+        onDrag(lastDrag.current);
       }}
       onPointerMove={(event: PointerEvent<HTMLDivElement>) => {
         if (dragging.current) {
-          onDrag(valueAt(event));
+          lastDrag.current = valueAt(event);
+          onDrag(lastDrag.current);
         }
       }}
       onPointerUp={(event: PointerEvent<HTMLDivElement>) => {
         if (dragging.current) {
           dragging.current = false;
           onCommit(valueAt(event));
+        }
+      }}
+      // A touch the browser took or lost never ends with a release. Ending the drag with the last
+      // value the finger reached lets whoever holds it let go, instead of leaving it held for good.
+      onPointerCancel={() => {
+        if (dragging.current) {
+          dragging.current = false;
+          onCommit(lastDrag.current ?? value);
+        }
+      }}
+      onLostPointerCapture={() => {
+        if (dragging.current) {
+          dragging.current = false;
+          onCommit(lastDrag.current ?? value);
         }
       }}
       onKeyDown={onKeyDown}

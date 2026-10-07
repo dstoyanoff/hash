@@ -142,6 +142,17 @@ export function ArtworkRing({
                   }
                 }
               },
+              // A touch the browser took or lost never ends with a release: let go of the position.
+              onPointerCancel: () => {
+                drag.current = null;
+                seek.cancel();
+              },
+              onLostPointerCapture: () => {
+                if (drag.current) {
+                  drag.current = null;
+                  seek.cancel();
+                }
+              },
             }
           : {})}
         css={{ inset: 0, touchAction: 'none' }}

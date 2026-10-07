@@ -412,3 +412,78 @@ test('overlays: a player with no queue has no queue button, browse={false} leave
     vi.useRealTimers();
   }
 });
+
+// A touch on the position line that never ends must not freeze the position.
+
+const seekable = {
+  room: mockMediaPlayer({
+    name: 'Room',
+    playback: 'paused',
+    media: { title: 'Blank Space', artist: 'More More' },
+    position: 80,
+    duration: 200,
+    capabilities: { seek: true },
+  }),
+};
+
+const lineOf = () => screen.getByRole('slider', { name: 'Position' });
+const shownTime = () => screen.getByText(/\d:\d{2} \/ 3:20/).textContent;
+
+test('pressing the position line shows the spot, and a cancelled touch gives the position back without seeking', () => {
+  const { ha } = renderWithMock(<MediaPlayerBar entity="ha:room" />, seekable);
+  mockWidth(lineOf());
+  expect(shownTime()).toBe('1:20 / 3:20');
+
+  fireEvent.pointerDown(lineOf(), { clientX: 150, pointerId: 1 }); // 75% of 200s
+  expect(shownTime()).toBe('2:30 / 3:20');
+
+  // The browser took the touch: no release ever comes.
+  fireEvent.pointerCancel(lineOf(), { pointerId: 1 });
+  expect(shownTime()).toBe('1:20 / 3:20');
+  expect(lineOf().getAttribute('aria-valuenow')).toBe('80');
+  expect(ha.calls.filter((call) => call.command === 'seek')).toHaveLength(0);
+});
+
+test('a lost pointer capture does the same', () => {
+  renderWithMock(<MediaPlayerBar entity="ha:room" />, seekable);
+  mockWidth(lineOf());
+  fireEvent.pointerDown(lineOf(), { clientX: 150, pointerId: 1 });
+  expect(shownTime()).toBe('2:30 / 3:20');
+  fireEvent.lostPointerCapture(lineOf(), { pointerId: 1 });
+  expect(shownTime()).toBe('1:20 / 3:20');
+});
+
+test('a drag that is never ended expires on its own, so the position cannot stay stuck', () => {
+  vi.useFakeTimers();
+  try {
+    renderWithMock(<MediaPlayerBar entity="ha:room" />, seekable);
+    mockWidth(lineOf());
+    fireEvent.pointerDown(lineOf(), { clientX: 150, pointerId: 1 });
+    expect(shownTime()).toBe('2:30 / 3:20');
+    act(() => vi.advanceTimersByTime(9000));
+    expect(shownTime()).toBe('1:20 / 3:20');
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('a normal press and release still seeks', () => {
+  const { ha } = renderWithMock(<MediaPlayerBar entity="ha:room" />, seekable);
+  mockWidth(lineOf());
+  fireEvent.pointerDown(lineOf(), { clientX: 150, pointerId: 1 });
+  fireEvent.pointerUp(lineOf(), { clientX: 150, pointerId: 1 });
+  expect(ha.calls.at(-1)).toMatchObject({ command: 'seek', args: { position: 150 } });
+});
+
+test('a cancelled touch on the volume slider ends the drag with the last value it reached', () => {
+  const { ha } = renderWithMock(<MediaPlayerBar entity="ha:room" />, player());
+  fireEvent.click(screen.getByRole('button', { name: 'Volume' }));
+  const slider = screen.getByRole('slider', { name: 'Volume level' });
+  mockWidth(slider);
+  fireEvent.pointerDown(slider, { clientX: 140, pointerId: 1 }); // 70%
+  fireEvent.pointerCancel(slider, { pointerId: 1 });
+  expect(ha.calls.at(-1)).toMatchObject({
+    command: 'setVolume',
+    args: { volume: expect.closeTo(0.7, 1) },
+  });
+});
