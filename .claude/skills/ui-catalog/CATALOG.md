@@ -250,6 +250,7 @@ Fixed left sidebar for switching between a dashboard's pages. Must be rendered i
 | `items`           | `NavItem[]` | yes      | The pages to link to; `to` is relative to `base`.                                                                                                              |
 | `base`            | `string`    | yes      | Base path items are resolved against, e.g. `/home`.                                                                                                            |
 | `showThemeToggle` | `boolean`   | no       | Adds a light/dark toggle at the bottom of the rail. Off by default — meant for development or a project that deliberately exposes it, not every kiosk install. |
+| `compact`         | `boolean`   | no       | A narrower rail for a small display: 48px wide instead of 76, with smaller markers, so the page keeps more of its width. Default `false`.                      |
 
 ### `NavDock`
 

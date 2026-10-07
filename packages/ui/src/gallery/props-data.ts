@@ -569,6 +569,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         optional: true,
         type: 'boolean',
       },
+      {
+        doc: 'A narrower rail for a small display: 48px wide instead of 76, with smaller markers, so the page keeps more of its width. Default `false`.',
+        name: 'compact',
+        optional: true,
+        type: 'boolean',
+      },
     ],
   },
   NavDock: {
