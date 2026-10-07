@@ -11,7 +11,7 @@ import { MemoryRouter } from 'react-router';
 import { describe, expect, test } from 'vitest';
 import { HashsomeProvider } from '../../provider.tsx';
 import { renderWithMock } from '../../test-utils.tsx';
-import { TopBar } from '../top-bar.tsx';
+import { Clock, DateChip, TopBar, WeatherChip } from '../top-bar.tsx';
 
 const entities = {
   movie_night: mockAction({ name: 'Movie Night' }),
@@ -52,6 +52,30 @@ const twoDashboards = [
   { id: 'living-room', title: 'Living Room', icon: 'lu:sofa' },
   { id: 'bedroom', title: 'Bedroom', icon: 'lu:bed' },
 ] as const;
+
+describe('the header pieces on their own', () => {
+  test('the date, the weather and the clock can be used without a top bar', () => {
+    renderWithMock(
+      <>
+        <DateChip />
+        <WeatherChip entity="ha:outdoor_temperature" />
+        <Clock format="24h" />
+      </>,
+      entities,
+      { router: true },
+    );
+
+    expect(screen.queryByRole('heading')).toBeNull();
+    expect(screen.getByText(/\w{3} · \w{3} \d{1,2}/)).toBeTruthy(); // Tue · Oct 6
+    expect(screen.getByText('12°')).toBeTruthy();
+    expect(screen.getByText(/^\d{2}:\d{2}$/)).toBeTruthy();
+  });
+
+  test('the clock follows the format it is given', () => {
+    renderWithMock(<Clock format="12h" />, {}, { router: true });
+    expect(screen.getByText(/^(AM|PM)$/i)).toBeTruthy();
+  });
+});
 
 test('a title with 2+ dashboards opens a switcher and closes it on pick', () => {
   renderWithMock(

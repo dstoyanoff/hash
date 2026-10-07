@@ -438,10 +438,17 @@ function StatusChip({ children }: { children: ReactNode }) {
   );
 }
 
+export interface WeatherChipProps {
+  /** A weather entity, like `ha:weather.forecast_home`, or a plain temperature sensor. */
+  entity: EntityRef;
+}
+
 /** Current weather, as a pill: an icon for the sky and a rounded whole-degree reading. A `weather`
- * entity gives the real condition; a plain `sensor.*` (an outdoor temperature) gets a fixed sun,
- * since a sensor says nothing about the sky. */
-function WeatherChip({ entity }: { entity: EntityRef }) {
+ * entity gives the real condition, today's high and low once its forecast has loaded, and opens the
+ * forecast when tapped (if its source has one); a plain `sensor.*` (an outdoor temperature) gets a
+ * fixed sun and no forecast, since a sensor says nothing about the sky. The top bar's weather pill,
+ * for a dashboard that builds its own header instead of using `TopBar`. */
+export function WeatherChip({ entity }: WeatherChipProps) {
   return useEntity(entity)?.kind === 'weather' ? (
     <WeatherPill entity={entity} />
   ) : (
@@ -683,7 +690,8 @@ function useNow(intervalMs: number): Date {
   return now;
 }
 
-function DateChip() {
+/** A short date pill (`Tue · Oct 6`), the top bar's, for a dashboard that builds its own header. */
+export function DateChip() {
   const now = useNow(60_000);
   const weekday = now.toLocaleDateString(undefined, { weekday: 'short' });
   const day = now.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -696,7 +704,14 @@ function DateChip() {
   );
 }
 
-function Clock({ format }: { format: 'auto' | '12h' | '24h' }) {
+export interface ClockProps {
+  /** `'auto'` follows the browser's locale (browsers don't read the OS 12/24h setting, so an `en-US` browser shows AM/PM); `'12h'`/`'24h'` force it. Default `'auto'`. */
+  format?: 'auto' | '12h' | '24h';
+}
+
+/** The top bar's clock: the time in the large clock type, with AM/PM beside it in a 12h format. For
+ * a dashboard that builds its own header instead of using `TopBar`. */
+export function Clock({ format = 'auto' }: ClockProps) {
   const now = useNow(30_000);
   const { time, dayPeriod } = formatClock(now, format);
 
