@@ -490,6 +490,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: '() => void',
       },
       {
+        doc: 'The library and the queue each open as a full-size overlay of their own, from the browse button and a new queue button, instead of one drawer with the whole player in it: for a small display, where the card itself is the player. The library overlay is a `MediaBrowser` as a list (or your `browse` content), the queue overlay a `MediaQueue`; each button is left out when the player has none, or for `browse={false}`. Holding the card and pressing the artwork then do nothing, unless `onOpen` is given. Default `false`.',
+        name: 'overlays',
+        optional: true,
+        type: 'boolean',
+      },
+      {
         doc: "`1` puts the controls beside the track, in one pill; `2` puts them on a second row under it, for a narrow space (a small wall display). Default `'auto'`: one row, and two once the bar is narrower than 560 px wide.",
         name: 'rows',
         optional: true,
