@@ -2,11 +2,13 @@
 import { Flex, Typography } from 'e-prim';
 import { LocalClient } from '@hashsome/core';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { NavLink, Route, Routes } from 'react-router';
 import { ActionButton } from '../entities/action-button.tsx';
 import { ClimateTile } from '../entities/climate-tile.tsx';
 import { LightTile } from '../entities/light-tile.tsx';
 import { MediaBrowser } from '../entities/media-browser.tsx';
 import { MediaPlayerBar } from '../entities/media-player-bar.tsx';
+import { AnimatedOutlet } from '../layout/animated-outlet.tsx';
 import { MediaPlayerColumn } from '../entities/media-player-column.tsx';
 import { MediaPlayerFull } from '../entities/media-player-full.tsx';
 import { MediaQueue } from '../entities/media-queue.tsx';
@@ -193,6 +195,76 @@ function TileFillDemo() {
  * chrome). `NavDock` is `position: fixed`, which a plain wrapper can't contain — `transform` on
  * an ancestor makes it establish a containing block for fixed-position descendants instead (a
  * standard CSS escape hatch), confining it to this box instead of the real viewport. */
+const DEMO_PAGES = [
+  { to: '', label: 'Lights', icon: 'lu:lightbulb' },
+  { to: 'climate', label: 'Climate', icon: 'lu:thermometer' },
+  { to: 'music', label: 'Music', icon: 'lu:music' },
+] as const;
+
+const DEMO_BASE = '/gallery/transition';
+
+/** Three pages under a route of the gallery's own router, with links to go between them: later ones
+ * slide in from the right. Until the address is under the demo's route there is a link to start it. */
+function AnimatedOutletDemo() {
+  return (
+    <Flex direction="column" gap={3} height={140} p={3}>
+      <Routes>
+        <Route
+          path={DEMO_BASE}
+          element={
+            <>
+              <Flex gap={2}>
+                {DEMO_PAGES.map((page) => (
+                  <NavLink key={page.to} to={page.to ? `${DEMO_BASE}/${page.to}` : DEMO_BASE} end>
+                    {({ isActive }) => (
+                      <Flex
+                        as="span"
+                        align="center"
+                        px={3}
+                        height={32}
+                        radius="full"
+                        background={isActive ? 'accent' : 'surfaceRaised'}
+                        color={isActive ? 'accentText' : 'text'}
+                      >
+                        <Typography as="span" variant="label">
+                          {page.label}
+                        </Typography>
+                      </Flex>
+                    )}
+                  </NavLink>
+                ))}
+              </Flex>
+              <AnimatedOutlet items={[...DEMO_PAGES]} base={DEMO_BASE} />
+            </>
+          }
+        >
+          {DEMO_PAGES.map((page) => (
+            <Route
+              key={page.to}
+              {...(page.to ? { path: page.to } : { index: true })}
+              element={
+                <Flex center grow={1} background="surfaceRaised" radius="row">
+                  <Typography as="span" variant="heading">
+                    {page.label}
+                  </Typography>
+                </Flex>
+              }
+            />
+          ))}
+        </Route>
+        <Route
+          path="*"
+          element={
+            <Flex center grow={1}>
+              <NavLink to={DEMO_BASE}>Try the transition</NavLink>
+            </Flex>
+          }
+        />
+      </Routes>
+    </Flex>
+  );
+}
+
 function SubPreview({
   label,
   height,
@@ -861,6 +933,14 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
                 <NavDock base="/gallery" items={NAV_ITEMS} />
               </SubPreview>
             </Flex>
+          </ComponentDoc>
+
+          <ComponentDoc
+            title="Animated Outlet"
+            components={['AnimatedOutlet']}
+            description="A dashboard layout's `Outlet` with a transition between its pages: the page that was showing fades out, then the new one fades in, sliding from the side it sits on in the nav (a later page from the right, an earlier one from the left) when you give it the nav's `items`. Without them the pages only fade. It does nothing for a visitor who prefers reduced motion. Try the links."
+          >
+            <AnimatedOutletDemo />
           </ComponentDoc>
 
           <ComponentDoc

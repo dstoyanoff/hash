@@ -43,6 +43,23 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
       },
     ],
   },
+  AnimatedOutlet: {
+    doc: "A dashboard layout's `<Outlet />` with a transition between its pages: the page that was showing fades out (sliding a little toward the side it was on), then the new one fades in from the side it is on. It is a drop-in for `Outlet` in a layout route, and does nothing the first time a page shows or for a visitor who prefers reduced motion.",
+    props: [
+      {
+        doc: "The dashboard's pages in the order its nav lists them (the same `items` as `NavRail` or `NavDock`). A page then slides in from the side it sits on: a later page from the right, an earlier one from the left. Left out, pages only fade.",
+        name: 'items',
+        optional: true,
+        type: 'NavItem[]',
+      },
+      {
+        doc: 'The path `items` are relative to, e.g. `/bathroom`. Needed with `items`.',
+        name: 'base',
+        optional: true,
+        type: 'string',
+      },
+    ],
+  },
   RoomHeader: {
     doc: 'The header that starts a room: muted icon and title, a hairline, and readouts on the right. Put it above a `Grid` (or any tiles); it adds its own space above, so consecutive rooms read as groups.',
     props: [
