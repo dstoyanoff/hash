@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import type { EntityRef } from '@hashsome/core';
+import type { CSSObject } from '@emotion/react';
 import { Flex, Typography } from 'e-prim';
 import { motion } from 'motion/react';
 import { useState, type ReactNode } from 'react';
@@ -57,6 +58,7 @@ function Ring({ onOpen, children }: { onOpen?: (() => void) | undefined; childre
             cursor: 'pointer',
           }
         : { as: 'span' })}
+      data-part="ring"
       center
       position="relative"
       p={0}
@@ -77,35 +79,66 @@ function Ring({ onOpen, children }: { onOpen?: (() => void) | undefined; childre
 /** The same spring the swatch rows pop in with, so the volume overlay opens like they do. */
 const VOLUME_SPRING = { type: 'spring', stiffness: 520, damping: 26 } as const;
 
-/** The bar's two parts, which in one row are plain children of the pill (`display: contents`) and in
- * two rows are a row each: the artwork and track on top, the controls under them. */
-const PART = { display: 'contents' } as const;
-
-/** What the pill is like in two rows: parts wrap, each a full row, and the corners are a card's. */
+/** What the pill is like in two rows: the artwork, "title · artist" and the time on top; under them
+ * the buttons share the whole width, all of one size, and while the volume slider is open it has the
+ * row to itself, with only the button that closes it. The bar is as tall as two regular tiles and
+ * the gap between them (a tile is its icon circle and a spacing unit), so it sits in a grid of
+ * tiles. A line break between the rows comes from an empty item that fills a line of its own. */
 const stacked = ({
   radius,
   spacing,
+  density,
 }: {
   radius: { card: string };
   spacing: (n: number) => string;
-}) => ({
-  flexWrap: 'wrap' as const,
-  rowGap: spacing(1.5),
+  density: { iconCircle: number; space: number };
+}): CSSObject => ({
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'center',
+  alignContent: 'center',
+  columnGap: spacing(2.5),
+  rowGap: 0,
+  minHeight: 2 * (density.iconCircle + density.space / 3) + density.space,
   paddingTop: spacing(2.5),
   paddingBottom: spacing(2.5),
   borderRadius: radius.card,
-  '& > [data-part="info"]': {
-    display: 'flex',
-    alignItems: 'center',
-    gap: spacing(3),
-    flex: '1 1 100%',
+  '&::before': { content: '""', order: 1, flexBasis: '100%', height: 0 },
+  '& > [data-part="track"]': {
+    flex: '1 1 0',
     minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacing(1.5),
+    // The artist follows the title on the same line, after a dot.
+    '& > :nth-child(2)': {
+      minWidth: 0,
+      '&::before': { content: '"·"', marginRight: spacing(1.5) },
+    },
   },
-  '& > [data-part="controls"]': {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flex: '1 1 100%',
+  '& [data-part="tools"], & [data-part="transport"]': { display: 'contents' },
+  '& [data-part="tools"] > button, & [data-part="transport"] > button': {
+    order: 2,
+    flex: '1 1 0',
+    minWidth: 0,
+    width: 'auto',
+    height: 34,
+    marginTop: spacing(2.5),
+  },
+  '& [data-part="transport"] > button': { order: 4 },
+  '& > [data-part="volume"]': {
+    order: 3,
+    flex: '1 1 0',
+    minWidth: 0,
+    marginTop: spacing(2.5),
+  },
+  '&[data-volume-open="true"]': {
+    '& > [data-part="track"], & > [data-part="time"]': { display: 'flex' },
+    // The slider has the row: only the button that closes it stays, a circle beside it.
+    '& [data-part="tools"] > button:nth-of-type(n + 2), & [data-part="transport"] > button': {
+      display: 'none',
+    },
+    '& [data-part="tools"] > button:first-of-type': { flex: 'none', width: 34 },
   },
 });
 
@@ -115,11 +148,13 @@ function HoldCard({
   open,
   status,
   rows,
+  volumeOpen,
   children,
 }: {
   open: (() => void) | undefined;
   status: string;
   rows: 1 | 2 | 'auto';
+  volumeOpen: boolean;
   children: ReactNode;
 }) {
   const hold = useHold(() => open?.(), open !== undefined);
@@ -137,8 +172,12 @@ function HoldCard({
       overflow="hidden"
       data-status={status}
       data-rows={rows === 2 ? 2 : undefined}
+      data-volume-open={volumeOpen}
       css={(theme) => ({
         minHeight: theme.density.tileHeight,
+        // In one row the volume slider takes the track's place; in two it has its own row.
+        '&[data-volume-open="true"] > [data-part="track"], &[data-volume-open="true"] > [data-part="time"]':
+          { display: 'none' },
         ...(rows === 2 ? stacked(theme) : {}),
         ...(rows === 'auto'
           ? { [`@container (max-width: ${TWO_ROWS_BELOW - 1}px)`]: stacked(theme) }
@@ -208,130 +247,137 @@ export function MediaPlayerBar({ entity, name, browse, rows = 'auto' }: MediaPla
       ? undefined
       : (browse ?? (ref && caps?.browse ? <MediaBrowser entity={ref} layout="auto" /> : undefined));
 
-  const bar = (open?: () => void, openExpanded?: () => void) => (
-    <HoldCard open={open} status={status} rows={rows}>
-      <Flex data-part="info" css={PART}>
-        {/* A ring (the old artwork size) around the artwork, which is as tall as the title + artist
-          lines beside it. */}
-        <Ring onOpen={open}>{artwork}</Ring>
-        {volumeOpen && ready ? (
-          <Flex
-            as={motion.div}
-            align="center"
-            gap={2}
-            grow={1}
-            minWidth={0}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.15 }}
-          >
-            <PlainButton
-              as={motion.button}
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={VOLUME_SPRING}
-              aria-label={muted ? 'Unmute' : 'Mute'}
-              aria-pressed={muted}
-              title={muted ? 'Unmute' : 'Mute'}
-              onClick={volume.toggleMute}
-              center
-              color={muted ? 'accent' : 'textMuted'}
-              css={{ flex: 'none' }}
-            >
-              <Icon name={muted ? 'lu:volume-x' : 'lu:volume-2'} size={16} />
-            </PlainButton>
-            <Flex
-              as={motion.div}
-              grow={1}
-              minWidth={0}
-              initial={{ scaleX: 0.4, opacity: 0 }}
-              animate={{ scaleX: 1, opacity: 1 }}
-              transition={{ ...VOLUME_SPRING, delay: 0.04 }}
-              css={{ transformOrigin: 'left center' }}
-            >
-              <ValueBar
-                label="Volume level"
-                value={volume.shown}
-                min={0}
-                max={100}
-                keyStep={5}
-                height={10}
-                onDrag={volume.drag}
-                onCommit={volume.commit}
-              />
-            </Flex>
-            <Typography
-              as={motion.span}
-              variant="secondary"
-              color="textMuted"
-              minWidth={32}
-              align="right"
-              css={{ flex: 'none' }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.2, delay: 0.1 }}
-            >
-              {volume.shown}%
-            </Typography>
-          </Flex>
-        ) : (
-          <>
-            <Flex
-              direction="column"
-              grow={1}
-              minWidth={0}
-              {...(ready ? {} : { color: 'textMuted' as const })}
-            >
-              <Flex align="center" gap={1.5} minWidth={0}>
-                <Typography as="span" variant="label" noWrap textOverflow="ellipsis">
-                  {ready
-                    ? (player?.media?.title ?? 'Nothing playing')
-                    : statusLabels[status as Exclude<typeof status, 'ready'>]}
-                </Typography>
-                {ready && caps?.shuffle ? (
-                  <PlainButton
-                    aria-label="Shuffle"
-                    aria-pressed={player?.shuffle === true}
-                    title="Shuffle"
-                    onClick={() =>
-                      void handle.command('setShuffle', { shuffle: player?.shuffle !== true })
-                    }
-                    center
-                    color={player?.shuffle === true ? 'accent' : 'textMuted'}
-                    css={{ flex: 'none' }}
-                  >
-                    <Icon name="lu:shuffle" size={14} />
-                  </PlainButton>
-                ) : null}
-              </Flex>
-              {ready && player?.media?.artist ? (
-                <Typography
-                  as="span"
-                  variant="secondary"
-                  color="textMuted"
-                  noWrap
-                  textOverflow="ellipsis"
-                >
-                  {player.media.artist}
-                </Typography>
-              ) : null}
-            </Flex>
-            {/* The time sits at the vertical middle of the bar, beside the track, not in a text row. */}
-            {timed ? (
-              <Typography
-                as="span"
-                variant="secondary"
-                color="textMuted"
-                noWrap
-                css={{ flex: 'none', fontVariantNumeric: 'tabular-nums' }}
-              >
-                {formatDuration(seek.shown ?? 0)} / {formatDuration(duration ?? 0)}
-              </Typography>
-            ) : null}
-          </>
-        )}
+  const volumeSlider = (
+    <Flex
+      as={motion.div}
+      align="center"
+      gap={2}
+      grow={1}
+      minWidth={0}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15 }}
+      data-part="volume"
+    >
+      <PlainButton
+        as={motion.button}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={VOLUME_SPRING}
+        aria-label={muted ? 'Unmute' : 'Mute'}
+        aria-pressed={muted}
+        title={muted ? 'Unmute' : 'Mute'}
+        onClick={volume.toggleMute}
+        center
+        color={muted ? 'accent' : 'textMuted'}
+        css={{ flex: 'none' }}
+      >
+        <Icon name={muted ? 'lu:volume-x' : 'lu:volume-2'} size={16} />
+      </PlainButton>
+      <Flex
+        as={motion.div}
+        grow={1}
+        minWidth={0}
+        initial={{ scaleX: 0.4, opacity: 0 }}
+        animate={{ scaleX: 1, opacity: 1 }}
+        transition={{ ...VOLUME_SPRING, delay: 0.04 }}
+        css={{ transformOrigin: 'left center' }}
+      >
+        <ValueBar
+          label="Volume level"
+          value={volume.shown}
+          min={0}
+          max={100}
+          keyStep={5}
+          height={10}
+          onDrag={volume.drag}
+          onCommit={volume.commit}
+        />
       </Flex>
-      <Flex data-part="controls" css={PART}>
+      <Typography
+        as={motion.span}
+        variant="secondary"
+        color="textMuted"
+        minWidth={32}
+        align="right"
+        css={{ flex: 'none' }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2, delay: 0.1 }}
+      >
+        {volume.shown}%
+      </Typography>
+    </Flex>
+  );
+
+  const trackInfo = (
+    <>
+      <Flex
+        data-part="track"
+        direction="column"
+        grow={1}
+        minWidth={0}
+        {...(ready ? {} : { color: 'textMuted' as const })}
+      >
+        <Flex align="center" gap={1.5} minWidth={0}>
+          <Typography as="span" variant="label" noWrap textOverflow="ellipsis">
+            {ready
+              ? (player?.media?.title ?? 'Nothing playing')
+              : statusLabels[status as Exclude<typeof status, 'ready'>]}
+          </Typography>
+          {ready && caps?.shuffle ? (
+            <PlainButton
+              aria-label="Shuffle"
+              aria-pressed={player?.shuffle === true}
+              title="Shuffle"
+              onClick={() =>
+                void handle.command('setShuffle', { shuffle: player?.shuffle !== true })
+              }
+              center
+              color={player?.shuffle === true ? 'accent' : 'textMuted'}
+              css={{ flex: 'none' }}
+            >
+              <Icon name="lu:shuffle" size={14} />
+            </PlainButton>
+          ) : null}
+        </Flex>
+        {ready && player?.media?.artist ? (
+          <Typography
+            as="span"
+            variant="secondary"
+            color="textMuted"
+            noWrap
+            textOverflow="ellipsis"
+          >
+            {player.media.artist}
+          </Typography>
+        ) : null}
+      </Flex>
+    </>
+  );
+
+  const bar = (open?: () => void, openExpanded?: () => void) => (
+    <HoldCard open={open} status={status} rows={rows} volumeOpen={volumeOpen && ready}>
+      {/* A ring (the old artwork size) around the artwork, which is as tall as the title + artist
+          lines beside it. */}
+      <Ring onOpen={open}>{artwork}</Ring>
+      {trackInfo}
+      {/* The time sits at the vertical middle of the bar, beside the track; in two rows it is at the
+          right of the top row. The volume slider takes the track's and the time's place in one row. */}
+      {timed ? (
+        <Typography
+          as="span"
+          data-part="time"
+          variant="secondary"
+          color="textMuted"
+          noWrap
+          css={{ flex: 'none', fontVariantNumeric: 'tabular-nums' }}
+        >
+          {formatDuration(seek.shown ?? 0)} / {formatDuration(duration ?? 0)}
+        </Typography>
+      ) : null}
+      {volumeOpen && ready ? volumeSlider : null}
+      <Flex data-part="tools" align="center" gap={3} css={{ flex: 'none' }}>
         <IconButton
           icon={volumeOpen ? 'lu:x' : muted ? 'lu:volume-x' : 'lu:volume-2'}
           label={volumeOpen ? 'Close volume' : 'Volume'}
@@ -347,6 +393,8 @@ export function MediaPlayerBar({ entity, name, browse, rows = 'auto' }: MediaPla
             onClick={openExpanded ?? open}
           />
         ) : null}
+      </Flex>
+      <Flex data-part="transport" align="center" gap={3} css={{ flex: 'none' }}>
         <IconButton
           icon="lu:skip-back"
           label="Previous"
