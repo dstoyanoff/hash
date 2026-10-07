@@ -441,6 +441,9 @@ function StatusChip({ children }: { children: ReactNode }) {
 export interface WeatherChipProps {
   /** A weather entity, like `ha:weather.forecast_home`, or a plain temperature sensor. */
   entity: EntityRef;
+
+  /** Tapping a weather entity's pill opens its forecast in a drawer. `false` builds none and the pill is only what it shows, which is lighter on a small display. Default `true`. */
+  drawer?: boolean;
 }
 
 /** Current weather, as a pill: an icon for the sky and a rounded whole-degree reading. A `weather`
@@ -448,9 +451,9 @@ export interface WeatherChipProps {
  * forecast when tapped (if its source has one); a plain `sensor.*` (an outdoor temperature) gets a
  * fixed sun and no forecast, since a sensor says nothing about the sky. The top bar's weather pill,
  * for a dashboard that builds its own header instead of using `TopBar`. */
-export function WeatherChip({ entity }: WeatherChipProps) {
+export function WeatherChip({ entity, drawer = true }: WeatherChipProps) {
   return useEntity(entity)?.kind === 'weather' ? (
-    <WeatherPill entity={entity} />
+    <WeatherPill entity={entity} drawer={drawer} />
   ) : (
     <SensorWeather entity={entity} />
   );
@@ -464,7 +467,7 @@ const LABEL_LINE = 15;
 
 const TRIM_TO_DIGITS = { textBox: 'trim-both cap alphabetic' } as const;
 
-function WeatherPill({ entity }: { entity: EntityRef }) {
+function WeatherPill({ entity, drawer }: { entity: EntityRef; drawer: boolean }) {
   const handle = useEntityHandle('weather', entity);
   const { status } = handle;
   const weather = handle.entity;
@@ -509,7 +512,7 @@ function WeatherPill({ entity }: { entity: EntityRef }) {
     </StatusChip>
   );
 
-  if (!forecastable) {
+  if (!forecastable || !drawer) {
     return chip;
   }
 
