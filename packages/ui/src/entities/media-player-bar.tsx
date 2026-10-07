@@ -33,6 +33,12 @@ export interface MediaPlayerBarProps {
   /** Content for the media browser shown with the player in the drawer. Holding the card or pressing the artwork opens the drawer; the browse button opens it expanded. By default a `MediaBrowser` over the player's own library, shown only for a ref whose player has one; pass your own content to replace it, or `false` for no browse button. */
   browse?: ReactNode | false;
 
+  /** `false` builds no drawer: holding the card, pressing the artwork and the browse button then do nothing, which is lighter on a small display. Default `true`. See `onOpen` to send them somewhere else instead. */
+  drawer?: boolean;
+
+  /** Called instead of opening the drawer when the card is held, the artwork pressed or the browse button pressed: for a dashboard with a page of its own for the player (a `MediaPlayerFull`), `onOpen={() => navigate('/bathroom/music')}`. Given, no drawer is built. The browse button stays unless `browse` is `false`. */
+  onOpen?: () => void;
+
   /** `1` puts the controls beside the track, in one pill; `2` puts them on a second row under it, for a narrow space (a small wall display). Default `'auto'`: one row, and two once the bar is narrower than 560 px wide. */
   rows?: 1 | 2 | 'auto';
 }
@@ -210,7 +216,14 @@ function HoldCard({
 }
 
 /** Now playing with previous / play-pause / next and a volume control, for a media player entity. */
-export function MediaPlayerBar({ entity, name, browse, rows = 'auto' }: MediaPlayerBarProps) {
+export function MediaPlayerBar({
+  entity,
+  name,
+  browse,
+  drawer = true,
+  onOpen,
+  rows = 'auto',
+}: MediaPlayerBarProps) {
   const handle = useEntityHandle('mediaPlayer', entity);
   const player = handle.entity;
   const status = handle.status;
@@ -394,7 +407,7 @@ export function MediaPlayerBar({ entity, name, browse, rows = 'auto' }: MediaPla
           disabled={!ready || (caps?.volume === false && caps.mute === false)}
           onClick={() => setVolumeOpen((current) => !current)}
         />
-        {open && browser !== undefined ? (
+        {open && (onOpen ? browse !== false : browser !== undefined) ? (
           <IconButton
             icon="lu:library"
             label="Browse media"
@@ -437,7 +450,20 @@ export function MediaPlayerBar({ entity, name, browse, rows = 'auto' }: MediaPla
 
   // Holding the card, the artwork and the browse button open the same drawer: the player laid out
   // like the vertical one, with the library below it.
-  return ready ? (
+  if (!ready) {
+    return bar();
+  }
+
+  // Held, pressed or browsed, the player goes where the dashboard says instead of opening a drawer.
+  if (onOpen) {
+    return bar(onOpen, onOpen);
+  }
+
+  if (!drawer) {
+    return bar();
+  }
+
+  return (
     <DrawerTrigger
       icon="lu:music"
       label={name ?? player?.name ?? fallbackName(entity)}
@@ -453,7 +479,5 @@ export function MediaPlayerBar({ entity, name, browse, rows = 'auto' }: MediaPla
     >
       {(open, openExpanded) => bar(open, openExpanded)}
     </DrawerTrigger>
-  ) : (
-    bar()
   );
 }
