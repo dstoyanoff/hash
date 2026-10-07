@@ -851,11 +851,15 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
           <ComponentDoc
             title="Media Player Bar"
             components={['MediaPlayerBar']}
-            description="Track info (with a small shuffle toggle by the title) and the time beside it, then volume, browse, previous, play/pause and next (the artwork opens the browser too), with a thin progress line along the bottom while something plays. The browse button opens the player's own library in the drawer; pass `browse` content to replace it, or `false` for no button. The volume button opens a volume slider in the bar (with a mute swatch, like the light colors and climate modes). Shows album art, or a note glyph when there is none."
+            description="Track info (with a small shuffle toggle by the title) and the time beside it, then volume, browse, previous, play/pause and next (the artwork opens the browser too), with a thin progress line along the bottom while something plays. The browse button opens the player's own library in the drawer; pass `browse` content to replace it, or `false` for no button. The volume button opens a volume slider in the bar (with a mute swatch, like the light colors and climate modes). Shows album art, or a note glyph when there is none. In a space narrower than 560px, or with `rows={2}`, the controls move to a second row under the track."
           >
             <Flex direction="column" gap={3}>
               <MediaPlayerBar entity="ha:media_player.living_room" />
               <MediaPlayerBar entity="ha:media_player.off" />
+              {/* Narrower than 560px it is two rows by itself; `rows={2}` asks for them at any width. */}
+              <Flex width={380}>
+                <MediaPlayerBar entity="ha:media_player.living_room" rows={2} />
+              </Flex>
             </Flex>
           </ComponentDoc>
 

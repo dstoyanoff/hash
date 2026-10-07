@@ -46,10 +46,12 @@ test('the volume button opens a volume slider in the bar; the X closes it', () =
   fireEvent.click(screen.getByRole('button', { name: 'Volume' }));
   const slider = screen.getByRole('slider', { name: 'Volume level' });
   expect(slider.getAttribute('aria-valuenow')).toBe('40');
-  expect(screen.queryByText('Blank Space')).toBeNull();
+  // In one row the slider takes the track's place (the track is hidden, not removed).
+  const track = screen.getByText('Blank Space').closest('[data-part="track"]') as HTMLElement;
+  expect(getComputedStyle(track).display).toBe('none');
   fireEvent.click(screen.getByRole('button', { name: 'Close volume' }));
   expect(screen.queryByRole('slider', { name: 'Volume level' })).toBeNull();
-  expect(screen.getByText('Blank Space')).toBeTruthy();
+  expect(getComputedStyle(track).display).not.toBe('none');
 });
 
 test('dragging or nudging the slider sets the volume as a fraction and it sticks', () => {
@@ -181,4 +183,98 @@ test('clicking the artwork opens the drawer: the player, and the browser below i
   fireEvent.click(screen.getByRole('button', { name: 'Open player' }));
   expect(screen.getByText('BROWSER CONTENT')).toBeTruthy();
   expect(screen.getByRole('heading', { name: 'Blank Space' })).toBeTruthy();
+});
+
+// One row or two.
+
+const timed = {
+  room: mockMediaPlayer({
+    name: 'Room',
+    playback: 'paused',
+    media: { title: 'Blank Space', artist: 'More More' },
+    position: 80,
+    duration: 200,
+  }),
+};
+
+const cardOf = () => document.querySelector('[data-status]') as HTMLElement;
+
+const partOf = (name: string) => cardOf().querySelector(`[data-part="${name}"]`) as HTMLElement;
+
+const buttonsOf = () => [
+  ...partOf('tools').querySelectorAll('button'),
+  ...partOf('transport').querySelectorAll('button'),
+];
+
+test('rows={2}: the track and time on top, the five buttons sharing the row under them', () => {
+  renderWithMock(<MediaPlayerBar entity="ha:room" rows={2} />, timed);
+  const card = cardOf();
+  expect(getComputedStyle(card).flexWrap).toBe('wrap');
+  expect(card.dataset.rows).toBe('2');
+
+  // "title · artist" on one line.
+  expect(getComputedStyle(partOf('track')).flexDirection).toBe('row');
+  expect(partOf('time').textContent).toMatch(/\d:\d{2} \/ \d:\d{2}/);
+
+  // Volume, library, previous, play and next, in that order.
+  expect(buttonsOf().map((b) => b.getAttribute('aria-label'))).toEqual([
+    'Volume',
+    'Previous',
+    'Play',
+    'Next',
+  ]);
+
+  // The tools and the transport are not boxes of their own: their buttons are the row's items.
+  expect(getComputedStyle(partOf('tools')).display).toBe('contents');
+  expect(getComputedStyle(partOf('transport')).display).toBe('contents');
+});
+
+test('rows={2}: every button is the same width, play included', () => {
+  renderWithMock(<MediaPlayerBar entity="ha:room" rows={2} />, timed);
+  const shares = new Set(buttonsOf().map((b) => getComputedStyle(b).flexGrow));
+  expect(shares).toEqual(new Set(['1']));
+  expect(new Set(buttonsOf().map((b) => getComputedStyle(b).height)).size).toBe(1);
+});
+
+test('rows={2} is as tall as two regular tiles and the gap between them', () => {
+  renderWithMock(<MediaPlayerBar entity="ha:room" rows={2} />, timed);
+  // A tile is its 44px icon circle and a 4px spacing unit; the gap is 12px.
+  expect(getComputedStyle(cardOf()).minHeight).toBe('108px');
+});
+
+test('rows={2}: while the volume slider is open it has the row, and only the close button stays', () => {
+  renderWithMock(<MediaPlayerBar entity="ha:room" rows={2} />, timed);
+  fireEvent.click(screen.getByRole('button', { name: 'Volume' }));
+  const shown = buttonsOf().filter((b) => getComputedStyle(b).display !== 'none');
+  expect(shown.map((b) => b.getAttribute('aria-label'))).toEqual(['Close volume']);
+  expect(screen.getByRole('slider', { name: 'Volume level' })).toBeTruthy();
+  // The track and the time stay above it.
+  for (const part of ['track', 'time']) {
+    expect(getComputedStyle(partOf(part)).display).not.toBe('none');
+  }
+
+  fireEvent.click(screen.getByRole('button', { name: 'Close volume' }));
+  expect(buttonsOf().every((b) => getComputedStyle(b).display !== 'none')).toBe(true);
+});
+
+test('in one row the slider takes the place of the track and the time', () => {
+  renderWithMock(<MediaPlayerBar entity="ha:room" rows={1} />, timed);
+  fireEvent.click(screen.getByRole('button', { name: 'Volume' }));
+  for (const part of ['track', 'time']) {
+    expect(getComputedStyle(partOf(part)).display).toBe('none');
+  }
+});
+
+test('rows={1} keeps everything in one pill', () => {
+  renderWithMock(<MediaPlayerBar entity="ha:room" rows={1} />, timed);
+  expect(getComputedStyle(cardOf()).flexWrap).not.toBe('wrap');
+  expect(cardOf().dataset.rows).toBeUndefined();
+  expect(getComputedStyle(partOf('transport')).display).not.toBe('contents');
+});
+
+test('by default it is one row until the width says otherwise, and the width is measured on a wrapper', () => {
+  renderWithMock(<MediaPlayerBar entity="ha:room" />, timed);
+  // jsdom does not evaluate container queries: this is the wide case, and the wrapper is what is measured.
+  expect(getComputedStyle(cardOf()).flexWrap).not.toBe('wrap');
+  expect(getComputedStyle(cardOf().parentElement!).containerType).toBe('inline-size');
 });
