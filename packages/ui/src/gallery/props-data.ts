@@ -308,6 +308,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         optional: true,
         type: 'LightColorPreset[]',
       },
+      {
+        doc: 'Holding the tile opens a drawer with the full controls, the color bars, the energy chart and the recent activity. `false` leaves the tile as it is without it: a toggle that dims by dragging, with the color swatches if the light has color, and no drawer built, which is lighter on a small display. Default `true`.',
+        name: 'drawer',
+        optional: true,
+        type: 'boolean',
+      },
     ],
   },
   ClimateTile: {
