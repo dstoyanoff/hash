@@ -694,6 +694,17 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
       },
     ],
   },
+  WeatherChip: {
+    doc: "Current weather, as a pill: an icon for the sky and a rounded whole-degree reading. A `weather` entity gives the real condition, today's high and low once its forecast has loaded, and opens the forecast when tapped (if its source has one); a plain `sensor.*` (an outdoor temperature) gets a fixed sun and no forecast, since a sensor says nothing about the sky. The top bar's weather pill, for a dashboard that builds its own header instead of using `TopBar`.",
+    props: [
+      {
+        doc: 'A weather entity, like `ha:weather.forecast_home`, or a plain temperature sensor.',
+        name: 'entity',
+        optional: false,
+        type: 'EntityRef',
+      },
+    ],
+  },
   PresenceStack: {
     doc: 'Overlapping avatar circles for a handful of `person.*` entities.',
     props: [
@@ -708,6 +719,21 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         name: 'colors',
         optional: true,
         type: 'readonly string[]',
+      },
+    ],
+  },
+  DateChip: {
+    doc: "A short date pill (`Tue · Oct 6`), the top bar's, for a dashboard that builds its own header.",
+    props: [],
+  },
+  Clock: {
+    doc: "The top bar's clock: the time in the large clock type, with AM/PM beside it in a 12h format. For a dashboard that builds its own header instead of using `TopBar`.",
+    props: [
+      {
+        doc: "`'auto'` follows the browser's locale (browsers don't read the OS 12/24h setting, so an `en-US` browser shows AM/PM); `'12h'`/`'24h'` force it. Default `'auto'`.",
+        name: 'format',
+        optional: true,
+        type: "'auto' | '12h' | '24h'",
       },
     ],
   },

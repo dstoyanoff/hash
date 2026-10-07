@@ -290,6 +290,14 @@ One dot summarising the runtime link and every integration — green when all ar
 | `statuses`    | `Readonly<Record<string, ConnectionStatus>>` | no       | Overrides the live per-integration statuses, keyed by integration id.                         |
 | `defaultOpen` | `boolean`                                    | no       | Start with the detail popover open. Default `false`.                                          |
 
+### `WeatherChip`
+
+Current weather, as a pill: an icon for the sky and a rounded whole-degree reading. A `weather` entity gives the real condition, today's high and low once its forecast has loaded, and opens the forecast when tapped (if its source has one); a plain `sensor.*` (an outdoor temperature) gets a fixed sun and no forecast, since a sensor says nothing about the sky. The top bar's weather pill, for a dashboard that builds its own header instead of using `TopBar`.
+
+| Prop     | Type        | Required |                                                                                   |
+| -------- | ----------- | -------- | --------------------------------------------------------------------------------- |
+| `entity` | `EntityRef` | yes      | A weather entity, like `ha:weather.forecast_home`, or a plain temperature sensor. |
+
 ### `PresenceStack`
 
 Overlapping avatar circles for a handful of `person.*` entities.
@@ -298,6 +306,22 @@ Overlapping avatar circles for a handful of `person.*` entities.
 | ---------- | ------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `entities` | `EntityRef[]`       | yes      | People, as refs like `ha:person.dan`: one avatar each (their picture, or a colored initial). Someone who is away is dimmed and grayscale. |
 | `colors`   | `readonly string[]` | no       | Only colors the initial of people without a picture; each gets one, always the same. Optional: a built-in set of six is used by default.  |
+
+### `DateChip`
+
+A short date pill (`Tue · Oct 6`), the top bar's, for a dashboard that builds its own header.
+
+```ts
+function DateChip();
+```
+
+### `Clock`
+
+The top bar's clock: the time in the large clock type, with AM/PM beside it in a 12h format. For a dashboard that builds its own header instead of using `TopBar`.
+
+| Prop     | Type                       | Required |                                                                                                                                                                   |
+| -------- | -------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `format` | `'auto' \| '12h' \| '24h'` | no       | `'auto'` follows the browser's locale (browsers don't read the OS 12/24h setting, so an `en-US` browser shows AM/PM); `'12h'`/`'24h'` force it. Default `'auto'`. |
 
 ### `WeatherForecast`
 
