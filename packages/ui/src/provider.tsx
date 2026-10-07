@@ -1,12 +1,21 @@
 import { RemoteClient, type Client, type RemoteClientOptions } from '@hashsome/core';
 import { Global, ThemeProvider as EmotionThemeProvider, type Theme } from '@emotion/react';
 import { ThemeProvider } from 'e-prim';
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 import { DetailProvider } from './layout/detail-provider.tsx';
 import { EntityDrawer } from './layout/entity-drawer.tsx';
 import { UNITS_PER_SPACE, type Density } from './theme/density.ts';
 import { globalStyles } from './theme/global-styles.ts';
 import { applyThemeOverrides, densityTokens, type ThemeOverrides } from './theme/overrides.ts';
+import { isDarkAt, msUntilSwitch, sunIsDown, type ThemeSchedule } from './theme/schedule.ts';
 import {
   DEFAULT_FONT,
   darkTheme,
@@ -17,7 +26,10 @@ import {
 
 const HashsomeContext = createContext<Client | null>(null);
 
-export type ThemeMode = 'light' | 'dark' | 'system';
+export type { ThemeSchedule };
+
+/** `'system'` follows the display's own light/dark preference; a `ThemeSchedule` changes with the time of day. */
+export type ThemeMode = 'light' | 'dark' | 'system' | ThemeSchedule;
 
 export interface HashsomeProviderProps {
   /** Runtime WebSocket URL. Defaults to `/ws` on the current origin. */
@@ -29,7 +41,7 @@ export interface HashsomeProviderProps {
   /** Options for the default `RemoteClient` (reconnect timing, a custom socket factory). Ignored when `client` is given. */
   clientOptions?: Omit<RemoteClientOptions, 'url'>;
 
-  /** `'system'` follows the browser/OS preference and updates live. Default `'dark'`. A `useThemeToggle()` caller (e.g. `NavRail`'s dev toggle) can still override this at runtime. */
+  /** `'light'`, `'dark'`, `'system'` (follows the browser/OS preference and updates live), or a schedule: `{ dark: { from: '19:00', to: '07:00' } }` is dark between those times on the display's clock, `{ sun: 'ha:sun.sun' }` is dark while that entity, a `daylight` sensor (`on` while the sun is up; the Home Assistant integration makes one of `sun.sun`), is `off`. Default `'dark'`. A schedule and the document shell's first paint use `'system'` until the time or the entity is known. A `useThemeToggle()` caller (e.g. `NavRail`'s dev toggle) can still override this at runtime. Pass a constant defined outside the component. */
   theme?: ThemeMode;
 
   /** Any Google Fonts family name (e.g. `'Inter'`, `'Roboto'`, `'Poppins'`), loaded dynamically. Default `'Inter'`. */
@@ -104,15 +116,36 @@ export function useThemeToggle(): ThemeModeState {
   return value;
 }
 
-/** Resolves `'system'` against the live OS/browser preference, updating if it changes while open —
- * a kiosk tablet left running overnight should follow a scheduled OS-level dark mode, for example.
- * `override` (set via `useThemeToggle().toggle()`) wins over both until the page reloads. */
-function useThemeMode(mode: ThemeMode): ThemeModeState {
-  const [systemDark, setSystemDark] = useState(() => mode === 'system' && systemPrefersDark());
+const SUN_KEY = 'hashsome:sun-down';
+
+/** The last answer a sun entity gave, kept across page loads so a reload at night does not start light. */
+function rememberedSun(): boolean | undefined {
+  try {
+    const stored = localStorage.getItem(SUN_KEY);
+    return stored === null ? undefined : stored === '1';
+  } catch {
+    return undefined;
+  }
+}
+
+/** Resolves the configured mode: `'system'` against the live OS/browser preference (updating if it
+ * changes while open — a kiosk tablet left running overnight should follow a scheduled OS-level dark
+ * mode, for example), a time range against the clock (re-checked at each boundary and whenever the
+ * page is shown again, since a sleeping tablet misses timers) and a sun entity against what it says.
+ * `override` (set via `useThemeToggle().toggle()`) wins over all of them until the page reloads. */
+function useThemeMode(mode: ThemeMode, client: Client): ThemeModeState {
+  const range = typeof mode === 'object' && 'dark' in mode ? mode.dark : undefined;
+  const from = range?.from;
+  const to = range?.to;
+  const sunRef = typeof mode === 'object' && 'sun' in mode ? mode.sun : undefined;
+  const followsSystem = mode === 'system' || sunRef !== undefined;
+
+  const [systemDark, setSystemDark] = useState(() => followsSystem && systemPrefersDark());
   const [override, setOverride] = useState<'light' | 'dark' | null>(null);
+  const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
-    if (mode !== 'system' || typeof window.matchMedia !== 'function') {
+    if (!followsSystem || typeof window.matchMedia !== 'function') {
       return;
     }
 
@@ -120,10 +153,67 @@ function useThemeMode(mode: ThemeMode): ThemeModeState {
     const onChange = () => setSystemDark(query.matches);
     query.addEventListener('change', onChange);
     return () => query.removeEventListener('change', onChange);
-  }, [mode]);
+  }, [followsSystem]);
 
-  const configured: 'light' | 'dark' =
-    mode === 'light' ? 'light' : mode === 'dark' ? 'dark' : systemDark ? 'dark' : 'light';
+  useEffect(() => {
+    if (from === undefined || to === undefined) {
+      return;
+    }
+
+    const bounds = { from, to };
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const arm = () => {
+      clearTimeout(timer);
+      const wait = msUntilSwitch(bounds, new Date());
+      if (Number.isFinite(wait)) {
+        // A moment past the boundary, so the clock has certainly crossed it.
+        timer = setTimeout(refresh, wait + 500);
+      }
+    };
+
+    const refresh = () => {
+      setNow(new Date());
+      arm();
+    };
+
+    const onVisible = () => document.visibilityState === 'visible' && refresh();
+    refresh();
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [from, to]);
+
+  const sun = useSyncExternalStore(
+    (onChange) => (sunRef ? client.subscribe(sunRef, onChange) : () => undefined),
+    () => (sunRef ? client.getEntity(sunRef) : undefined),
+    () => undefined,
+  );
+
+  const sunDown = sunIsDown(sun);
+  useEffect(() => {
+    if (sunDown === undefined) {
+      return;
+    }
+
+    try {
+      localStorage.setItem(SUN_KEY, sunDown ? '1' : '0');
+    } catch {
+      // Without storage the next load just starts from the system preference again.
+    }
+  }, [sunDown]);
+
+  let configured: 'light' | 'dark';
+  if (mode === 'light' || mode === 'dark') {
+    configured = mode;
+  } else if (range) {
+    configured = isDarkAt(range, now) ? 'dark' : 'light';
+  } else if (sunRef) {
+    configured = (sunDown ?? rememberedSun() ?? systemDark) ? 'dark' : 'light';
+  } else {
+    configured = systemDark ? 'dark' : 'light';
+  }
 
   const resolved = override ?? configured;
 
@@ -146,7 +236,7 @@ export function HashsomeProvider({
     [client, url, clientOptions],
   );
 
-  const themeMode = useThemeMode(theme);
+  const themeMode = useThemeMode(theme, instance);
   // Memoized: Emotion recomputes the merged theme (and every `css` prop) when the function changes.
   const withDensity = useMemo(
     () =>

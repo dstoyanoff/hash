@@ -275,6 +275,27 @@ describe('files Home Assistant serves itself', () => {
   });
 });
 
+describe('sun', () => {
+  test('is a daylight sensor: on while the sun is up, off while it is down', () => {
+    expect(map(hass('sun.sun', 'above_horizon', { friendly_name: 'Sun' }))).toMatchObject({
+      kind: 'sensor',
+      name: 'Sun',
+      value: 'on',
+      measurement: 'daylight',
+    });
+
+    expect(map(hass('sun.sun', 'below_horizon'))).toMatchObject({ kind: 'sensor', value: 'off' });
+  });
+
+  test('passes on a state that is neither, such as unavailable', () => {
+    expect(map(hass('sun.sun', 'unavailable'))).toMatchObject({
+      kind: 'sensor',
+      value: 'unavailable',
+      measurement: 'daylight',
+    });
+  });
+});
+
 describe('weather', () => {
   test('the state is the condition and the attributes are the readings', () => {
     expect(

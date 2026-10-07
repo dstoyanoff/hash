@@ -16,6 +16,19 @@ export function mapSensor(entity: HassEntity): EntityInput {
   };
 }
 
+/** Home Assistant's sun is `above_horizon` or `below_horizon`; the generic model says it as a `daylight`
+ * sensor, `on` while the sun is up. Anything else (unavailable) is passed on as it is. */
+export function mapSun(entity: HassEntity): EntityInput {
+  const value =
+    entity.state === 'above_horizon'
+      ? 'on'
+      : entity.state === 'below_horizon'
+        ? 'off'
+        : entity.state;
+
+  return { kind: 'sensor', ...baseOf(entity), value, measurement: 'daylight' };
+}
+
 /** `on` for an on/off thing; for a lock, `locked`. */
 export function mapSwitch(entity: HassEntity): EntityInput {
   const on = entity.state === 'on' || entity.state === 'locked';

@@ -1,7 +1,5 @@
-import { DEFAULT_FONT, fontStack, googleFontHref } from '@hashsome/ui';
+import { DEFAULT_FONT, fontStack, googleFontHref, type ThemeMode } from '@hashsome/ui';
 import { Links, Meta, Scripts, ScrollRestoration } from 'react-router';
-
-type ThemeMode = 'light' | 'dark' | 'system';
 
 const SHELL = {
   dark: { bg: '#101114', fg: '#e6e6e6' },
@@ -11,16 +9,18 @@ const SHELL = {
 /** Builds the document shell's `Layout`, painted before any client JS runs — so its background
  * needs to already roughly match the configured theme, or hydration visibly swaps the color out
  * from under the user. `'system'` can't know the OS preference at render time, so it ships both
- * colors and lets a plain CSS media query (not JS) pick the right one with no flash either way.
+ * colors and lets a plain CSS media query (not JS) pick the right one with no flash either way. A
+ * schedule (by the clock or the sun) is not known yet either, so it starts as `'system'` does and
+ * the app takes over once it is running.
  * The Google Fonts `<link>` is rendered here too (not left to `HashsomeProvider`'s own client-side
  * fallback) so the chosen font is already loading before hydration, not swapped in after. */
 export function createLayout(theme: ThemeMode = 'dark', font: string = DEFAULT_FONT) {
-  const colorScheme = theme === 'system' ? 'light dark' : theme;
+  const followsSystem = typeof theme === 'object' || theme === 'system';
+  const colorScheme = followsSystem ? 'light dark' : theme;
   const initial = theme === 'light' ? SHELL.light : SHELL.dark;
-  const systemOverride =
-    theme === 'system'
-      ? `@media (prefers-color-scheme: light) { html, body { background: ${SHELL.light.bg}; color: ${SHELL.light.fg}; } }`
-      : '';
+  const systemOverride = followsSystem
+    ? `@media (prefers-color-scheme: light) { html, body { background: ${SHELL.light.bg}; color: ${SHELL.light.fg}; } }`
+    : '';
 
   const kioskCss = `
     html, body { margin: 0; height: 100%; background: ${initial.bg}; color: ${initial.fg}; font-family: ${fontStack(font)}; }
