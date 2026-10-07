@@ -110,9 +110,13 @@ const stacked = ({
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: spacing(1.5),
-    // The artist follows the title on the same line, after a dot.
+    // The title and the artist share the line and shorten, with an ellipsis, before they run into
+    // the time; the artist follows the title after a dot.
+    '& > :nth-child(1)': { flex: '0 1 auto', minWidth: 0 },
     '& > :nth-child(2)': {
+      flex: '0 1 auto',
       minWidth: 0,
+      overflow: 'hidden',
       '&::before': { content: '"·"', marginRight: spacing(1.5) },
     },
   },
