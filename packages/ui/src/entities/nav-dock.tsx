@@ -32,7 +32,7 @@ export function NavDock({ items, base, showThemeToggle }: NavDockProps) {
       background="rail"
       radius="full"
       p={1.5}
-      shadow="drawer"
+      shadow="dock"
       position="fixed"
       css={({ spacing }) => ({
         bottom: spacing(5),
