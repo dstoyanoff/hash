@@ -1,5 +1,5 @@
-import { mockMediaPlayer } from '@hashsome/core';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { mockLibrary, mockMediaPlayer } from '@hashsome/core';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
 import { renderWithMock } from '../../test-utils.tsx';
 import { MediaPlayerBar } from '../media-player-bar.tsx';
@@ -350,4 +350,61 @@ test('the artwork ring fills as far as playback has gone, and is plain without a
 
   renderWithMock(<MediaPlayerBar entity="ha:room" />, player());
   expect(document.querySelector('[data-part="progress"]')).toBeNull();
+});
+
+// The library and the queue as overlays of their own.
+
+const withLibrary = {
+  room: mockMediaPlayer({
+    name: 'Room',
+    playback: 'paused',
+    media: { title: 'Blank Space', artist: 'More More' },
+    capabilities: { browse: true, queue: true },
+  }),
+};
+
+test('overlays: browse opens the library alone, and the queue button opens the queue alone, each full size', async () => {
+  renderWithMock(<MediaPlayerBar entity="ha:room" overlays />, withLibrary, {
+    library: mockLibrary(),
+  });
+
+  // The card is the player: the buttons in order, the queue after browse.
+  expect(screen.getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([
+    'Volume',
+    'Browse media',
+    'Queue',
+    'Previous',
+    'Play',
+    'Next',
+  ]);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Browse media' }));
+  expect(await screen.findByText('Playlists')).toBeTruthy();
+  expect(within(screen.getByRole('dialog')).getByText('Library')).toBeTruthy();
+  // The player is not drawn again inside it, and the queue is not there.
+  expect(screen.getAllByText('Blank Space')).toHaveLength(1);
+  expect(screen.queryByText(/tracks/)).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+  fireEvent.click(screen.getByRole('button', { name: 'Queue' }));
+  expect(await screen.findByText(/24 tracks/)).toBeTruthy();
+  expect(within(screen.getByRole('dialog')).getAllByText('Queue').length).toBeGreaterThan(0);
+  expect(screen.queryByText('Playlists')).toBeNull();
+});
+
+test('overlays: a player with no queue has no queue button, browse={false} leaves out the library, and holding opens nothing', () => {
+  vi.useFakeTimers();
+  try {
+    renderWithMock(<MediaPlayerBar entity="ha:room" overlays browse={false} />, player());
+    expect(screen.queryByRole('button', { name: 'Queue' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Browse media' })).toBeNull();
+
+    const card = document.querySelector('[data-status]') as HTMLElement;
+    fireEvent.pointerDown(card, { clientX: 10, clientY: 10, pointerId: 1 });
+    act(() => vi.advanceTimersByTime(800));
+    fireEvent.pointerUp(card, { pointerId: 1 });
+    expect(screen.getAllByText('Blank Space')).toHaveLength(1);
+  } finally {
+    vi.useRealTimers();
+  }
 });

@@ -39,6 +39,9 @@ export interface MediaPlayerBarProps {
   /** Called instead of opening the drawer when the card is held, the artwork pressed or the browse button pressed: for a dashboard with a page of its own for the player (a `MediaPlayerFull`), `onOpen={() => navigate('/bathroom/music')}`. Given, no drawer is built. The browse button stays unless `browse` is `false`. */
   onOpen?: () => void;
 
+  /** The library and the queue each open as a full-size overlay of their own, from the browse button and a new queue button, instead of one drawer with the whole player in it: for a small display, where the card itself is the player. The library overlay is a `MediaBrowser` as a list (or your `browse` content), the queue overlay a `MediaQueue`; each button is left out when the player has none, or for `browse={false}`. Holding the card and pressing the artwork then do nothing, unless `onOpen` is given. Default `false`. */
+  overlays?: boolean;
+
   /** `1` puts the controls beside the track, in one pill; `2` puts them on a second row under it, for a narrow space (a small wall display). Default `'auto'`: one row, and two once the bar is narrower than 560 px wide. */
   rows?: 1 | 2 | 'auto';
 }
@@ -265,6 +268,7 @@ export function MediaPlayerBar({
   browse,
   drawer = true,
   onOpen,
+  overlays = false,
   rows = 'auto',
 }: MediaPlayerBarProps) {
   const handle = useEntityHandle('mediaPlayer', entity);
@@ -317,6 +321,14 @@ export function MediaPlayerBar({
     browse === false
       ? undefined
       : (browse ?? (ref && caps?.browse ? <MediaBrowser entity={ref} layout="auto" /> : undefined));
+
+  // What the overlays hold, when the library and the queue open on their own (`overlays`).
+  const libraryBody =
+    browse === false
+      ? undefined
+      : (browse ?? (ref && caps?.browse ? <MediaBrowser entity={ref} layout="list" /> : undefined));
+
+  const queueBody = ref && caps?.queue === true ? <MediaQueue entity={ref} /> : undefined;
 
   const volumeSlider = (
     <Flex
@@ -427,7 +439,7 @@ export function MediaPlayerBar({
     </>
   );
 
-  const bar = (open?: () => void, openExpanded?: () => void) => (
+  const bar = (open?: () => void, openExpanded?: () => void, openQueue?: () => void) => (
     <HoldCard open={open} status={status} rows={rows} volumeOpen={volumeOpen && ready}>
       {/* A ring (the old artwork size) around the artwork, which is as tall as the title + artist
           lines beside it. */}
@@ -458,13 +470,20 @@ export function MediaPlayerBar({
           disabled={!ready || (caps?.volume === false && caps.mute === false)}
           onClick={() => setVolumeOpen((current) => !current)}
         />
-        {open && (onOpen ? browse !== false : browser !== undefined) ? (
+        {(
+          overlays
+            ? openExpanded !== undefined
+            : open && (onOpen ? browse !== false : browser !== undefined)
+        ) ? (
           <IconButton
             icon="lu:library"
             label="Browse media"
             glyph={MEDIA_GLYPH}
-            onClick={openExpanded ?? open}
+            onClick={() => (openExpanded ?? open)?.()}
           />
+        ) : null}
+        {openQueue ? (
+          <IconButton icon="lu:list-music" label="Queue" glyph={MEDIA_GLYPH} onClick={openQueue} />
         ) : null}
       </Flex>
       <Flex data-part="transport" align="center" gap={3} css={{ flex: 'none' }}>
@@ -503,6 +522,22 @@ export function MediaPlayerBar({
   // like the vertical one, with the library below it.
   if (!ready) {
     return bar();
+  }
+
+  // The library and the queue are overlays of their own; the card is the player.
+  if (overlays) {
+    const title = name ?? player?.name ?? fallbackName(entity);
+    return (
+      <DrawerTrigger icon="lu:library" label="Library" kind={title} body={libraryBody ?? null}>
+        {(_open, openLibrary) => (
+          <DrawerTrigger icon="lu:list-music" label="Queue" kind={title} body={queueBody ?? null}>
+            {(_openToo, openQueue) =>
+              bar(onOpen, libraryBody ? openLibrary : undefined, queueBody ? openQueue : undefined)
+            }
+          </DrawerTrigger>
+        )}
+      </DrawerTrigger>
+    );
   }
 
   // Held, pressed or browsed, the player goes where the dashboard says instead of opening a drawer.
