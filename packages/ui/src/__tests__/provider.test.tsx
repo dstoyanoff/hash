@@ -1,8 +1,8 @@
-import { LocalClient, MockIntegration } from '@hashsome/core';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { LocalClient, MockIntegration, mockGeneric } from '@hashsome/core';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useTheme } from '@emotion/react';
 import { Box, Flex } from 'e-prim';
-import { afterEach, expect, test } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { HashsomeProvider, useThemeToggle, type ThemeMode } from '../provider.tsx';
 
 afterEach(cleanup);
@@ -202,4 +202,82 @@ test('changing the density’s space rescales all spacing', () => {
   expect(spacingOf({ overrides })).toEqual({ unit: '18px', gap: '18px', pad: '36px' });
   // The other density is untouched.
   expect(spacingOf({ density: 'compact', overrides }).gap).toBe('8px');
+});
+
+// A theme that follows the time of day.
+
+const DARK_BG = 'rgb(11, 10, 13)';
+const LIGHT_BG = 'rgb(244, 241, 235)';
+const bgOf = () => getComputedStyle(screen.getByTestId('probe')).backgroundColor;
+const FAKE = ['Date', 'setTimeout', 'clearTimeout'] as const;
+
+function mountScheduled(theme: ThemeMode, integration = new MockIntegration({})) {
+  const client = new LocalClient([integration]);
+  render(
+    <HashsomeProvider client={client} theme={theme}>
+      <Probe />
+    </HashsomeProvider>,
+  );
+
+  return integration;
+}
+
+test('a clock schedule is dark inside its hours and light outside them', () => {
+  vi.useFakeTimers({ now: new Date(2026, 9, 6, 22, 0), toFake: [...FAKE] });
+  try {
+    mountScheduled({ dark: { from: '19:00', to: '07:00' } });
+    expect(bgOf()).toBe(DARK_BG);
+    cleanup();
+
+    vi.setSystemTime(new Date(2026, 9, 6, 12, 0));
+    mountScheduled({ dark: { from: '19:00', to: '07:00' } });
+    expect(bgOf()).toBe(LIGHT_BG);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('a clock schedule switches by itself when its time comes, without a reload', () => {
+  vi.useFakeTimers({ now: new Date(2026, 9, 6, 18, 59, 30), toFake: [...FAKE] });
+  try {
+    mountScheduled({ dark: { from: '19:00', to: '07:00' } });
+    expect(bgOf()).toBe(LIGHT_BG);
+
+    act(() => void vi.advanceTimersByTime(31_000));
+    expect(bgOf()).toBe(DARK_BG);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('a clock schedule with a time that is not HH:MM is refused', () => {
+  vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  expect(() => mountScheduled({ dark: { from: '7pm', to: '07:00' } })).toThrow('theme.dark.from');
+  vi.restoreAllMocks();
+});
+
+beforeEach(() => localStorage.clear());
+
+const sunWith = (value: string) =>
+  new MockIntegration({ entities: { 'sun.sun': mockGeneric({ name: 'Sun', value }) } });
+
+test('a sun schedule is dark while the sun entity says it is below the horizon', async () => {
+  mountScheduled({ sun: 'ha:sun.sun' }, sunWith('below_horizon'));
+  await waitFor(() => expect(bgOf()).toBe(DARK_BG));
+});
+
+test('a sun schedule is light while the sun is up, and follows the entity when it sets', async () => {
+  const sun = sunWith('above_horizon');
+  mountScheduled({ sun: 'ha:sun.sun' }, sun);
+  await waitFor(() => expect(bgOf()).toBe(LIGHT_BG));
+
+  act(() => sun.update('sun.sun', { value: 'below_horizon' }));
+  await waitFor(() => expect(bgOf()).toBe(DARK_BG));
+});
+
+test('a sun schedule starts from what the sun last said, until the entity is known', () => {
+  localStorage.setItem('hashsome:sun-down', '1');
+  // No such entity: nothing to go by yet, so the remembered night is what shows.
+  mountScheduled({ sun: 'ha:sun.sun' }, new MockIntegration({}));
+  expect(bgOf()).toBe(DARK_BG);
 });
