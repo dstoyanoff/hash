@@ -124,11 +124,13 @@ export function EntityDrawer() {
               <Flex justify="space-between" align="center" gap={2.5} mb={4}>
                 {detail.header}
                 <Flex gap={1.5} grow={0}>
-                  <DrawerActionButton
-                    icon={expanded ? 'lu:minimize-2' : 'lu:maximize-2'}
-                    label={expanded ? 'Collapse' : 'Expand'}
-                    onClick={toggleExpanded}
-                  />
+                  {detail.locked ? null : (
+                    <DrawerActionButton
+                      icon={expanded ? 'lu:minimize-2' : 'lu:maximize-2'}
+                      label={expanded ? 'Collapse' : 'Expand'}
+                      onClick={toggleExpanded}
+                    />
+                  )}
                   <DrawerActionButton icon="lu:x" label="Close" onClick={closeDetail} />
                 </Flex>
               </Flex>

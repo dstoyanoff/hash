@@ -529,9 +529,9 @@ export function MediaPlayerBar({
     const title = name ?? player?.name ?? fallbackName(entity);
     return (
       <DrawerTrigger icon="lu:library" label="Library" kind={title} body={libraryBody ?? null}>
-        {(_open, openLibrary) => (
+        {(_open, _expanded, openLibrary) => (
           <DrawerTrigger icon="lu:list-music" label="Queue" kind={title} body={queueBody ?? null}>
-            {(_openToo, openQueue) =>
+            {(_openToo, _expandedToo, openQueue) =>
               bar(onOpen, libraryBody ? openLibrary : undefined, queueBody ? openQueue : undefined)
             }
           </DrawerTrigger>

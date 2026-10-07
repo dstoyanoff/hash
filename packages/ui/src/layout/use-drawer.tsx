@@ -73,7 +73,11 @@ export function useDrawer({
   const openExpanded = () =>
     openDetail(id, <DrawerHeader icon={icon} label={label} kind={kind} />, body, true);
 
-  return { open, openExpanded, isOpen };
+  // Full size and kept there: for content that is an overlay of its own, with nothing to collapse to.
+  const openFull = () =>
+    openDetail(id, <DrawerHeader icon={icon} label={label} kind={kind} />, body, true, true);
+
+  return { open, openExpanded, openFull, isOpen };
 }
 
 /** `useDrawer` for an owner that must not itself subscribe to the drawer's context. Re-pushing the
@@ -92,9 +96,9 @@ export function DrawerTrigger({
   kind?: string | undefined;
   body: ReactNode;
 
-  /** Gets `open` (the side panel) and `openExpanded` (full size). */
-  children: (open: () => void, openExpanded: () => void) => ReactNode;
+  /** Gets `open` (the side panel), `openExpanded` (full size, which can be collapsed) and `openFull` (full size, with no collapse button). */
+  children: (open: () => void, openExpanded: () => void, openFull: () => void) => ReactNode;
 }) {
-  const { open, openExpanded } = useDrawer({ icon, label, kind, body });
-  return <>{children(open, openExpanded)}</>;
+  const { open, openExpanded, openFull } = useDrawer({ icon, label, kind, body });
+  return <>{children(open, openExpanded, openFull)}</>;
 }

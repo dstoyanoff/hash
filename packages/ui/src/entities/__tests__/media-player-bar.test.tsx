@@ -381,6 +381,9 @@ test('overlays: browse opens the library alone, and the queue button opens the q
   fireEvent.click(screen.getByRole('button', { name: 'Browse media' }));
   expect(await screen.findByText('Playlists')).toBeTruthy();
   expect(within(screen.getByRole('dialog')).getByText('Library')).toBeTruthy();
+  // Already full size: nothing to collapse to, so only a close button.
+  expect(screen.queryByRole('button', { name: /^(Collapse|Expand)$/ })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy();
   // The player is not drawn again inside it, and the queue is not there.
   expect(screen.getAllByText('Blank Space')).toHaveLength(1);
   expect(screen.queryByText(/tracks/)).toBeNull();
@@ -389,6 +392,7 @@ test('overlays: browse opens the library alone, and the queue button opens the q
   fireEvent.click(screen.getByRole('button', { name: 'Queue' }));
   expect(await screen.findByText(/24 tracks/)).toBeTruthy();
   expect(within(screen.getByRole('dialog')).getAllByText('Queue').length).toBeGreaterThan(0);
+  expect(screen.queryByRole('button', { name: /^(Collapse|Expand)$/ })).toBeNull();
   expect(screen.queryByText('Playlists')).toBeNull();
 });
 

@@ -5,13 +5,22 @@ interface DetailState {
   header: ReactNode;
   body: ReactNode;
   expanded: boolean;
+
+  /** Stays at full size: the drawer has no button to collapse it. */
+  locked: boolean;
 }
 
 interface DetailContextValue {
   detail: DetailState | null;
 
-  /** `expanded` opens it at full size instead of the side panel. */
-  openDetail: (id: string, header: ReactNode, body: ReactNode, expanded?: boolean) => void;
+  /** `expanded` opens it at full size instead of the side panel; `locked` keeps it there, with no button to collapse it. */
+  openDetail: (
+    id: string,
+    header: ReactNode,
+    body: ReactNode,
+    expanded?: boolean,
+    locked?: boolean,
+  ) => void;
 
   /** Keeps an already-open drawer's content live; a no-op for any other `id`. */
   updateDetail: (id: string, header: ReactNode, body: ReactNode) => void;
@@ -26,8 +35,8 @@ export function DetailProvider({ children }: { children: ReactNode }) {
   const [detail, setDetail] = useState<DetailState | null>(null);
 
   const openDetail = useCallback(
-    (id: string, header: ReactNode, body: ReactNode, expanded = false) => {
-      setDetail({ id, header, body, expanded });
+    (id: string, header: ReactNode, body: ReactNode, expanded = false, locked = false) => {
+      setDetail({ id, header, body, expanded: expanded || locked, locked });
     },
     [],
   );
