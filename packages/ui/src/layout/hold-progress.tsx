@@ -11,19 +11,28 @@ const fill = keyframes({
   to: { transform: 'scaleX(1)' },
 });
 
-/** The thin line along a card's top edge that fills while a press is being timed as a hold. */
-export function HoldProgress() {
+export interface HoldProgressProps {
+  /** Which edge of the card the line runs along. Default `top`. */
+  edge?: 'top' | 'bottom';
+
+  /** A literal CSS color for the line, alpha included. Left out, a half-faded muted text color. */
+  color?: string;
+}
+
+/** The thin line along a card's edge that fills while a press is being timed as a hold. */
+export function HoldProgress({ edge = 'top', color }: HoldProgressProps) {
   return (
     <Box
       as="span"
       position="absolute"
       width="100%"
       height={2}
-      background="textMuted"
+      {...(color ? {} : { background: 'textMuted' as const })}
       css={{
-        top: 0,
+        [edge]: 0,
         left: 0,
-        opacity: 0.5,
+        opacity: color ? 1 : 0.5,
+        ...(color ? { backgroundColor: color } : {}),
         pointerEvents: 'none',
         transformOrigin: 'left center',
         willChange: 'transform',

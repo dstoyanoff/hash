@@ -18,6 +18,7 @@ import { statusLabels, type EntityStatus } from '../status.ts';
 import { useDrawer } from './use-drawer.tsx';
 import { EnergyChart, type EnergyChartProps } from './energy-chart.tsx';
 import { HistorySection, type LogbookEntry } from './history-section.tsx';
+import { HoldProgress } from './hold-progress.tsx';
 import { LogbookHistory } from './logbook-history.tsx';
 
 export interface TileProps {
@@ -323,6 +324,7 @@ export function Tile({
       radius="full"
       width={32}
       height={32}
+      initial={false}
       animate={{ backgroundColor: iconBg, color: iconColor }}
       transition={COLOR_TRANSITION}
       css={{ flex: 'none' }}
@@ -347,6 +349,8 @@ export function Tile({
       data-overlay={overlay !== undefined}
       data-pending={feedback === 'pending'}
       data-feedback={feedback === 'pending' ? undefined : feedback}
+      // A card that mounts (a page opened) is drawn as it is, not animated from nothing.
+      initial={false}
       animate={{ backgroundColor: cardBg, color: cardColor, opacity: cardOpacity }}
       transition={COLOR_TRANSITION}
       css={({ palette }) =>
@@ -361,28 +365,19 @@ export function Tile({
           // Spans the whole card, including behind `trailing` (e.g. a color-capable light's
           // picker button) — it's a sibling of the button and `trailing`, not nested inside the
           // button, specifically so its width isn't capped at the button's own narrower bounds.
+          initial={false}
           animate={{ width: `${(shownFill ?? 0) * 100}%`, opacity: overlaid ? 0 : shownFill }}
           transition={drag !== null ? { duration: 0 } : COLOR_TRANSITION}
           css={{ inset: '0 auto 0 0', pointerEvents: 'none' }}
         />
       ) : null}
       {holdable && holding ? (
-        <Box
-          as={motion.span}
-          key="hold-progress"
-          position="absolute"
-          initial={{ width: '0%' }}
-          animate={{ width: '100%' }}
-          transition={{ duration: HOLD_MS / 1000, ease: 'linear' }}
-          height={2}
-          css={{
-            inset: 'auto auto 0 0',
-            pointerEvents: 'none',
-            // Visible against either background: a light wash normally, a dark wash on an
-            // accent-colored (non-dimmable-active) card, where a light or accent bar would
-            // disappear or clash.
-            backgroundColor: solidAccent ? 'rgba(0, 0, 0, 0.35)' : 'rgba(255, 255, 255, 0.55)',
-          }}
+        // Visible against either background: a light wash normally, a dark wash on an
+        // accent-colored (non-dimmable-active) card, where a light or accent bar would
+        // disappear or clash.
+        <HoldProgress
+          edge="bottom"
+          color={solidAccent ? 'rgba(0, 0, 0, 0.35)' : 'rgba(255, 255, 255, 0.55)'}
         />
       ) : null}
       {overlay ? (
