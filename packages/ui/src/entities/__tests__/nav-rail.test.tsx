@@ -2,10 +2,12 @@ import { LocalClient, MockIntegration } from '@hashsome/core';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'e-prim';
 import { MemoryRouter } from 'react-router';
-import { expect, test } from 'vitest';
+import { afterEach, expect, test } from 'vitest';
 import { HashsomeProvider } from '../../provider.tsx';
 import { darkTheme } from '../../theme/index.ts';
 import { NavRail } from '../nav-rail.tsx';
+
+afterEach(cleanup);
 
 test('nav rail resolves items against base and marks the current page', () => {
   render(
