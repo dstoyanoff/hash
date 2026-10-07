@@ -52,6 +52,9 @@ declare module 'e-prim' {
   interface TShadow {
     /** `EntityDrawer`'s own drop shadow. */
     drawer: string;
+
+    /** `NavDock`'s: a softer one, for a small pill that floats over the page. */
+    dock: string;
   }
 
   interface TZIndex {
