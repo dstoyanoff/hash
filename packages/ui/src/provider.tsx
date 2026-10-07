@@ -1,6 +1,7 @@
 import { RemoteClient, type Client, type RemoteClientOptions } from '@hashsome/core';
 import { Global, ThemeProvider as EmotionThemeProvider, type Theme } from '@emotion/react';
 import { ThemeProvider } from 'e-prim';
+import { MotionGlobalConfig } from 'motion/react';
 import {
   createContext,
   useContext,
@@ -28,6 +29,9 @@ const HashsomeContext = createContext<Client | null>(null);
 
 export type { ThemeSchedule };
 
+/** `reduced` turns every animation off, for a slow display; `full` keeps them; `auto` (the default) leaves things as they are. */
+export type MotionPreference = 'auto' | 'full' | 'reduced';
+
 /** `'system'` follows the display's own light/dark preference; a `ThemeSchedule` changes with the time of day. */
 export type ThemeMode = 'light' | 'dark' | 'system' | ThemeSchedule;
 
@@ -49,6 +53,9 @@ export interface HashsomeProviderProps {
 
   /** `'compact'` for small square displays: tighter spacing, shorter tiles, smaller icon circles. Default `'comfortable'`. */
   density?: Density;
+
+  /** `'reduced'` turns animations and transitions off, for a slow display, `'full'` keeps them and `'auto'` (the default) leaves things as they are. A device can choose for itself with `?motion=reduced` (or `full`) on the address it opens: the choice is kept on the device, so reloads and links inside the app keep it, and `?motion=auto` forgets it. That wins over this prop. */
+  motion?: MotionPreference;
 
   /** Partial changes to the built-in theme — colors per light/dark, radii, typography, spacing, density sizes. Pass a constant defined outside the component: a new object each render rebuilds the theme each render. */
   overrides?: ThemeOverrides;
@@ -114,6 +121,51 @@ export function useThemeToggle(): ThemeModeState {
   }
 
   return value;
+}
+
+const MOTION_KEY = 'hashsome:motion';
+
+/** What this device chose for motion: `?motion=reduced` or `?motion=full` on the address (which is
+ * also remembered), or what an earlier visit remembered. `?motion=auto` forgets it. */
+function motionFromDevice(): 'full' | 'reduced' | undefined {
+  try {
+    const asked = new URLSearchParams(window.location.search).get('motion');
+    if (asked === 'reduced' || asked === 'full') {
+      localStorage.setItem(MOTION_KEY, asked);
+      return asked;
+    }
+
+    if (asked === 'auto') {
+      localStorage.removeItem(MOTION_KEY);
+      return undefined;
+    }
+
+    const kept = localStorage.getItem(MOTION_KEY);
+    return kept === 'reduced' || kept === 'full' ? kept : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Settles motion once, when the app starts, before anything renders: in `reduced` every animation
+ * motion would run is skipped, and a flag on the page lets the global styles switch off CSS
+ * transitions and animations too. */
+function useMotionMode(preference: MotionPreference): MotionPreference {
+  const [mode] = useState<MotionPreference>(() => {
+    const chosen = motionFromDevice() ?? preference;
+    MotionGlobalConfig.skipAnimations = chosen === 'reduced';
+    if (typeof document !== 'undefined') {
+      if (chosen === 'reduced') {
+        document.documentElement.dataset.motion = 'reduced';
+      } else {
+        delete document.documentElement.dataset.motion;
+      }
+    }
+
+    return chosen;
+  });
+
+  return mode;
 }
 
 const SUN_KEY = 'hashsome:sun-down';
@@ -226,6 +278,7 @@ export function HashsomeProvider({
   client,
   clientOptions,
   theme = 'dark',
+  motion = 'auto',
   font = DEFAULT_FONT,
   density = 'comfortable',
   overrides,
@@ -236,6 +289,7 @@ export function HashsomeProvider({
     [client, url, clientOptions],
   );
 
+  useMotionMode(motion);
   const themeMode = useThemeMode(theme, instance);
   // Memoized: Emotion recomputes the merged theme (and every `css` prop) when the function changes.
   const withDensity = useMemo(
