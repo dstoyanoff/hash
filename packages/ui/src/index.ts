@@ -9,6 +9,7 @@ export type { IconName } from './icon-data.ts';
 export * from './icon.tsx';
 export * from './layout/grid.tsx';
 export * from './layout/page.tsx';
+export * from './layout/animated-outlet.tsx';
 export * from './layout/room-header.tsx';
 export { Tile, type TileProps } from './layout/tile.tsx';
 export * from './layout/energy-chart.tsx';
