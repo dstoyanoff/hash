@@ -182,3 +182,40 @@ test('clicking the artwork opens the drawer: the player, and the browser below i
   expect(screen.getByText('BROWSER CONTENT')).toBeTruthy();
   expect(screen.getByRole('heading', { name: 'Blank Space' })).toBeTruthy();
 });
+
+// One row or two.
+
+const cardOf = () =>
+  screen.getByRole('button', { name: 'Play' }).closest('[data-status]') as HTMLElement;
+
+const partOf = (name: 'info' | 'controls') =>
+  cardOf().querySelector(`[data-part="${name}"]`) as HTMLElement;
+
+test('rows={2} puts the controls on a row of their own under the track', () => {
+  renderWithMock(<MediaPlayerBar entity="ha:room" rows={2} />, player('paused'));
+  const card = cardOf();
+  expect(getComputedStyle(card).flexWrap).toBe('wrap');
+  expect(card.dataset.rows).toBe('2');
+
+  const controls = partOf('controls');
+  expect(getComputedStyle(controls).display).toBe('flex');
+  expect(getComputedStyle(controls).flexBasis).toBe('100%');
+  // The track is the other row, and the artwork is in it, not with the controls.
+  expect(partOf('info').textContent).toContain('Blank Space');
+  expect(controls.querySelector('[aria-label="Open player"]')).toBeNull();
+  expect(controls.querySelectorAll('button').length).toBeGreaterThanOrEqual(4);
+});
+
+test('rows={1} keeps everything in one pill', () => {
+  renderWithMock(<MediaPlayerBar entity="ha:room" rows={1} />, player('paused'));
+  expect(getComputedStyle(cardOf()).flexWrap).not.toBe('wrap');
+  expect(getComputedStyle(partOf('controls')).display).toBe('contents');
+  expect(getComputedStyle(partOf('info')).display).toBe('contents');
+});
+
+test('by default it is one row until the width says otherwise, and the width is measured on a wrapper', () => {
+  renderWithMock(<MediaPlayerBar entity="ha:room" />, player('paused'));
+  // jsdom does not evaluate container queries: this is the wide case, and the wrapper is what is measured.
+  expect(getComputedStyle(cardOf()).flexWrap).not.toBe('wrap');
+  expect(getComputedStyle(cardOf().parentElement!).containerType).toBe('inline-size');
+});

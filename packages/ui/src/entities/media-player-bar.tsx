@@ -31,7 +31,13 @@ export interface MediaPlayerBarProps {
 
   /** Content for the media browser shown with the player in the drawer. Holding the card or pressing the artwork opens the drawer; the browse button opens it expanded. By default a `MediaBrowser` over the player's own library, shown only for a ref whose player has one; pass your own content to replace it, or `false` for no browse button. */
   browse?: ReactNode | false;
+
+  /** `1` puts the controls beside the track, in one pill; `2` puts them on a second row under it, for a narrow space (a small wall display). Default `'auto'`: one row, and two once the bar is narrower than 560 px wide. */
+  rows?: 1 | 2 | 'auto';
 }
+
+/** Narrower than this, a bar with `rows="auto"` is two rows. */
+const TWO_ROWS_BELOW = 560;
 
 /** Glyph size inside the player's 44px circles — smaller than an icon's default so there is breathing room around it. */
 const MEDIA_GLYPH = 18;
@@ -71,22 +77,58 @@ function Ring({ onOpen, children }: { onOpen?: (() => void) | undefined; childre
 /** The same spring the swatch rows pop in with, so the volume overlay opens like they do. */
 const VOLUME_SPRING = { type: 'spring', stiffness: 520, damping: 26 } as const;
 
+/** The bar's two parts, which in one row are plain children of the pill (`display: contents`) and in
+ * two rows are a row each: the artwork and track on top, the controls under them. */
+const PART = { display: 'contents' } as const;
+
+/** What the pill is like in two rows: parts wrap, each a full row, and the corners are a card's. */
+const stacked = ({
+  radius,
+  spacing,
+}: {
+  radius: { card: string };
+  spacing: (n: number) => string;
+}) => ({
+  flexWrap: 'wrap' as const,
+  rowGap: spacing(1.5),
+  paddingTop: spacing(2.5),
+  paddingBottom: spacing(2.5),
+  borderRadius: radius.card,
+  '& > [data-part="info"]': {
+    display: 'flex',
+    alignItems: 'center',
+    gap: spacing(3),
+    flex: '1 1 100%',
+    minWidth: 0,
+  },
+  '& > [data-part="controls"]': {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flex: '1 1 100%',
+  },
+});
+
 /** The bar itself. Holding it (anywhere but on a button or slider) opens the drawer, with a thin
  * line along the top that fills while the press is timed, like a tile's. */
 function HoldCard({
   open,
   status,
+  rows,
   children,
 }: {
   open: (() => void) | undefined;
   status: string;
+  rows: 1 | 2 | 'auto';
   children: ReactNode;
 }) {
   const hold = useHold(() => open?.(), open !== undefined);
-  return (
+  const card = (
     <Flex
       position="relative"
       align="center"
+      grow={1}
+      minWidth={0}
       gap={3}
       pl={2.25}
       pr={3}
@@ -94,17 +136,33 @@ function HoldCard({
       radius="full"
       overflow="hidden"
       data-status={status}
-      css={({ density }) => ({ minHeight: density.tileHeight })}
+      data-rows={rows === 2 ? 2 : undefined}
+      css={(theme) => ({
+        minHeight: theme.density.tileHeight,
+        ...(rows === 2 ? stacked(theme) : {}),
+        ...(rows === 'auto'
+          ? { [`@container (max-width: ${TWO_ROWS_BELOW - 1}px)`]: stacked(theme) }
+          : {}),
+      })}
       {...hold.handlers}
     >
       {children}
       {hold.holding ? <HoldProgress /> : null}
     </Flex>
   );
+
+  // `auto` asks the width the bar is given, so its parent is the thing measured.
+  return rows === 'auto' ? (
+    <Flex width="100%" css={{ containerType: 'inline-size' }}>
+      {card}
+    </Flex>
+  ) : (
+    card
+  );
 }
 
 /** Now playing with previous / play-pause / next and a volume control, for a media player entity. */
-export function MediaPlayerBar({ entity, name, browse }: MediaPlayerBarProps) {
+export function MediaPlayerBar({ entity, name, browse, rows = 'auto' }: MediaPlayerBarProps) {
   const handle = useEntityHandle('mediaPlayer', entity);
   const player = handle.entity;
   const status = handle.status;
@@ -151,165 +209,169 @@ export function MediaPlayerBar({ entity, name, browse }: MediaPlayerBarProps) {
       : (browse ?? (ref && caps?.browse ? <MediaBrowser entity={ref} layout="auto" /> : undefined));
 
   const bar = (open?: () => void, openExpanded?: () => void) => (
-    <HoldCard open={open} status={status}>
-      {/* A ring (the old artwork size) around the artwork, which is as tall as the title + artist
+    <HoldCard open={open} status={status} rows={rows}>
+      <Flex data-part="info" css={PART}>
+        {/* A ring (the old artwork size) around the artwork, which is as tall as the title + artist
           lines beside it. */}
-      <Ring onOpen={open}>{artwork}</Ring>
-      {volumeOpen && ready ? (
-        <Flex
-          as={motion.div}
-          align="center"
-          gap={2}
-          grow={1}
-          minWidth={0}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.15 }}
-        >
-          <PlainButton
-            as={motion.button}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={VOLUME_SPRING}
-            aria-label={muted ? 'Unmute' : 'Mute'}
-            aria-pressed={muted}
-            title={muted ? 'Unmute' : 'Mute'}
-            onClick={volume.toggleMute}
-            center
-            color={muted ? 'accent' : 'textMuted'}
-            css={{ flex: 'none' }}
-          >
-            <Icon name={muted ? 'lu:volume-x' : 'lu:volume-2'} size={16} />
-          </PlainButton>
+        <Ring onOpen={open}>{artwork}</Ring>
+        {volumeOpen && ready ? (
           <Flex
             as={motion.div}
+            align="center"
+            gap={2}
             grow={1}
             minWidth={0}
-            initial={{ scaleX: 0.4, opacity: 0 }}
-            animate={{ scaleX: 1, opacity: 1 }}
-            transition={{ ...VOLUME_SPRING, delay: 0.04 }}
-            css={{ transformOrigin: 'left center' }}
-          >
-            <ValueBar
-              label="Volume level"
-              value={volume.shown}
-              min={0}
-              max={100}
-              keyStep={5}
-              height={10}
-              onDrag={volume.drag}
-              onCommit={volume.commit}
-            />
-          </Flex>
-          <Typography
-            as={motion.span}
-            variant="secondary"
-            color="textMuted"
-            minWidth={32}
-            align="right"
-            css={{ flex: 'none' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.2, delay: 0.1 }}
+            transition={{ duration: 0.15 }}
           >
-            {volume.shown}%
-          </Typography>
-        </Flex>
-      ) : (
-        <>
-          <Flex
-            direction="column"
-            grow={1}
-            minWidth={0}
-            {...(ready ? {} : { color: 'textMuted' as const })}
-          >
-            <Flex align="center" gap={1.5} minWidth={0}>
-              <Typography as="span" variant="label" noWrap textOverflow="ellipsis">
-                {ready
-                  ? (player?.media?.title ?? 'Nothing playing')
-                  : statusLabels[status as Exclude<typeof status, 'ready'>]}
-              </Typography>
-              {ready && caps?.shuffle ? (
-                <PlainButton
-                  aria-label="Shuffle"
-                  aria-pressed={player?.shuffle === true}
-                  title="Shuffle"
-                  onClick={() =>
-                    void handle.command('setShuffle', { shuffle: player?.shuffle !== true })
-                  }
-                  center
-                  color={player?.shuffle === true ? 'accent' : 'textMuted'}
-                  css={{ flex: 'none' }}
+            <PlainButton
+              as={motion.button}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={VOLUME_SPRING}
+              aria-label={muted ? 'Unmute' : 'Mute'}
+              aria-pressed={muted}
+              title={muted ? 'Unmute' : 'Mute'}
+              onClick={volume.toggleMute}
+              center
+              color={muted ? 'accent' : 'textMuted'}
+              css={{ flex: 'none' }}
+            >
+              <Icon name={muted ? 'lu:volume-x' : 'lu:volume-2'} size={16} />
+            </PlainButton>
+            <Flex
+              as={motion.div}
+              grow={1}
+              minWidth={0}
+              initial={{ scaleX: 0.4, opacity: 0 }}
+              animate={{ scaleX: 1, opacity: 1 }}
+              transition={{ ...VOLUME_SPRING, delay: 0.04 }}
+              css={{ transformOrigin: 'left center' }}
+            >
+              <ValueBar
+                label="Volume level"
+                value={volume.shown}
+                min={0}
+                max={100}
+                keyStep={5}
+                height={10}
+                onDrag={volume.drag}
+                onCommit={volume.commit}
+              />
+            </Flex>
+            <Typography
+              as={motion.span}
+              variant="secondary"
+              color="textMuted"
+              minWidth={32}
+              align="right"
+              css={{ flex: 'none' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.2, delay: 0.1 }}
+            >
+              {volume.shown}%
+            </Typography>
+          </Flex>
+        ) : (
+          <>
+            <Flex
+              direction="column"
+              grow={1}
+              minWidth={0}
+              {...(ready ? {} : { color: 'textMuted' as const })}
+            >
+              <Flex align="center" gap={1.5} minWidth={0}>
+                <Typography as="span" variant="label" noWrap textOverflow="ellipsis">
+                  {ready
+                    ? (player?.media?.title ?? 'Nothing playing')
+                    : statusLabels[status as Exclude<typeof status, 'ready'>]}
+                </Typography>
+                {ready && caps?.shuffle ? (
+                  <PlainButton
+                    aria-label="Shuffle"
+                    aria-pressed={player?.shuffle === true}
+                    title="Shuffle"
+                    onClick={() =>
+                      void handle.command('setShuffle', { shuffle: player?.shuffle !== true })
+                    }
+                    center
+                    color={player?.shuffle === true ? 'accent' : 'textMuted'}
+                    css={{ flex: 'none' }}
+                  >
+                    <Icon name="lu:shuffle" size={14} />
+                  </PlainButton>
+                ) : null}
+              </Flex>
+              {ready && player?.media?.artist ? (
+                <Typography
+                  as="span"
+                  variant="secondary"
+                  color="textMuted"
+                  noWrap
+                  textOverflow="ellipsis"
                 >
-                  <Icon name="lu:shuffle" size={14} />
-                </PlainButton>
+                  {player.media.artist}
+                </Typography>
               ) : null}
             </Flex>
-            {ready && player?.media?.artist ? (
+            {/* The time sits at the vertical middle of the bar, beside the track, not in a text row. */}
+            {timed ? (
               <Typography
                 as="span"
                 variant="secondary"
                 color="textMuted"
                 noWrap
-                textOverflow="ellipsis"
+                css={{ flex: 'none', fontVariantNumeric: 'tabular-nums' }}
               >
-                {player.media.artist}
+                {formatDuration(seek.shown ?? 0)} / {formatDuration(duration ?? 0)}
               </Typography>
             ) : null}
-          </Flex>
-          {/* The time sits at the vertical middle of the bar, beside the track, not in a text row. */}
-          {timed ? (
-            <Typography
-              as="span"
-              variant="secondary"
-              color="textMuted"
-              noWrap
-              css={{ flex: 'none', fontVariantNumeric: 'tabular-nums' }}
-            >
-              {formatDuration(seek.shown ?? 0)} / {formatDuration(duration ?? 0)}
-            </Typography>
-          ) : null}
-        </>
-      )}
-      <IconButton
-        icon={volumeOpen ? 'lu:x' : muted ? 'lu:volume-x' : 'lu:volume-2'}
-        label={volumeOpen ? 'Close volume' : 'Volume'}
-        glyph={MEDIA_GLYPH}
-        disabled={!ready || (caps?.volume === false && caps.mute === false)}
-        onClick={() => setVolumeOpen((current) => !current)}
-      />
-      {open && browser !== undefined ? (
+          </>
+        )}
+      </Flex>
+      <Flex data-part="controls" css={PART}>
         <IconButton
-          icon="lu:library"
-          label="Browse media"
+          icon={volumeOpen ? 'lu:x' : muted ? 'lu:volume-x' : 'lu:volume-2'}
+          label={volumeOpen ? 'Close volume' : 'Volume'}
           glyph={MEDIA_GLYPH}
-          onClick={openExpanded ?? open}
+          disabled={!ready || (caps?.volume === false && caps.mute === false)}
+          onClick={() => setVolumeOpen((current) => !current)}
         />
-      ) : null}
-      <IconButton
-        icon="lu:skip-back"
-        label="Previous"
-        glyph={MEDIA_GLYPH}
-        disabled={!ready || caps?.previous === false}
-        feedback={feedbackFor('previous')}
-        onClick={() => press('previous', () => handle.command('previous'))}
-      />
-      <IconButton
-        icon={playing ? 'lu:pause' : 'lu:play'}
-        label={playing ? 'Pause' : 'Play'}
-        glyph={MEDIA_GLYPH}
-        disabled={!ready}
-        primary
-        onClick={() => void handle.command('togglePlay')}
-      />
-      <IconButton
-        icon="lu:skip-forward"
-        label="Next"
-        glyph={MEDIA_GLYPH}
-        disabled={!ready || caps?.next === false}
-        feedback={feedbackFor('next')}
-        onClick={() => press('next', () => handle.command('next'))}
-      />
+        {open && browser !== undefined ? (
+          <IconButton
+            icon="lu:library"
+            label="Browse media"
+            glyph={MEDIA_GLYPH}
+            onClick={openExpanded ?? open}
+          />
+        ) : null}
+        <IconButton
+          icon="lu:skip-back"
+          label="Previous"
+          glyph={MEDIA_GLYPH}
+          disabled={!ready || caps?.previous === false}
+          feedback={feedbackFor('previous')}
+          onClick={() => press('previous', () => handle.command('previous'))}
+        />
+        <IconButton
+          icon={playing ? 'lu:pause' : 'lu:play'}
+          label={playing ? 'Pause' : 'Play'}
+          glyph={MEDIA_GLYPH}
+          disabled={!ready}
+          primary
+          onClick={() => void handle.command('togglePlay')}
+        />
+        <IconButton
+          icon="lu:skip-forward"
+          label="Next"
+          glyph={MEDIA_GLYPH}
+          disabled={!ready || caps?.next === false}
+          feedback={feedbackFor('next')}
+          onClick={() => press('next', () => handle.command('next'))}
+        />
+      </Flex>
       {timed ? (
         <SeekLine seek={seek} duration={duration ?? 0} seekable={caps?.seek === true} />
       ) : null}

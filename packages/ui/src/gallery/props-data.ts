@@ -454,6 +454,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         optional: true,
         type: 'ReactNode | false',
       },
+      {
+        doc: "`1` puts the controls beside the track, in one pill; `2` puts them on a second row under it, for a narrow space (a small wall display). Default `'auto'`: one row, and two once the bar is narrower than 560 px wide.",
+        name: 'rows',
+        optional: true,
+        type: "1 | 2 | 'auto'",
+      },
     ],
   },
   MediaPlayerColumn: {
