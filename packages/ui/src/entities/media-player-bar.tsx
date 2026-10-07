@@ -112,7 +112,12 @@ const stacked = ({
     gap: spacing(1.5),
     // The title and the artist share the line and shorten, with an ellipsis, before they run into
     // the time; the artist follows the title after a dot.
-    '& > :nth-child(1)': { flex: '0 1 auto', minWidth: 0 },
+    '& > :nth-child(1)': {
+      flex: '0 1 auto',
+      minWidth: 0,
+      // The title is what gives way, not the shuffle button beside it.
+      '& > :first-child': { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' },
+    },
     '& > :nth-child(2)': {
       flex: '0 1 auto',
       minWidth: 0,
