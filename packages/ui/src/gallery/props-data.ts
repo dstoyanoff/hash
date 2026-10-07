@@ -478,6 +478,18 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'ReactNode | false',
       },
       {
+        doc: '`false` builds no drawer: holding the card, pressing the artwork and the browse button then do nothing, which is lighter on a small display. Default `true`. See `onOpen` to send them somewhere else instead.',
+        name: 'drawer',
+        optional: true,
+        type: 'boolean',
+      },
+      {
+        doc: "Called instead of opening the drawer when the card is held, the artwork pressed or the browse button pressed: for a dashboard with a page of its own for the player (a `MediaPlayerFull`), `onOpen={() => navigate('/bathroom/music')}`. Given, no drawer is built. The browse button stays unless `browse` is `false`.",
+        name: 'onOpen',
+        optional: true,
+        type: '() => void',
+      },
+      {
         doc: "`1` puts the controls beside the track, in one pill; `2` puts them on a second row under it, for a narrow space (a small wall display). Default `'auto'`: one row, and two once the bar is narrower than 560 px wide.",
         name: 'rows',
         optional: true,

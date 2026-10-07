@@ -1,6 +1,6 @@
 import { mockMediaPlayer } from '@hashsome/core';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { expect, test } from 'vitest';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { expect, test, vi } from 'vitest';
 import { renderWithMock } from '../../test-utils.tsx';
 import { MediaPlayerBar } from '../media-player-bar.tsx';
 
@@ -277,4 +277,64 @@ test('by default it is one row until the width says otherwise, and the width is 
   // jsdom does not evaluate container queries: this is the wide case, and the wrapper is what is measured.
   expect(getComputedStyle(cardOf()).flexWrap).not.toBe('wrap');
   expect(getComputedStyle(cardOf().parentElement!).containerType).toBe('inline-size');
+});
+
+// Where holding the player goes.
+
+test('onOpen: holding the card calls it, and no drawer is built', () => {
+  vi.useFakeTimers();
+  try {
+    const onOpen = vi.fn<() => void>();
+    renderWithMock(<MediaPlayerBar entity="ha:room" onOpen={onOpen} />, timed);
+    const card = document.querySelector('[data-status]') as HTMLElement;
+    fireEvent.pointerDown(card, { clientX: 10, clientY: 10, pointerId: 1 });
+    act(() => vi.advanceTimersByTime(500));
+    fireEvent.pointerUp(card, { pointerId: 1 });
+    expect(onOpen).toHaveBeenCalledTimes(1);
+
+    // Nothing opened over the page: the player is drawn once.
+    expect(screen.getAllByText('Blank Space')).toHaveLength(1);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('onOpen: pressing the artwork, or the browse button (the library is on that page), calls it', () => {
+  const onOpen = vi.fn<() => void>();
+  renderWithMock(<MediaPlayerBar entity="ha:room" onOpen={onOpen} />, timed);
+  fireEvent.click(screen.getByRole('button', { name: 'Open player' }));
+  expect(onOpen).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Browse media' }));
+  expect(onOpen).toHaveBeenCalledTimes(2);
+  expect(screen.getAllByText('Blank Space')).toHaveLength(1);
+});
+
+test('onOpen: the browse button is left out with browse={false}, the artwork and holding still go', () => {
+  const onOpen = vi.fn<() => void>();
+  renderWithMock(<MediaPlayerBar entity="ha:room" onOpen={onOpen} browse={false} />, timed);
+  expect(screen.queryByRole('button', { name: 'Browse media' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Open player' }));
+  expect(onOpen).toHaveBeenCalledTimes(1);
+});
+
+test('drawer={false}: holding and the artwork do nothing, and there is no browse button', () => {
+  vi.useFakeTimers();
+  try {
+    renderWithMock(
+      <MediaPlayerBar entity="ha:room" drawer={false} browse={<span>LIBRARY</span>} />,
+      timed,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Open player' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Browse media' })).toBeNull();
+
+    const card = document.querySelector('[data-status]') as HTMLElement;
+    fireEvent.pointerDown(card, { clientX: 10, clientY: 10, pointerId: 1 });
+    act(() => vi.advanceTimersByTime(800));
+    fireEvent.pointerUp(card, { pointerId: 1 });
+    expect(screen.queryByText('LIBRARY')).toBeNull();
+    expect(screen.getAllByText('Blank Space')).toHaveLength(1);
+  } finally {
+    vi.useRealTimers();
+  }
 });
