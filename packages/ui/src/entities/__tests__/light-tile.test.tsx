@@ -304,3 +304,28 @@ test('the drawer’s power control is one icon button with two states', () => {
   fireEvent.click(button());
   expect(ha.getEntity('dim')).toMatchObject({ on: true });
 });
+
+test('drawer={false}: holding the tile opens nothing, and it still toggles with a tap', () => {
+  const { ha } = renderWithMock(<LightTile entity="ha:plain" drawer={false} />, lights);
+  const tile = screen.getByRole('button', { name: 'stairs lamp' });
+  fireEvent.pointerDown(tile, { clientX: 0, pointerId: 1 });
+  act(() => vi.advanceTimersByTime(800));
+  expect(screen.queryByText('Power')).toBeNull();
+  fireEvent.pointerUp(tile, { clientX: 0, pointerId: 1 });
+  expect(ha.calls).toHaveLength(0);
+
+  fireEvent.click(tile);
+  expect(ha.calls.at(-1)).toMatchObject({ command: 'toggle' });
+});
+
+test('drawer={false}: a dimmable light still dims by dragging, and the color swatches stay, without a custom color', () => {
+  const { ha } = renderWithMock(<LightTile entity="ha:cct" drawer={false} />, lights);
+  fireEvent.click(screen.getByRole('button', { name: 'Color' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Warm white' }));
+  expect(ha.calls.at(-1)).toMatchObject({ command: 'setColorTemperature', args: { kelvin: 2700 } });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Color' }));
+  expect(screen.getAllByRole('button', { name: /white|Candle|Daylight/ })).toHaveLength(4);
+  // The custom color is a card in the drawer, which there is none of.
+  expect(screen.queryByRole('button', { name: 'Custom color' })).toBeNull();
+});
