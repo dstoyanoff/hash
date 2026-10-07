@@ -47,6 +47,9 @@ export interface LightTileProps {
 
   /** Swatches shown when the palette button is opened. Default: four white temperatures. Each takes `kelvin` (color-temp lights) and/or `hs` (color lights) and is skipped if the light can't apply it. */
   colors?: LightColorPreset[];
+
+  /** Holding the tile opens a drawer with the full controls, the color bars, the energy chart and the recent activity. `false` leaves the tile as it is without it: a toggle that dims by dragging, with the color swatches if the light has color, and no drawer built, which is lighter on a small display. Default `true`. */
+  drawer?: boolean;
 }
 
 const HUE_GRADIENT =
@@ -65,6 +68,7 @@ export function LightTile({
   energy,
   history,
   colors = DEFAULT_COLOR_PRESETS,
+  drawer = true,
 }: LightTileProps) {
   const handle = useEntityHandle('light', entity);
   const [picking, setPicking] = useState(false);
@@ -99,47 +103,51 @@ export function LightTile({
       active={on}
       secondary={on ? (dimmable && percent !== undefined ? `${percent}%` : undefined) : 'Off'}
       onPress={() => void handle.command('toggle')}
-      detail={
-        <LightDetailBody
-          on={on}
-          percent={dimmable ? percent : undefined}
-          onToggle={() => void handle.command('toggle')}
-          {...(dimmable
-            ? {
-                onBrightness: (next: number) =>
-                  void handle.command('setBrightness', { brightness: next / 100 }),
-              }
-            : {})}
-          colorSection={
-            showPicker ? (
-              <LightColorSection
-                light={light}
-                open={colorOpen}
-                onToggle={() => setColorOpen((open) => !open)}
-                supportsTemp={supportsTemp}
-                supportsHs={supportsHs}
-                onKelvin={(kelvin) => void handle.command('setColorTemperature', { kelvin })}
-                onHue={(hue) =>
-                  void handle.command('setColor', {
-                    hue,
-                    saturation: currentHs(light)[1] || 100,
-                  })
+      {...(drawer
+        ? {
+            detail: (
+              <LightDetailBody
+                on={on}
+                percent={dimmable ? percent : undefined}
+                onToggle={() => void handle.command('toggle')}
+                {...(dimmable
+                  ? {
+                      onBrightness: (next: number) =>
+                        void handle.command('setBrightness', { brightness: next / 100 }),
+                    }
+                  : {})}
+                colorSection={
+                  showPicker ? (
+                    <LightColorSection
+                      light={light}
+                      open={colorOpen}
+                      onToggle={() => setColorOpen((open) => !open)}
+                      supportsTemp={supportsTemp}
+                      supportsHs={supportsHs}
+                      onKelvin={(kelvin) => void handle.command('setColorTemperature', { kelvin })}
+                      onHue={(hue) =>
+                        void handle.command('setColor', {
+                          hue,
+                          saturation: currentHs(light)[1] || 100,
+                        })
+                      }
+                      onPicked={(hex) => {
+                        const picked = hexToRgb(hex);
+                        if (picked) {
+                          const [hue, saturation] = rgbToHs(picked);
+                          void handle.command('setColor', { hue, saturation });
+                        }
+                      }}
+                    />
+                  ) : null
                 }
-                onPicked={(hex) => {
-                  const picked = hexToRgb(hex);
-                  if (picked) {
-                    const [hue, saturation] = rgbToHs(picked);
-                    void handle.command('setColor', { hue, saturation });
-                  }
-                }}
               />
-            ) : null
+            ),
           }
-        />
-      }
-      {...(energy ? { energy } : {})}
-      {...(history ? { history } : {})}
-      {...(typeof entity === 'string' ? { logbook: entity } : {})}
+        : {})}
+      {...(drawer && energy ? { energy } : {})}
+      {...(drawer && history ? { history } : {})}
+      {...(drawer && typeof entity === 'string' ? { logbook: entity } : {})}
       {...(dimmable
         ? {
             fill: on ? (brightness ?? 1) : 0,
@@ -166,12 +174,17 @@ export function LightTile({
                     setPicking(false);
                   },
                 }))}
-                customLabel="Custom color"
-                onCustom={() => {
-                  setPicking(false);
-                  setColorOpen(true);
-                  openDetail();
-                }}
+                // The custom color is a card in the drawer: without one there is no such button.
+                {...(drawer
+                  ? {
+                      customLabel: 'Custom color',
+                      onCustom: () => {
+                        setPicking(false);
+                        setColorOpen(true);
+                        openDetail();
+                      },
+                    }
+                  : {})}
               />
             ),
           }
