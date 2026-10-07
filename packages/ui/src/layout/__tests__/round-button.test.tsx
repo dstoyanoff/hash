@@ -62,7 +62,7 @@ test('state comes from data attributes: primary is the accent, active is warm', 
   );
 
   expect(getComputedStyle(screen.getByRole('button', { name: 'Primary' })).backgroundColor).toBe(
-    'rgb(255, 122, 69)',
+    'rgb(184, 92, 56)',
   );
 
   expect(getComputedStyle(screen.getByRole('button', { name: 'Active' })).color).toBe(
