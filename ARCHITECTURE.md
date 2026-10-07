@@ -681,6 +681,11 @@ Packages are published to npm by hand, from **Actions → Release → Run workfl
   publish therefore leaves `main` untouched. Pushing to `main` uses the `RELEASE_TOKEN` secret (a
   fine-grained token with Contents write), since `main` requires PRs and the built-in token cannot
   bypass that.
+- **The docs site follows the release.** After a run has published, its last job (`docs`) runs
+  `pages.yml` for the tag it just made, so the component gallery and the live demo show what is
+  released, not what is merged. A dry run, or a run with nothing to release, deploys nothing. It runs
+  from `main`, the one ref the `github-pages` environment accepts. To redeploy by hand, run
+  **Actions → Docs site** from `main` and name a tag (empty is the latest release).
 - **npm auth** is trusted publishing (OIDC), configured once per package on npmjs.com for this
   repository and `release.yml`; there is no npm token in GitHub.
 

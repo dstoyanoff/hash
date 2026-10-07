@@ -2,17 +2,31 @@ name: Docs site
 
 # The @hashsome/ui component gallery at the site root and the example as a live demo under /demo/,
 # built as one static site and served by GitHub Pages.
+#
+# It shows what is released, not what is merged: the Release workflow runs this after it has
+# published, for the tag it just made. To redeploy by hand, run it from `main` (the Pages
+# environment only accepts main) and name a tag, or leave it empty for the latest release.
 on:
-  push:
-    branches: [main]
+  workflow_call:
+    inputs:
+      tag:
+        description: The release to build the site from, e.g. v0.5.0.
+        type: string
+        required: true
   workflow_dispatch:
+    inputs:
+      tag:
+        description: The release to build the site from, e.g. v0.5.0. Empty is the latest.
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# One deployment at a time; a newer push replaces an older one that has not finished.
+# One deployment at a time; a newer release replaces an older one that has not finished.
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -22,6 +36,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Check out the release
+        run: |
+          tag="${{ inputs.tag }}"
+          if [ -z "$tag" ]; then
+            tag="$(git describe --tags --abbrev=0 --match 'v*' origin/main)"
+          fi
+
+          git checkout --detach "$tag"
+          echo "Building the docs of $tag" | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: pnpm/action-setup@v6
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @hashsome/ui docs:build

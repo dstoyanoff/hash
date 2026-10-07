@@ -2,7 +2,8 @@ name: Release
 
 # Run by hand: Actions → Release → Run workflow. It reads the conventional commits since the last
 # `v*` tag, picks the version, publishes every package to npm, then commits the version bump and
-# changelog to main, tags it and creates the GitHub release.
+# changelog to main, tags it and creates the GitHub release, then deploys the docs site for that
+# release.
 on:
   workflow_dispatch:
     inputs:
@@ -26,6 +27,10 @@ jobs:
   release:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    outputs:
+      # Set only when a release was really made (not a dry run, not "nothing to release").
+      published: ${{ steps.push.outputs.published }}
+      tag: ${{ steps.push.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -79,9 +84,25 @@ jobs:
           done
 
       - name: Push and release
+        id: push
         if: steps.next.outputs.skip != 'true' && !inputs.dry_run
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           git push origin HEAD:main "v${{ steps.next.outputs.version }}"
           gh release create "v${{ steps.next.outputs.version }}" --title "v${{ steps.next.outputs.version }}" --notes-file "$RUNNER_TEMP/notes.md" --prerelease="${{ startsWith(steps.next.outputs.version, '0.') }}"
+          echo "published=true" >> "$GITHUB_OUTPUT"
+          echo "tag=v${{ steps.next.outputs.version }}" >> "$GITHUB_OUTPUT"
+
+  # The gallery and demo show what is released: built from the tag this run just made, and only if it
+  # made one. It runs on main, which is the one ref the github-pages environment accepts.
+  docs:
+    needs: release
+    if: needs.release.outputs.published == 'true'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml
+    with:
+      tag: ${{ needs.release.outputs.tag }}
