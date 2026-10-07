@@ -2,6 +2,7 @@ import { LocalClient, MockIntegration, mockSensor } from '@hashsome/core';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useTheme } from '@emotion/react';
 import { Box, Flex } from 'e-prim';
+import { MotionGlobalConfig } from 'motion/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { HashsomeProvider, useThemeToggle, type ThemeMode } from '../provider.tsx';
 
@@ -283,4 +284,82 @@ test('a sun schedule starts from what the sun last said, until the entity is kno
   // No such entity: nothing to go by yet, so the remembered night is what shows.
   mountScheduled({ sun: 'ha:sun.sun' }, new MockIntegration({}));
   expect(bgOf()).toBe(DARK_BG);
+});
+
+// Motion: one device can ask for no animations with ?motion=reduced.
+
+const resetMotion = () => {
+  window.history.replaceState({}, '', '/');
+  localStorage.clear();
+  delete document.documentElement.dataset.motion;
+  MotionGlobalConfig.skipAnimations = false;
+};
+
+const startAt = (search: string, props: { motion?: 'auto' | 'full' | 'reduced' } = {}) => {
+  window.history.replaceState({}, '', `/bathroom${search}`);
+  const client = new LocalClient([new MockIntegration({})]);
+  render(
+    <HashsomeProvider client={client} {...props}>
+      <Probe />
+    </HashsomeProvider>,
+  );
+};
+
+const reduced = () => document.documentElement.dataset.motion === 'reduced';
+
+test('?motion=reduced skips animations and is remembered for the next visit', () => {
+  resetMotion();
+  startAt('?motion=reduced');
+  expect(reduced()).toBe(true);
+  expect(MotionGlobalConfig.skipAnimations).toBe(true);
+  expect(localStorage.getItem('hashsome:motion')).toBe('reduced');
+
+  // A later visit with no query (or the app's own links) keeps it.
+  cleanup();
+  delete document.documentElement.dataset.motion;
+  MotionGlobalConfig.skipAnimations = false;
+  startAt('');
+  expect(reduced()).toBe(true);
+  expect(MotionGlobalConfig.skipAnimations).toBe(true);
+  resetMotion();
+});
+
+test('?motion=full overrides a reduced prop, and ?motion=auto forgets what was kept', () => {
+  resetMotion();
+  startAt('', { motion: 'reduced' });
+  expect(reduced()).toBe(true);
+  cleanup();
+
+  startAt('?motion=full', { motion: 'reduced' });
+  expect(reduced()).toBe(false);
+  expect(MotionGlobalConfig.skipAnimations).toBe(false);
+  expect(localStorage.getItem('hashsome:motion')).toBe('full');
+  cleanup();
+
+  startAt('?motion=auto');
+  expect(localStorage.getItem('hashsome:motion')).toBeNull();
+  expect(reduced()).toBe(false);
+  resetMotion();
+});
+
+test('the default is to leave animations alone, and the prop can ask for none', () => {
+  resetMotion();
+  startAt('');
+  expect(reduced()).toBe(false);
+  expect(MotionGlobalConfig.skipAnimations).toBe(false);
+  cleanup();
+
+  startAt('', { motion: 'reduced' });
+  expect(reduced()).toBe(true);
+  resetMotion();
+});
+
+test('reduced motion switches off CSS transitions and animations, except the marked ones', () => {
+  resetMotion();
+  startAt('?motion=reduced');
+  const css = [...document.querySelectorAll('style')].map((style) => style.textContent).join('\n');
+  expect(css).toContain('html[data-motion="reduced"]');
+  expect(css).toContain(':not([data-keep-motion])');
+  expect(css).toMatch(/transition:none\s*!important/);
+  resetMotion();
 });

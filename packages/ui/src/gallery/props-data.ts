@@ -823,6 +823,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'Density',
       },
       {
+        doc: "`'reduced'` turns animations and transitions off, for a slow display, `'full'` keeps them and `'auto'` (the default) leaves things as they are. A device can choose for itself with `?motion=reduced` (or `full`) on the address it opens: the choice is kept on the device, so reloads and links inside the app keep it, and `?motion=auto` forgets it. That wins over this prop.",
+        name: 'motion',
+        optional: true,
+        type: 'MotionPreference',
+      },
+      {
         doc: 'Partial changes to the built-in theme — colors per light/dark, radii, typography, spacing, density sizes. Pass a constant defined outside the component: a new object each render rebuilds the theme each render.',
         name: 'overrides',
         optional: true,

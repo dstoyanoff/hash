@@ -24,6 +24,8 @@ export function HoldProgress({ edge = 'top', color }: HoldProgressProps) {
   return (
     <Box
       as="span"
+      // A cue the user waits for: it keeps moving when `?motion=reduced` turns the rest off.
+      data-keep-motion=""
       position="absolute"
       width="100%"
       height={2}

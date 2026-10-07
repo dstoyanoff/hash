@@ -24,6 +24,10 @@ export function globalStyles({ palette, typography }: Theme): Interpolation<Them
       color: palette.text,
       fontFamily: typography.default.fontFamily,
     },
+    // `?motion=reduced` (see `HashsomeProvider`): no CSS transitions or animations, except the ones
+    // that are a cue the user waits for (a hold's progress line, marked `data-keep-motion`).
+    'html[data-motion="reduced"] *:not([data-keep-motion]), html[data-motion="reduced"] *:not([data-keep-motion])::before, html[data-motion="reduced"] *:not([data-keep-motion])::after':
+      { transition: 'none !important', animation: 'none !important' },
     button: { font: 'inherit', color: 'inherit' },
     // Buttons and inputs start borderless; one that wants a border asks for it with the `border` prop.
     'button, input': { border: 0 },
