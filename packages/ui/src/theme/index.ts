@@ -85,7 +85,7 @@ export const darkTheme: ThemeConfig = {
     surfaceRaised: '#211E26',
     text: '#F2EFEA',
     textMuted: '#96908C',
-    accent: '#FF7A45',
+    accent: '#B85C38',
     accentText: '#FFFFFF',
     onAccent: '#1B1B1F',
     warm: '#E3B341',
