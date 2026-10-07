@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { VERSION_FILE, VERSION_PATH } from '../build-id.ts';
 import type { ResolvedConfig } from '../config.ts';
 import { serveAsset } from './assets.ts';
+import { homeAssistantCompat } from './ha-compat.ts';
 import { Proxy } from './proxy.ts';
 import { startIntegrations } from './integrations.ts';
 import { attachWebSocket } from './websocket.ts';
@@ -23,9 +24,17 @@ function readVersion(clientDir: string): string | undefined {
   }
 }
 
-export function createApp(clientDir: string, integrations: Integration[] = []): Express {
+export function createApp(
+  clientDir: string,
+  integrations: Integration[] = [],
+  options: { homeAssistantCompat?: boolean } = {},
+): Express {
   const app = express();
   app.disable('x-powered-by');
+  if (options.homeAssistantCompat) {
+    app.use(homeAssistantCompat());
+  }
+
   app.get('/healthz', (_req, res) => {
     res.json({ status: 'ok' });
   });
@@ -63,7 +72,12 @@ export function createApp(clientDir: string, integrations: Integration[] = []): 
 export const BUILT_CLIENT = join('build', 'client');
 
 export function startServer(config: ResolvedConfig, clientDir = join(config.root, BUILT_CLIENT)) {
-  const server = createServer(createApp(clientDir, config.integrations));
+  const server = createServer(
+    createApp(clientDir, config.integrations, {
+      homeAssistantCompat: config.homeAssistantCompat,
+    }),
+  );
+
   const proxy = new Proxy(config.integrations, { log: console.log });
   attachWebSocket(server, proxy);
   const stop = startIntegrations(config.integrations, { log: console.log });

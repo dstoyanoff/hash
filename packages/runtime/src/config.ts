@@ -28,6 +28,9 @@ export interface HashsomeConfig {
 
   /** Defaults for `hashsome package`, so deploying is `pnpm package` with no flags. */
   package?: PackageConfig;
+
+  /** Answers the requests a device makes to check that an address is a Home Assistant (its login flow, `/api/`, `/api/config`, `/manifest.json`), so a wall display that only opens a Home Assistant, like the Shelly Wall Display, accepts this server's address. Off by default. Any login is accepted — nothing sits behind it, and Hashsome has no login of its own — so turn it on only for a server on a network you trust. */
+  homeAssistantCompat?: boolean;
 }
 
 export interface ResolvedConfig {
@@ -36,6 +39,7 @@ export interface ResolvedConfig {
   port: number;
   host: string;
   package: PackageConfig;
+  homeAssistantCompat: boolean;
 }
 
 export function defineConfig(config: HashsomeConfig): HashsomeConfig {
@@ -75,6 +79,7 @@ export function resolveConfig(root: string, user: HashsomeConfig): ResolvedConfi
     port: Number(process.env.PORT ?? user.port ?? 3000),
     host: process.env.HOST ?? user.host ?? '0.0.0.0',
     package: user.package ?? {},
+    homeAssistantCompat: user.homeAssistantCompat ?? false,
   };
 }
 
