@@ -16,7 +16,14 @@ import { NavRail } from '../entities/nav-rail.tsx';
 import { Page } from '../layout/page.tsx';
 import { SceneButton } from '../entities/scene-button.tsx';
 import { SensorReadout } from '../entities/sensor-readout.tsx';
-import { PresenceStack, SystemStatus, TopBar } from '../entities/top-bar.tsx';
+import {
+  Clock,
+  DateChip,
+  PresenceStack,
+  SystemStatus,
+  TopBar,
+  WeatherChip,
+} from '../entities/top-bar.tsx';
 import { Icon } from '../icon.tsx';
 import {
   EnergyChart,
@@ -872,6 +879,18 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
               weather="ha:weather.home"
               people={['ha:person.dan', 'ha:person.alex']}
             />
+          </ComponentDoc>
+
+          <ComponentDoc
+            title="Header pieces"
+            components={['DateChip', 'WeatherChip', 'Clock']}
+            description="The top bar's date, weather and clock, on their own: for a dashboard that builds its own header (a small room display, say) without the title, switcher and scenes of a whole TopBar. Put them in a row with SystemStatus, PresenceStack or anything else."
+          >
+            <Flex align="center" gap={3} px={4}>
+              <DateChip />
+              <WeatherChip entity="ha:weather.home" />
+              <Clock format="24h" />
+            </Flex>
           </ComponentDoc>
 
           <ComponentDoc
