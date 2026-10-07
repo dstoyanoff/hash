@@ -5,7 +5,7 @@ import { mapClimate } from './climate.ts';
 import { mapLight } from './light.ts';
 import { mapMediaPlayer } from './media-player.ts';
 import { mapWeather } from './weather.ts';
-import { mapAction, mapGeneric, mapPerson, mapSensor, mapSwitch } from './simple.ts';
+import { mapAction, mapGeneric, mapPerson, mapSensor, mapSwitch, mapSun } from './simple.ts';
 
 export interface MapOptions {
   /** Home Assistant reports the temperature unit in its own config, not per entity. */
@@ -38,6 +38,8 @@ export function mapEntity(entity: HassEntity, options: MapOptions): EntityInput 
       return mapPerson(entity, options.assetUrl);
     case 'weather':
       return mapWeather(entity);
+    case 'sun':
+      return mapSun(entity);
     default:
       if (SWITCH_DOMAINS.includes(domain)) {
         return mapSwitch(entity);

@@ -750,7 +750,7 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: "Omit<RemoteClientOptions, 'url'>",
       },
       {
-        doc: "`'light'`, `'dark'`, `'system'` (follows the browser/OS preference and updates live), or a schedule: `{ dark: { from: '19:00', to: '07:00' } }` is dark between those times on the display's clock, `{ sun: 'ha:sun.sun' }` is dark while the sun entity says it is below the horizon. Default `'dark'`. A schedule and the document shell's first paint use `'system'` until the time or the entity is known. A `useThemeToggle()` caller (e.g. `NavRail`'s dev toggle) can still override this at runtime. Pass a constant defined outside the component.",
+        doc: "`'light'`, `'dark'`, `'system'` (follows the browser/OS preference and updates live), or a schedule: `{ dark: { from: '19:00', to: '07:00' } }` is dark between those times on the display's clock, `{ sun: 'ha:sun.sun' }` is dark while that entity, a `daylight` sensor (`on` while the sun is up; the Home Assistant integration makes one of `sun.sun`), is `off`. Default `'dark'`. A schedule and the document shell's first paint use `'system'` until the time or the entity is known. A `useThemeToggle()` caller (e.g. `NavRail`'s dev toggle) can still override this at runtime. Pass a constant defined outside the component.",
         name: 'theme',
         optional: true,
         type: 'ThemeMode',

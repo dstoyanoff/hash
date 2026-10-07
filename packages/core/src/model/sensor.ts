@@ -8,7 +8,7 @@ export interface SensorEntity extends EntityBase<'sensor'> {
   numeric?: number;
   unit?: string;
 
-  /** What is measured, e.g. `temperature`, `humidity`, `power`, `energy`. Open vocabulary. */
+  /** What is measured, e.g. `temperature`, `humidity`, `power`, `energy`. Open vocabulary. `daylight` is one the UI reads: a sensor whose `value` is `on` while the sun is up and `off` while it is down, which a `theme` that follows the sun is pointed at. */
   measurement?: string;
 }
 

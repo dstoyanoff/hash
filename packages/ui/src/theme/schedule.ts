@@ -4,7 +4,7 @@ import type { EntityRef } from '@hashsome/core';
  * When the dark theme is on, for a display that should change with the time of day:
  * - `{ dark: { from: '19:00', to: '07:00' } }`: dark between two times of day on the display's own
  *   clock. `to` may be earlier than `from` (it is the next morning); the same time twice means never dark.
- * - `{ sun: 'ha:sun.sun' }`: dark while a sun entity says the sun is below the horizon.
+ * - `{ sun: 'ha:sun.sun' }`: dark while a `daylight` sensor (the sun entity: `on` while the sun is up) is off.
  */
 export type ThemeSchedule = { dark: { from: string; to: string } } | { sun: EntityRef };
 
@@ -55,15 +55,13 @@ export function msUntilSwitch(range: { from: string; to: string }, now: Date): n
   return Math.min(wait(from), wait(to));
 }
 
-/** What a sun entity says: dark once it is below the horizon. `undefined` for anything else (not loaded yet, unavailable). */
-export function sunIsDown(entity: { kind: string; value?: string } | null | undefined) {
-  if (entity?.kind !== 'generic') {
+/** What a `daylight` sensor says (`on` while the sun is up): dark once it is `off`. `undefined` for anything else (not loaded yet, unavailable, not that kind of sensor). */
+export function sunIsDown(
+  entity: { kind: string; value?: string; measurement?: string } | null | undefined,
+) {
+  if (entity?.kind !== 'sensor' || entity.measurement !== 'daylight') {
     return undefined;
   }
 
-  return entity.value === 'below_horizon'
-    ? true
-    : entity.value === 'above_horizon'
-      ? false
-      : undefined;
+  return entity.value === 'off' ? true : entity.value === 'on' ? false : undefined;
 }

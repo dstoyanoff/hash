@@ -1,4 +1,4 @@
-import { LocalClient, MockIntegration, mockGeneric } from '@hashsome/core';
+import { LocalClient, MockIntegration, mockSensor } from '@hashsome/core';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useTheme } from '@emotion/react';
 import { Box, Flex } from 'e-prim';
@@ -258,20 +258,23 @@ test('a clock schedule with a time that is not HH:MM is refused', () => {
 
 beforeEach(() => localStorage.clear());
 
-const sunWith = (value: string) =>
-  new MockIntegration({ entities: { 'sun.sun': mockGeneric({ name: 'Sun', value }) } });
+// The generic form of a sun: a daylight sensor, on while the sun is up.
+const sunWith = (value: 'on' | 'off') =>
+  new MockIntegration({
+    entities: { 'sun.sun': mockSensor({ name: 'Sun', value, measurement: 'daylight' }) },
+  });
 
 test('a sun schedule is dark while the sun entity says it is below the horizon', async () => {
-  mountScheduled({ sun: 'ha:sun.sun' }, sunWith('below_horizon'));
+  mountScheduled({ sun: 'ha:sun.sun' }, sunWith('off'));
   await waitFor(() => expect(bgOf()).toBe(DARK_BG));
 });
 
 test('a sun schedule is light while the sun is up, and follows the entity when it sets', async () => {
-  const sun = sunWith('above_horizon');
+  const sun = sunWith('on');
   mountScheduled({ sun: 'ha:sun.sun' }, sun);
   await waitFor(() => expect(bgOf()).toBe(LIGHT_BG));
 
-  act(() => sun.update('sun.sun', { value: 'below_horizon' }));
+  act(() => sun.update('sun.sun', { value: 'off' }));
   await waitFor(() => expect(bgOf()).toBe(DARK_BG));
 });
 

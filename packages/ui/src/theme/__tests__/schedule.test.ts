@@ -50,11 +50,14 @@ test('a time that is not HH:MM is refused, naming which one', () => {
   expect(() => isDarkAt({ from: '19:00', to: '7:00' }, at('12:00'))).toThrow('theme.dark.to');
 });
 
-test('a sun entity is down when it is below the horizon, and unknown when it says nothing useful', () => {
-  expect(sunIsDown({ kind: 'generic', value: 'below_horizon' })).toBe(true);
-  expect(sunIsDown({ kind: 'generic', value: 'above_horizon' })).toBe(false);
-  expect(sunIsDown({ kind: 'generic', value: 'unavailable' })).toBeUndefined();
-  expect(sunIsDown({ kind: 'sensor', value: 'below_horizon' })).toBeUndefined();
+test('a daylight sensor says the sun is down once it is off, and nothing useful otherwise', () => {
+  const daylight = (value: string) => ({ kind: 'sensor', measurement: 'daylight', value });
+  expect(sunIsDown(daylight('off'))).toBe(true);
+  expect(sunIsDown(daylight('on'))).toBe(false);
+  expect(sunIsDown(daylight('unavailable'))).toBeUndefined();
+  // Not a daylight sensor: an `off` on its own says nothing about the sun.
+  expect(sunIsDown({ kind: 'sensor', measurement: 'motion', value: 'off' })).toBeUndefined();
+  expect(sunIsDown({ kind: 'generic', value: 'off' })).toBeUndefined();
   expect(sunIsDown(undefined)).toBeUndefined();
   expect(sunIsDown(null)).toBeUndefined();
 });
