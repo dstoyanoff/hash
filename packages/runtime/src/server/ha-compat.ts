@@ -14,6 +14,10 @@ const send = (res: ServerResponse, body: unknown, type = 'application/json') => 
   res.end(text);
 };
 
+/** The paths Home Assistant's own clients ask, and so the only ones that answer a page on another origin. */
+const COMPAT_PATH =
+  /^\/(auth\/(providers|token|login_flow(\/[^/]+)?)|api\/?|api\/(config|discovery_info)|manifest\.json)$/;
+
 /** A request's body, JSON or a form (the token request is a form). Never throws. */
 async function bodyOf(req: IncomingMessage): Promise<Record<string, string>> {
   const chunks: Buffer[] = [];
@@ -43,6 +47,25 @@ export function homeAssistantCompat() {
       const method = req.method ?? 'GET';
       const base = `http://${req.headers.host ?? 'localhost'}`;
       const handler = ['homeassistant', null];
+
+      // A display opens its own page and asks the address from there, so the browser wants
+      // permission: the answer to the preflight, and the origin allowed on the real request.
+      if (COMPAT_PATH.test(pathname)) {
+        res.setHeader('Access-Control-Allow-Origin', req.headers.origin ?? '*');
+        res.setHeader('Vary', 'Origin');
+        if (method === 'OPTIONS') {
+          res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+          res.setHeader(
+            'Access-Control-Allow-Headers',
+            req.headers['access-control-request-headers'] ?? 'content-type, authorization',
+          );
+
+          res.statusCode = 204;
+          res.end();
+
+          return;
+        }
+      }
 
       if (method === 'GET' && pathname === '/auth/providers') {
         return send(res, {

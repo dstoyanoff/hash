@@ -109,3 +109,31 @@ test('is off in a config that does not ask for it', () => {
   expect(resolveConfig('/p', {}).homeAssistantCompat).toBe(false);
   expect(resolveConfig('/p', { homeAssistantCompat: true }).homeAssistantCompat).toBe(true);
 });
+
+test('lets a page on another origin ask: it answers the preflight and allows the origin', async () => {
+  const { base } = await start(true);
+  const origin = 'http://localhost';
+
+  const preflight = await fetch(`${base}/auth/login_flow`, {
+    method: 'OPTIONS',
+    headers: {
+      origin,
+      'access-control-request-method': 'POST',
+      'access-control-request-headers': 'content-type',
+    },
+  });
+
+  expect(preflight.status).toBe(204);
+  expect(preflight.headers.get('access-control-allow-origin')).toBe(origin);
+  expect(preflight.headers.get('access-control-allow-headers')).toBe('content-type');
+
+  const request = await fetch(`${base}/auth/providers`, { headers: { origin } });
+  expect(request.headers.get('access-control-allow-origin')).toBe(origin);
+});
+
+test("leaves the app's own paths without CORS headers", async () => {
+  const { base } = await start(true);
+
+  const page = await fetch(`${base}/bathroom`, { headers: { origin: 'http://localhost' } });
+  expect(page.headers.get('access-control-allow-origin')).toBeNull();
+});
