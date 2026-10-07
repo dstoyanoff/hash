@@ -338,3 +338,16 @@ test('drawer={false}: holding and the artwork do nothing, and there is no browse
     vi.useRealTimers();
   }
 });
+
+// How far along playback is, round the artwork.
+
+test('the artwork ring fills as far as playback has gone, and is plain without a duration', () => {
+  const { unmount } = renderWithMock(<MediaPlayerBar entity="ha:room" />, timed);
+  // 80s of 200s.
+  const arc = document.querySelector('[data-part="progress"]');
+  expect(arc?.getAttribute('stroke-dasharray')).toBe('40 100');
+  unmount();
+
+  renderWithMock(<MediaPlayerBar entity="ha:room" />, player());
+  expect(document.querySelector('[data-part="progress"]')).toBeNull();
+});

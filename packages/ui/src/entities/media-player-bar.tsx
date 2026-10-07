@@ -50,8 +50,17 @@ const TWO_ROWS_BELOW = 560;
 const MEDIA_GLYPH = 18;
 
 /** The ring around the artwork (the size of an icon circle): a button when there is somewhere to
- * go, otherwise just the ring. */
-function Ring({ onOpen, children }: { onOpen?: (() => void) | undefined; children: ReactNode }) {
+ * go, otherwise just the ring. `fraction` (0 to 1) fills it with how far along playback is, from the
+ * top, like the large player's ring. */
+function Ring({
+  onOpen,
+  fraction,
+  children,
+}: {
+  onOpen?: (() => void) | undefined;
+  fraction?: number | undefined;
+  children: ReactNode;
+}) {
   return (
     <Flex
       {...(onOpen
@@ -68,7 +77,6 @@ function Ring({ onOpen, children }: { onOpen?: (() => void) | undefined; childre
       center
       position="relative"
       p={0}
-      border
       radius="full"
       css={({ density }) => ({
         width: density.iconCircle,
@@ -77,6 +85,41 @@ function Ring({ onOpen, children }: { onOpen?: (() => void) | undefined; childre
         background: 'none',
       })}
     >
+      <svg
+        viewBox="0 0 100 100"
+        aria-hidden="true"
+        css={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+        }}
+      >
+        <circle
+          cx="50"
+          cy="50"
+          r="47.5"
+          fill="none"
+          strokeWidth="4"
+          css={({ palette }) => ({ stroke: palette.border })}
+        />
+        {fraction !== undefined ? (
+          <circle
+            data-part="progress"
+            cx="50"
+            cy="50"
+            r="47.5"
+            fill="none"
+            strokeWidth="4"
+            strokeLinecap="round"
+            pathLength={100}
+            strokeDasharray={`${fraction * 100} 100`}
+            transform="rotate(-90 50 50)"
+            css={({ palette }) => ({ stroke: palette.accent })}
+          />
+        ) : null}
+      </svg>
       {children}
     </Flex>
   );
@@ -263,6 +306,12 @@ export function MediaPlayerBar({
   const duration = ready ? player?.duration : undefined;
   const timed = seek.shown !== undefined && duration !== undefined && duration > 0;
 
+  // How far along playback is, for the ring round the artwork.
+  const progress =
+    timed && duration !== undefined
+      ? Math.min(1, Math.max(0, (seek.shown ?? 0) / duration))
+      : undefined;
+
   const ref = typeof entity === 'string' ? entity : undefined;
   const browser =
     browse === false
@@ -382,7 +431,9 @@ export function MediaPlayerBar({
     <HoldCard open={open} status={status} rows={rows} volumeOpen={volumeOpen && ready}>
       {/* A ring (the old artwork size) around the artwork, which is as tall as the title + artist
           lines beside it. */}
-      <Ring onOpen={open}>{artwork}</Ring>
+      <Ring onOpen={open} fraction={progress}>
+        {artwork}
+      </Ring>
       {trackInfo}
       {/* The time sits at the vertical middle of the bar, beside the track; in two rows it is at the
           right of the top row. The volume slider takes the track's and the time's place in one row. */}
