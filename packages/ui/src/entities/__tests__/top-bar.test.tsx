@@ -206,7 +206,7 @@ test('a scene dot uses the color its app gave it, and the theme accent otherwise
   ).toBe('rgb(18, 52, 86)');
 
   expect(getComputedStyle(screen.getByRole('button', { name: 'Cooking' })).backgroundColor).toBe(
-    'rgb(255, 122, 69)', // the dark theme's accent
+    'rgb(184, 92, 56)', // the dark theme's accent
   );
 });
 

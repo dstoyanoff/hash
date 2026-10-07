@@ -150,11 +150,11 @@ test('overrides change only the tokens they name, and light and dark are separat
   expect(light.label).toMatchObject({ fontSize: 15, fontWeight: 500 });
 
   const dark = themeOf({ theme: 'dark', overrides });
-  expect(dark).toMatchObject({ accent: '#FF7A45', card: '10px' });
+  expect(dark).toMatchObject({ accent: '#B85C38', card: '10px' });
 });
 
 test('without overrides the built-in theme is untouched', () => {
-  expect(themeOf({ theme: 'dark' })).toMatchObject({ accent: '#FF7A45', card: '25px', space: 12 });
+  expect(themeOf({ theme: 'dark' })).toMatchObject({ accent: '#B85C38', card: '25px', space: 12 });
 });
 
 test('density overrides apply to their density only', () => {
