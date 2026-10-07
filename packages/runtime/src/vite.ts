@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { searchForWorkspaceRoot, type InlineConfig, type Plugin } from 'vite';
 import type { ResolvedConfig } from './config.ts';
 import { serveAsset } from './server/assets.ts';
+import { homeAssistantCompat } from './server/ha-compat.ts';
 import type { Proxy } from './server/proxy.ts';
 import { attachWebSocket } from './server/websocket.ts';
 
@@ -14,6 +15,10 @@ function hashsomeDevServer(proxy: Proxy, config: ResolvedConfig): Plugin {
   return {
     name: 'hashsome:dev-server',
     configureServer(server) {
+      if (config.homeAssistantCompat) {
+        server.middlewares.use(homeAssistantCompat());
+      }
+
       server.middlewares.use('/healthz', (_req, res) => {
         res.setHeader('content-type', 'application/json');
         res.end('{"status":"ok"}');

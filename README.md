@@ -195,12 +195,34 @@ browser or a kiosk app at `http://<the server>:3000/<id>`.
 How the release is built, and how to load the image on k3s, is in
 [ARCHITECTURE.md](ARCHITECTURE.md#packaging-and-deployment).
 
+### A wall display that only opens a Home Assistant
+
+Some wall displays, such as the Shelly Wall Display, only accept an address that answers like a Home
+Assistant: they run its login flow before they show a page. One line in `hashsome.config.ts` makes
+Hashsome answer those checks (the login flow, `/api/`, `/api/config`, `/manifest.json`), in `pnpm dev`
+and in a packaged release:
+
+```ts
+export default defineConfig({
+  integrations: [...],
+  homeAssistantCompat: true,
+});
+```
+
+Then give the display your server's address as its "Home Assistant" and any username and password.
+It is off by default. It accepts any login, because nothing sits behind it (see Security below), and
+it is written from Home Assistant's documented API, not from any device's firmware, so a firmware
+update could change what a display asks for.
+
 ## Security
 
 - **Dashboards have no login.** A Hashsome server shows and controls everything its integrations
   expose to anyone who can reach it. Run it on a trusted network, or put it behind a reverse proxy
   that authenticates (Authelia, Authentik, Cloudflare Access, basic auth, a VPN). Do not expose it to
   the internet as is.
+- **`homeAssistantCompat` accepts any login** on the Home Assistant login endpoints, and hands out a
+  token that opens nothing. It adds no access that Hashsome does not already give to anyone who can
+  reach it; turn it on only for a server on a network you trust.
 - **Tokens stay on the server**, read from its environment: never in the browser, the image or the
   release files. Where you can, give Home Assistant a dedicated non-admin user for the token.
 - To report a vulnerability, see [SECURITY.md](SECURITY.md).
