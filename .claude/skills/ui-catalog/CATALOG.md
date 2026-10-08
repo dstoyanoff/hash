@@ -15,6 +15,33 @@ A grid of equal-width columns for tiles; cells share the width and never overflo
 | `columns`  | `number`    | no       | Number of equal columns. Default 2.              |
 | `children` | `ReactNode` | yes      | Tiles (or any content) to lay out, one per cell. |
 
+### `Board`
+
+A page laid out on a grid, for a dashboard made for one device. The page is `columns` equal columns (a gap between them) and rows as tall as what is in them, with twice that gap between rows. Nothing says where a cell goes: each `Cell` only says how big it is, and the board puts it in the first place it fits, in the order written. Every card is a whole number of grid modules tall and every gap is 3, so whatever the board makes stays on the grid. It takes the height that is left of the page. Opt in: a page of plain flex columns keeps working the same.
+
+| Prop       | Type        | Required |                                                              |
+| ---------- | ----------- | -------- | ------------------------------------------------------------ |
+| `columns`  | `number`    | no       | How many equal columns the page is divided into. Default 12. |
+| `children` | `ReactNode` | yes      | `Cell`s, each saying how big it is; the board places them.   |
+
+### `Cell`
+
+Something on a `Board`, and how big it is: `cols` wide and `rows` tall. Where it goes is the board's business. A room is one cell (its header and its tiles), a player beside three of them is one that covers three rows, or fills.
+
+| Prop       | Type               | Required |                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ---------- | ------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cols`     | `number`           | no       | How many columns wide. Default: all of them.                                                                                                                                                                                                                                                                                                                                                                                |
+| `rows`     | `number \| 'fill'` | no       | How many rows of the board it covers, counting rows as tall as their content (a room is one): `3` ends where the third row does, and the cell is as tall as those rows, whatever is in it (a card in it that is too tall squeezes). `'fill'` starts where the cell is placed and goes down to the bottom of the page (or of the content, if that is longer), whatever rows are beside it; they keep their place. Default 1. |
+| `children` | `ReactNode`        | yes      | What is in it, one under the other with the gap between. In a cell of more than one row, or `'fill'`, the last card stretches to the cell's height.                                                                                                                                                                                                                                                                         |
+
+### `TopRow`
+
+The row along the top of a page you build yourself instead of with `TopBar`: its pieces (`DateChip`, `WeatherChip`, `Clock`, `SystemStatus`) in a line at the right, in the height the grid gives the top row, with no padding of its own.
+
+| Prop       | Type        | Required |                                                         |
+| ---------- | ----------- | -------- | ------------------------------------------------------- |
+| `children` | `ReactNode` | yes      | What goes in the row: the date, the weather, the clock. |
+
 ### `usePageInset`
 
 Reserves `size` px of the surrounding `Page`'s edge for something fixed over it (`NavRail`, `NavDock`), so content never sits under it. A no-op outside a `Page`.

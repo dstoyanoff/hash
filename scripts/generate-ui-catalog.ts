@@ -48,6 +48,8 @@ const sections: Section[] = [
     heading: 'Layout',
     files: [
       'layout/grid.tsx',
+      'layout/board.tsx',
+      'layout/top-row.tsx',
       'layout/page.tsx',
       'layout/animated-outlet.tsx',
       'layout/room-header.tsx',
