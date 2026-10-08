@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0 (2026-10-08)
+
+### Features
+
+- **ui:** numbers that change move to their new value instead of jumping (#85) ([4cb788c](https://github.com/dstoyanoff/hashsome/commit/4cb788c231d9cdceccc160f4f161439a6f768781))
+
 ## 0.6.0 (2026-10-08)
 
 ### Features
