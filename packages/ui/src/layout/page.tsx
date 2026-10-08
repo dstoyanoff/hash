@@ -1,5 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import { Flex } from 'e-prim';
+import { gridFromDevice } from '../theme/grid.ts';
+import { GridOverlay } from './grid-overlay.tsx';
 import {
   createContext,
   useCallback,
@@ -32,7 +34,9 @@ export interface PageProps {
 /** The page every dashboard renders into: padded by the density's spacing, a column with gaps,
  * exactly viewport height, and scrolling inside itself (the document never scrolls — the entity
  * drawer is `position: fixed` and relies on that). It pads further for a `NavRail` or `NavDock`
- * the dashboard includes. Render it once, in the app's root layout. */
+ * the dashboard includes. Render it once, in the app's root layout. `?grid` on the address draws the
+ * module grid over it, with every card boxed green or red by whether it sits on the grid (`?grid=off`
+ * stops): for laying a dashboard out for one device. */
 export function Page({ children, height = '100dvh' }: PageProps) {
   const [insets, setInsets] = useState<Record<Side, number>>({ left: 0, bottom: 0 });
   const reserve = useCallback((side: Side, size: number) => {
@@ -41,6 +45,8 @@ export function Page({ children, height = '100dvh' }: PageProps) {
   }, []);
 
   const value = useMemo(() => reserve, [reserve]);
+  // `?grid` on the address draws the module grid over the page, for laying a dashboard out.
+  const [showGrid] = useState(gridFromDevice);
 
   return (
     <InsetContext.Provider value={value}>
@@ -49,6 +55,7 @@ export function Page({ children, height = '100dvh' }: PageProps) {
         direction="column"
         height={height}
         overflow="auto"
+        position="relative"
         gap={3}
         p={3}
         css={({ spacing }) => ({
@@ -59,6 +66,7 @@ export function Page({ children, height = '100dvh' }: PageProps) {
         })}
       >
         {children}
+        {showGrid ? <GridOverlay /> : null}
       </Flex>
     </InsetContext.Provider>
   );

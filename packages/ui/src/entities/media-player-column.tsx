@@ -159,6 +159,7 @@ function Card({ open, children }: { open?: () => void; children: ReactNode }) {
   const hold = useHold(() => open?.(), open !== undefined);
   return (
     <Flex
+      data-grid-card
       direction="column"
       background="surface"
       radius="card"

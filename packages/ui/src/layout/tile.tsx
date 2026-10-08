@@ -341,6 +341,7 @@ export function Tile({
       align="center"
       overflow="hidden"
       minWidth={0}
+      data-grid-card
       data-status={status}
       data-active={accented}
       data-solid-accent={solidAccent}

@@ -231,6 +231,7 @@ function HoldCard({
       background="surface"
       radius="full"
       overflow="hidden"
+      data-grid-card
       data-status={status}
       data-rows={rows === 2 ? 2 : undefined}
       data-volume-open={volumeOpen}
