@@ -330,24 +330,24 @@ const startAt = (search: string, props: { motion?: 'auto' | 'full' | 'reduced' }
 
 const reduced = () => document.documentElement.dataset.motion === 'reduced';
 
-test('?motion=reduced skips animations and is remembered for the next visit', () => {
+test('?motion=reduced skips animations for that visit only, and nothing is kept', () => {
   resetMotion();
   startAt('?motion=reduced');
   expect(reduced()).toBe(true);
   expect(MotionGlobalConfig.skipAnimations).toBe(true);
-  expect(localStorage.getItem('hashsome:motion')).toBe('reduced');
+  expect(localStorage.length).toBe(0);
 
-  // A later visit with no query (or the app's own links) keeps it.
+  // A later visit with no query starts from the prop again.
   cleanup();
   delete document.documentElement.dataset.motion;
   MotionGlobalConfig.skipAnimations = false;
   startAt('');
-  expect(reduced()).toBe(true);
-  expect(MotionGlobalConfig.skipAnimations).toBe(true);
+  expect(reduced()).toBe(false);
+  expect(MotionGlobalConfig.skipAnimations).toBe(false);
   resetMotion();
 });
 
-test('?motion=full overrides a reduced prop, and ?motion=auto forgets what was kept', () => {
+test('?motion=full overrides a reduced prop, and ?motion=auto leaves it to the prop', () => {
   resetMotion();
   startAt('', { motion: 'reduced' });
   expect(reduced()).toBe(true);
@@ -356,12 +356,11 @@ test('?motion=full overrides a reduced prop, and ?motion=auto forgets what was k
   startAt('?motion=full', { motion: 'reduced' });
   expect(reduced()).toBe(false);
   expect(MotionGlobalConfig.skipAnimations).toBe(false);
-  expect(localStorage.getItem('hashsome:motion')).toBe('full');
+  expect(localStorage.length).toBe(0);
   cleanup();
 
-  startAt('?motion=auto');
-  expect(localStorage.getItem('hashsome:motion')).toBeNull();
-  expect(reduced()).toBe(false);
+  startAt('?motion=auto', { motion: 'reduced' });
+  expect(reduced()).toBe(true);
   resetMotion();
 });
 
