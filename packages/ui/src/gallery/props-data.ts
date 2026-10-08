@@ -616,6 +616,30 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         optional: true,
         type: 'boolean',
       },
+      {
+        doc: 'In the narrow layout, where the queue has no room beside the player, a Library and a Queue tab above the list switch between them (shown when there is a `browser`, a `queue` and a player with a queue). `false` leaves the library alone, as before. In the wide layout the queue is beside the player and there are no tabs. Default `true`.',
+        name: 'tabs',
+        optional: true,
+        type: 'boolean',
+      },
+      {
+        doc: "The tab that is open first, when the tabs are on. Default `'library'`.",
+        name: 'defaultTab',
+        optional: true,
+        type: 'ListTab',
+      },
+      {
+        doc: 'The open tab, to keep it yourself (to remember it between visits, or open the queue from elsewhere); the tabs ask for a change through `onTabChange`. Without it, the component keeps it, until it is gone.',
+        name: 'tab',
+        optional: true,
+        type: 'ListTab',
+      },
+      {
+        doc: 'Called with the tab someone chose.',
+        name: 'onTabChange',
+        optional: true,
+        type: '(tab: ListTab) => void',
+      },
     ],
   },
   MediaBrowser: {

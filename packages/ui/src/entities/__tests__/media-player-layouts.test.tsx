@@ -1,5 +1,6 @@
 import { mockLibrary, mockMediaPlayer, type EntityRef } from '@hashsome/core';
 import { act, cleanup, fireEvent, screen } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { renderWithMock } from '../../test-utils.tsx';
 import { MediaPlayerBar } from '../media-player-bar.tsx';
@@ -8,6 +9,7 @@ import { Flex } from 'e-prim';
 import { useEntityHandle } from '../../hooks.ts';
 import { MediaBrowser } from '../media-browser.tsx';
 import { MediaPlayerFull } from '../media-player-full.tsx';
+import { MediaQueue } from '../media-queue.tsx';
 
 /** What a dashboard's music page is: the widget in a surface that fills the space, with the player's
  * library below it when it has one. */
@@ -749,9 +751,9 @@ describe('the queue beside the player', () => {
     expect(getComputedStyle(column).flexShrink).toBe('0');
   });
 
-  test('a narrow one has no room for it', () => {
+  test('a narrow one has no room for it, when it is asked not to take turns with the library', () => {
     renderWithMock(
-      <MediaPlayerFull entity="ha:room" wide={false} queue={queue} />,
+      <MediaPlayerFull entity="ha:room" wide={false} tabs={false} queue={queue} />,
       playing({ queue: true }),
       library,
     );
@@ -814,4 +816,90 @@ test('the column with overlays has no buttons for a library or queue the player 
   expect(screen.queryByRole('button', { name: 'Browse media' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Queue' })).toBeNull();
   expect(screen.queryByRole('button', { name: /Artwork|Open/ })).toBeNull();
+});
+
+// Library and Queue as tabs below the player, where the queue has no room beside it.
+
+function fullPlayer(props: Partial<ComponentProps<typeof MediaPlayerFull>> = {}) {
+  return (
+    <MediaPlayerFull
+      entity="ha:room"
+      browser={<MediaBrowser entity="ha:room" layout="list" />}
+      queue={<MediaQueue entity="ha:room" />}
+      {...props}
+    />
+  );
+}
+
+const tab = (name: string) => screen.getByRole('tab', { name });
+
+test('the full player has Library and Queue tabs below it, the library first, and a tab swaps the list', async () => {
+  renderWithMock(fullPlayer(), playing({ queue: true }), library);
+
+  expect(screen.getByRole('tablist', { name: 'Library or queue' })).toBeTruthy();
+  expect(tab('Library').getAttribute('aria-selected')).toBe('true');
+  expect(tab('Queue').getAttribute('aria-selected')).toBe('false');
+  expect(await screen.findByText('Playlists')).toBeTruthy();
+  expect(screen.queryByText(/tracks/)).toBeNull();
+
+  fireEvent.click(tab('Queue'));
+  expect(await screen.findByText(/24 tracks/)).toBeTruthy();
+  expect(screen.queryByText('Playlists')).toBeNull();
+  expect(tab('Queue').getAttribute('aria-selected')).toBe('true');
+
+  // The player is where it was, and not drawn again.
+  expect(screen.getAllByRole('heading', { name: 'Dreams' })).toHaveLength(1);
+  fireEvent.click(tab('Library'));
+  expect(await screen.findByText('Playlists')).toBeTruthy();
+});
+
+test('tabs={false} leaves the library alone, defaultTab opens the queue first', async () => {
+  const { unmount } = renderWithMock(
+    fullPlayer({ tabs: false }),
+    playing({ queue: true }),
+    library,
+  );
+
+  expect(screen.queryByRole('tablist')).toBeNull();
+
+  expect(await screen.findByText('Playlists')).toBeTruthy();
+  unmount();
+
+  renderWithMock(fullPlayer({ defaultTab: 'queue' }), playing({ queue: true }), library);
+  expect(tab('Queue').getAttribute('aria-selected')).toBe('true');
+  expect(await screen.findByText(/24 tracks/)).toBeTruthy();
+});
+
+test('a tab that is kept by the caller is the open one, and a change is asked for', async () => {
+  const onTabChange = vi.fn<(next: 'library' | 'queue') => void>();
+  renderWithMock(fullPlayer({ tab: 'queue', onTabChange }), playing({ queue: true }), library);
+
+  expect(tab('Queue').getAttribute('aria-selected')).toBe('true');
+  fireEvent.click(tab('Library'));
+  expect(onTabChange).toHaveBeenCalledWith('library');
+});
+
+test('no tabs without a queue to switch to, in the wide layout, or with only one list', async () => {
+  // A player with no queue: just its library, under a plain line.
+  const { unmount } = renderWithMock(fullPlayer(), playing(), library);
+  expect(screen.queryByRole('tablist')).toBeNull();
+
+  expect(await screen.findByText('Playlists')).toBeTruthy();
+  unmount();
+
+  // Wide, the queue is beside the player instead.
+  const wide = renderWithMock(fullPlayer({ wide: true }), playing({ queue: true }), library);
+  expect(screen.queryByRole('tablist')).toBeNull();
+  expect(await screen.findByText(/24 tracks/)).toBeTruthy();
+  wide.unmount();
+
+  // Only a queue: it is shown, with nothing to switch to.
+  renderWithMock(
+    <MediaPlayerFull entity="ha:room" queue={<MediaQueue entity="ha:room" />} />,
+    playing({ queue: true }),
+    library,
+  );
+
+  expect(screen.queryByRole('tablist')).toBeNull();
+  expect(await screen.findByText(/24 tracks/)).toBeTruthy();
 });

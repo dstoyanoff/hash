@@ -1,10 +1,12 @@
 /** @jsxImportSource @emotion/react */
 import type { EntityRef } from '@hashsome/core';
-import { Box, Flex } from 'e-prim';
-import type { ReactNode } from 'react';
+import { Box, Flex, Typography } from 'e-prim';
+import { motion } from 'motion/react';
+import { useId, useState, type ReactNode } from 'react';
 import { fallbackName, type EntityHandle } from '../entity-handle.ts';
 import { useEntityHandle } from '../hooks.ts';
 import { useDetail } from '../layout/detail-provider.tsx';
+import { Icon } from '../icon.tsx';
 import { NowPlaying } from './now-playing.tsx';
 
 /** The artwork ring's diameter in a full-size player, against the usual 168px. */
@@ -25,6 +27,87 @@ export interface MediaPlayerFullProps {
 
   /** Gives the library the whole width, for one laid out to use it (the theater layout). Defaults to whether the drawer is expanded. */
   wide?: boolean;
+
+  /** In the narrow layout, where the queue has no room beside the player, a Library and a Queue tab above the list switch between them (shown when there is a `browser`, a `queue` and a player with a queue). `false` leaves the library alone, as before. In the wide layout the queue is beside the player and there are no tabs. Default `true`. */
+  tabs?: boolean;
+
+  /** The tab that is open first, when the tabs are on. Default `'library'`. */
+  defaultTab?: ListTab;
+
+  /** The open tab, to keep it yourself (to remember it between visits, or open the queue from elsewhere); the tabs ask for a change through `onTabChange`. Without it, the component keeps it, until it is gone. */
+  tab?: ListTab;
+
+  /** Called with the tab someone chose. */
+  onTabChange?: (tab: ListTab) => void;
+}
+
+/** What the tabs below the player choose between. */
+export type ListTab = 'library' | 'queue';
+
+const TAB_HEIGHT = 40;
+
+/** Library and Queue, as text with an underline (not the pills the library's own categories are, so the
+ * two rows read as different things). */
+function ListTabs({ value, onChange }: { value: ListTab; onChange: (tab: ListTab) => void }) {
+  // One line that slides between the tabs; its own id, so two players on a page do not share it.
+  const line = useId();
+  const tabs: { id: ListTab; label: string; icon: 'lu:library' | 'lu:list-music' }[] = [
+    { id: 'library', label: 'Library', icon: 'lu:library' },
+    { id: 'queue', label: 'Queue', icon: 'lu:list-music' },
+  ];
+
+  return (
+    <Flex
+      role="tablist"
+      aria-label="Library or queue"
+      gap={5}
+      css={({ palette }) => ({ flexShrink: 0, borderBottom: `1px solid ${palette.border}` })}
+    >
+      {tabs.map((tab) => {
+        const selected = tab.id === value;
+        return (
+          <Flex
+            as="button"
+            type="button"
+            key={tab.id}
+            role="tab"
+            aria-selected={selected}
+            onClick={() => onChange(tab.id)}
+            align="center"
+            justify="center"
+            gap={2}
+            height={TAB_HEIGHT}
+            cursor="pointer"
+            color={selected ? 'text' : 'textMuted'}
+            css={{
+              flex: 1,
+              background: 'none',
+              border: 0,
+              padding: 0,
+              position: 'relative',
+              marginBottom: -1,
+            }}
+          >
+            {/* The line under the open tab sits on the row's own line. */}
+            {selected ? (
+              <Box
+                as={motion.span}
+                layoutId={line}
+                position="absolute"
+                background="accent"
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                css={{ left: 0, right: 0, bottom: 0, height: 2 }}
+              />
+            ) : null}
+            <Icon name={tab.icon} size={16} />
+            <Typography as="span" variant={selected ? 'bodyStrong' : 'body'}>
+              {tab.label}
+            </Typography>
+          </Flex>
+        );
+      })}
+    </Flex>
+  );
 }
 
 /** The big player: the player centered at the top, and the library (or whatever `browser` is) below
@@ -32,10 +115,36 @@ export interface MediaPlayerFullProps {
  * in a page of its own, around it whatever it likes (a surface that fills the space and scrolls, a
  * heading, other cards beside it). It fills the height it is given, so the page that holds it
  * decides how tall that is. */
-export function MediaPlayerFull({ entity, browser, queue, wide, name }: MediaPlayerFullProps) {
+export function MediaPlayerFull({
+  entity,
+  browser,
+  queue,
+  wide,
+  name,
+  tabs = true,
+  defaultTab = 'library',
+  tab,
+  onTabChange,
+}: MediaPlayerFullProps) {
   const handle = useEntityHandle('mediaPlayer', entity);
   const { detail } = useDetail();
   const full = wide ?? detail?.expanded === true;
+
+  // Narrow, the queue and the library take turns in the one space below the player.
+  const [kept, setKept] = useState<ListTab>(defaultTab);
+  const hasQueue = queue !== undefined && handle.entity?.capabilities.queue === true;
+  const lists: ListTab[] = [
+    ...(browser !== undefined ? (['library'] as const) : []),
+    ...(!full && tabs && hasQueue ? (['queue'] as const) : []),
+  ];
+
+  const wanted = tab ?? kept;
+  const open: ListTab | undefined = lists.includes(wanted) ? wanted : lists[0];
+  const choose = (next: ListTab) => {
+    setKept(next);
+    onTabChange?.(next);
+  };
+
   return (
     <Flex direction="column" gap={5} grow={1} minHeight={0}>
       {/* Full size, the player is larger and centered in whatever room the library leaves, with the
@@ -73,19 +182,30 @@ export function MediaPlayerFull({ entity, browser, queue, wide, name }: MediaPla
           </Flex>
         ) : null}
       </Flex>
-      {browser !== undefined ? (
+      {open !== undefined ? (
         <>
-          <Box height={1} background="border" css={{ flexShrink: 0 }} />
+          {/* The tabs are the line between the player and the list when there are two; one list has a plain line. */}
+          {lists.length > 1 ? (
+            <ListTabs value={open} onChange={choose} />
+          ) : (
+            <Box height={1} background="border" css={{ flexShrink: 0 }} />
+          )}
           {/* A list is capped so a row is never a long way from its play button on a very wide
               screen; the theater row uses the whole width. The player stays put and the library
               is what scrolls, inside the space the drawer leaves it. */}
           <Flex
+            // Another list fades in where the last one was, so a tab does not cut from one to the other.
+            as={motion.div}
+            key={open}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
             direction="column"
             width="100%"
             minHeight={0}
             {...(full ? {} : { maxWidth: 960, mx: 'auto' })}
           >
-            {browser}
+            {open === 'queue' ? queue : browser}
           </Flex>
         </>
       ) : null}
