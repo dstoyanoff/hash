@@ -1,4 +1,9 @@
-import { RemoteClient, type Client, type RemoteClientOptions } from '@hashsome/core';
+import {
+  RemoteClient,
+  type Client,
+  type EntityRef,
+  type RemoteClientOptions,
+} from '@hashsome/core';
 import { Global, ThemeProvider as EmotionThemeProvider, type Theme } from '@emotion/react';
 import { ThemeProvider } from 'e-prim';
 import { MotionGlobalConfig } from 'motion/react';
@@ -12,6 +17,14 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
+import {
+  DebugContext,
+  debugFromEnv,
+  useDebugState,
+  useFullscreenKept,
+  type ThemeChoice,
+} from './debug.ts';
+import { DebugMenu } from './layout/debug-menu.tsx';
 import { DetailProvider } from './layout/detail-provider.tsx';
 import { EntityDrawer } from './layout/entity-drawer.tsx';
 import { UNITS_PER_SPACE, type Density } from './theme/density.ts';
@@ -60,6 +73,12 @@ export interface HashsomeProviderProps {
 
   /** Partial changes to the built-in theme — colors per light/dark, radii, typography, spacing, density sizes. Pass a constant defined outside the component: a new object each render rebuilds the theme each render. */
   overrides?: ThemeOverrides;
+
+  /** Shows the debug menu: a floating button at the bottom left whose popover shows the module grid, makes the page fullscreen and changes the theme, on the device, kept there. Default: on when `HASHSOME_DEBUG=1` (or `true`) was in the environment of `hashsome dev` or `build`. */
+  debug?: boolean;
+
+  /** The daylight sensor (`on` while the sun is up) the debug menu's Sun theme follows, when `theme` is not a sun schedule already (`theme={{ sun: … }}` names one). Without either, the menu has no Sun choice: Hashsome does not know which entity is the sun. */
+  sun?: EntityRef;
 
   /** The app. */
   children: ReactNode;
@@ -167,6 +186,30 @@ function rememberedSun(): boolean | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** The sun entity a theme follows, if it is a sun schedule. */
+function sunOf(mode: ThemeMode): EntityRef | undefined {
+  return typeof mode === 'object' && 'sun' in mode ? mode.sun : undefined;
+}
+
+/** The theme in effect: what the debug menu chose, if it chose, else what the project configured.
+ * The sun is the project's: the one its theme follows, or the `sun` it gave. Without one there is no
+ * sun to follow, so that choice (kept from a visit that had one) leaves the configured theme as it was. */
+function chosenTheme(
+  configured: ThemeMode,
+  choice: ThemeChoice | null,
+  sun: EntityRef | undefined,
+): ThemeMode {
+  if (choice === null) {
+    return configured;
+  }
+
+  if (choice === 'sun') {
+    return sun === undefined ? configured : { sun };
+  }
+
+  return choice;
 }
 
 /** Resolves the configured mode: `'system'` against the live OS/browser preference (updating if it
@@ -280,6 +323,8 @@ export function HashsomeProvider({
   font = DEFAULT_FONT,
   density = 'comfortable',
   overrides,
+  debug = debugFromEnv(),
+  sun,
   children,
 }: HashsomeProviderProps) {
   const instance = useMemo<Client>(
@@ -288,7 +333,15 @@ export function HashsomeProvider({
   );
 
   useMotionMode(motion);
-  const themeMode = useThemeMode(theme, instance);
+  const debugState = useDebugState();
+  useFullscreenKept(debugState.fullscreen, debugState.setFullscreen);
+  // The debug menu can choose a theme over the configured one; the sun is the project's own entity.
+  const sunEntity = sunOf(theme) ?? sun;
+  const themeMode = useThemeMode(
+    chosenTheme(theme, debug ? debugState.themeChoice : null, sunEntity),
+    instance,
+  );
+
   // Memoized: Emotion recomputes the merged theme (and every `css` prop) when the function changes.
   const withDensity = useMemo(
     () =>
@@ -324,10 +377,13 @@ export function HashsomeProvider({
         <ThemeProvider theme={resolvedTheme}>
           <EmotionThemeProvider theme={withDensity}>
             <Global styles={globalStyles} />
-            <DetailProvider>
-              {children}
-              <EntityDrawer />
-            </DetailProvider>
+            <DebugContext.Provider value={debugState}>
+              <DetailProvider>
+                {children}
+                <EntityDrawer />
+                {debug ? <DebugMenu configured={theme} sun={sunEntity} /> : null}
+              </DetailProvider>
+            </DebugContext.Provider>
           </EmotionThemeProvider>
         </ThemeProvider>
       </ThemeModeContext.Provider>
