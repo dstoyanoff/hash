@@ -30,6 +30,7 @@
     "test": "vitest run",
     "dev": "pnpm --filter @hashsome/example dev",
     "start": "pnpm --filter @hashsome/example start",
+    "docs:dev": "pnpm --filter @hashsome/ui run docs",
     "generate:catalog": "node scripts/generate-ui-catalog.ts",
     "generate:icons": "node scripts/generate-icons.ts",
     "package": "pnpm --filter @hashsome/example package",

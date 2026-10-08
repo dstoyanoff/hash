@@ -95,7 +95,7 @@ A dashboard owns its whole layout. There is no runtime-rendered chrome: a page b
 Read `example/dashboards/home/pages/home.tsx` and
 `example/dashboards/second-floor/pages/home.tsx` as the reference layout (two separate
 dashboards, each a single page — see "Layout and chrome" above), and
-run `pnpm --filter @hashsome/ui docs` to see
+run `pnpm docs:dev` to see
 every component live, documented with its supported states. Concretely:
 
 - Group by room: a `<RoomHeader title="..." icon={...} readouts={...} />` followed by that room's
@@ -121,6 +121,25 @@ every component live, documented with its supported states. Concretely:
   name, or pass an explicit `name` when it would otherwise collide.
 - A media bar or anything else that wants the full width goes in its own row (no `Grid`), not
   squeezed into a grid cell.
+- **A page for one known device can be a `Board`** (optional; flex columns keep working). It is `columns`
+  equal columns (12 by default) and rows as tall as their content; each `<Cell cols={8} rows={1}>` says
+  only how big it is and the board places the cells in order, in the first spot they fit. A room (its
+  header and tiles) is one cell; a player beside three rooms is `<Cell cols={4} rows={3}>` and ends where
+  the third row does; `rows="fill"` is a column from where it is placed down to the bottom of the page, whatever rows are beside it (they keep their place). The top row of a page
+  that is not a `TopBar` is `<TopRow>` (the date, weather, clock and status, at the right). Never type a
+  height for a row yourself: the grid's sizes are whole modules (the spacing unit, 4px), cards are
+  already that tall, and the debug menu's "Show grid" (`HASHSOME_DEBUG=1`) draws the grid and flags a card that is off it.
+  ```tsx
+  <Board>
+    <Cell>
+      <TopRow>{/* DateChip, WeatherChip, Clock, SystemStatus */}</TopRow>
+    </Cell>
+    <Cell cols={8}>{/* RoomHeader + Grid of tiles */}</Cell>
+    <Cell cols={4} rows="fill">
+      <MediaPlayerColumn entity="ma:kitchen" overlays />
+    </Cell>
+  </Board>
+  ```
 
 ## Multi-page dashboards
 
