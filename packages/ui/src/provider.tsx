@@ -1,4 +1,9 @@
-import { RemoteClient, type Client, type RemoteClientOptions } from '@hashsome/core';
+import {
+  RemoteClient,
+  type Client,
+  type EntityRef,
+  type RemoteClientOptions,
+} from '@hashsome/core';
 import { Global, ThemeProvider as EmotionThemeProvider, type Theme } from '@emotion/react';
 import { ThemeProvider } from 'e-prim';
 import { MotionGlobalConfig } from 'motion/react';
@@ -70,6 +75,9 @@ export interface HashsomeProviderProps {
 
   /** Shows the debug menu: a floating button at the bottom left whose popover shows the module grid, makes the page fullscreen and changes the theme, on the device, kept there. Default: on when `HASHSOME_DEBUG=1` (or `true`) was in the environment of `hashsome dev` or `build`. */
   debug?: boolean;
+
+  /** The daylight sensor (`on` while the sun is up) the debug menu's Sun theme follows, when `theme` is not a sun schedule already (`theme={{ sun: … }}` names one). Without either, the menu has no Sun choice: Hashsome does not know which entity is the sun. */
+  sun?: EntityRef;
 
   /** The app. */
   children: ReactNode;
@@ -191,16 +199,25 @@ function rememberedSun(): boolean | undefined {
   }
 }
 
-/** The theme in effect: what the debug menu chose, if it chose, else what the project configured. */
-function chosenTheme(configured: ThemeMode, choice: ThemeChoice | null): ThemeMode {
+/** The sun entity a theme follows, if it is a sun schedule. */
+function sunOf(mode: ThemeMode): EntityRef | undefined {
+  return typeof mode === 'object' && 'sun' in mode ? mode.sun : undefined;
+}
+
+/** The theme in effect: what the debug menu chose, if it chose, else what the project configured.
+ * The sun is the project's: the one its theme follows, or the `sun` it gave. Without one there is no
+ * sun to follow, so that choice (kept from a visit that had one) leaves the configured theme as it was. */
+function chosenTheme(
+  configured: ThemeMode,
+  choice: ThemeChoice | null,
+  sun: EntityRef | undefined,
+): ThemeMode {
   if (choice === null) {
     return configured;
   }
 
   if (choice === 'sun') {
-    return typeof configured === 'object' && 'sun' in configured
-      ? configured
-      : { sun: 'ha:sun.sun' };
+    return sun === undefined ? configured : { sun };
   }
 
   return choice;
@@ -309,6 +326,7 @@ export function HashsomeProvider({
   density = 'comfortable',
   overrides,
   debug = debugFromEnv(),
+  sun,
   children,
 }: HashsomeProviderProps) {
   const instance = useMemo<Client>(
@@ -319,9 +337,10 @@ export function HashsomeProvider({
   useMotionMode(motion);
   const debugState = useDebugState();
   useFullscreenKept(debugState.fullscreen, debugState.setFullscreen);
-  // The debug menu can choose a theme over the configured one; a sun needs an entity, the configured one or Home Assistant's.
+  // The debug menu can choose a theme over the configured one; the sun is the project's own entity.
+  const sunEntity = sunOf(theme) ?? sun;
   const themeMode = useThemeMode(
-    chosenTheme(theme, debug ? debugState.themeChoice : null),
+    chosenTheme(theme, debug ? debugState.themeChoice : null, sunEntity),
     instance,
   );
 
@@ -364,7 +383,7 @@ export function HashsomeProvider({
               <DetailProvider>
                 {children}
                 <EntityDrawer />
-                {debug ? <DebugMenu configured={theme} /> : null}
+                {debug ? <DebugMenu configured={theme} sun={sunEntity} /> : null}
               </DetailProvider>
             </DebugContext.Provider>
           </EmotionThemeProvider>

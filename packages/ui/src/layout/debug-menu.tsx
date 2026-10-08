@@ -1,4 +1,5 @@
 /** @jsxImportSource @emotion/react */
+import type { EntityRef } from '@hashsome/core';
 import { Flex, Typography } from 'e-prim';
 import { useEffect, useRef, useState } from 'react';
 import { THEME_CHOICES, useDebug, type ThemeChoice } from '../debug.ts';
@@ -46,9 +47,15 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 /** A floating button at the bottom left, for working on a dashboard on the device it is for: its
  * popover shows the module grid over the page, makes the page fullscreen, and changes the theme
- * (light, dark, the system's, or the sun's). What it sets is kept on the device. Only there when
+ * (light, dark, the system's, and the sun's when the project has a sun entity). What it sets is kept on the device. Only there when
  * `HashsomeProvider` has `debug` on (`HASHSOME_DEBUG=1`), and not exported. */
-export function DebugMenu({ configured }: { configured?: ThemeMode }) {
+export function DebugMenu({
+  configured,
+  sun,
+}: {
+  configured?: ThemeMode;
+  sun?: EntityRef | undefined;
+}) {
   const debug = useDebug();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -157,10 +164,10 @@ export function DebugMenu({ configured }: { configured?: ThemeMode }) {
           </Row>
           <Row label="Theme">
             <ChipRow
-              options={THEME_CHOICES.map((choice) => ({
-                value: choice,
-                label: THEME_LABELS[choice],
-              }))}
+              // The sun only if the project has one to follow.
+              options={THEME_CHOICES.filter((choice) => choice !== 'sun' || sun !== undefined).map(
+                (choice) => ({ value: choice, label: THEME_LABELS[choice] }),
+              )}
               value={theme}
               onChange={(value) => debug.setThemeChoice(value as ThemeChoice)}
             />

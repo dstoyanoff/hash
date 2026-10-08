@@ -871,6 +871,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'boolean',
       },
       {
+        doc: "The daylight sensor (`on` while the sun is up) the debug menu's Sun theme follows, when `theme` is not a sun schedule already (`theme={{ sun: … }}` names one). Without either, the menu has no Sun choice: Hashsome does not know which entity is the sun.",
+        name: 'sun',
+        optional: true,
+        type: 'EntityRef',
+      },
+      {
         doc: 'The app.',
         name: 'children',
         optional: false,

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-/** What the debug menu can set the theme to. `sun` follows a daylight sensor (the configured one, or `ha:sun.sun`). */
+/** What the debug menu can set the theme to. `sun` follows the project's daylight sensor, so it is only offered when there is one. */
 export type ThemeChoice = 'light' | 'dark' | 'system' | 'sun';
 
 export const THEME_CHOICES: ThemeChoice[] = ['light', 'dark', 'system', 'sun'];

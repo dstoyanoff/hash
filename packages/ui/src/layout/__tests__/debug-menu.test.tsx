@@ -19,16 +19,26 @@ function Probe() {
   return <Box background="bg" data-testid="probe" />;
 }
 
-function mount(props: { debug?: boolean; theme?: ThemeMode; sun?: 'on' | 'off' } = {}) {
-  const { sun = 'on', ...rest } = props;
+const SUN = 'ha:sun.sun';
+
+/** `sunIs` is what the sun entity says; `sun` is the provider's prop naming it. */
+function mount(
+  props: { debug?: boolean; theme?: ThemeMode; sun?: string; sunIs?: 'on' | 'off' } = {},
+) {
+  const { sunIs = 'on', sun, ...rest } = props;
   const client = new LocalClient([
     new MockIntegration({
-      entities: { 'sun.sun': mockSensor({ name: 'Sun', value: sun, measurement: 'daylight' }) },
+      entities: { 'sun.sun': mockSensor({ name: 'Sun', value: sunIs, measurement: 'daylight' }) },
     }),
   ]);
 
   return render(
-    <HashsomeProvider client={client} theme="dark" {...rest}>
+    <HashsomeProvider
+      client={client}
+      theme="dark"
+      {...(sun ? { sun: sun as `${string}:${string}` } : {})}
+      {...rest}
+    >
       <Page>
         <Probe />
       </Page>
@@ -125,7 +135,7 @@ test('Show grid draws the grid over the page, and is kept on the device', async 
 });
 
 test('the theme row chooses light, dark, system or the sun over the configured theme, kept on the device', async () => {
-  mount({ debug: true, theme: 'dark', sun: 'on' });
+  mount({ debug: true, theme: 'dark', sun: SUN, sunIs: 'on' });
   expect(bg()).toBe(DARK_BG);
 
   open();
@@ -158,13 +168,44 @@ test('without the menu on, a theme it kept is ignored', () => {
 });
 
 test('the sun choice uses the configured sun entity, and shows which theme is in effect', async () => {
-  mount({ debug: true, theme: { sun: 'ha:sun.sun' }, sun: 'off' });
+  mount({ debug: true, theme: { sun: SUN }, sunIs: 'off' });
   await waitFor(() => expect(bg()).toBe(DARK_BG));
 
   open();
   const pressed = [...screen.getByRole('dialog').querySelectorAll('button[aria-pressed="true"]')];
   // Nothing chosen yet: the configured theme (the sun) is the one shown.
   expect(pressed.map((button) => button.textContent)).toContain('Sun');
+});
+
+test('the menu has no Sun choice unless the project names a sun entity, and Hashsome never picks one', async () => {
+  // Nothing says which entity is the sun: only light, dark and system.
+  mount({ debug: true, theme: 'dark' });
+  open();
+  const chips = () =>
+    [...screen.getByRole('dialog').querySelectorAll('button[aria-pressed]')].map(
+      (button) => button.textContent,
+    );
+
+  expect(chips()).not.toContain('Sun');
+  expect(chips()).toContain('System');
+  cleanup();
+
+  // A sun schedule names one, and so does the `sun` prop.
+  mount({ debug: true, theme: { sun: SUN } });
+  open();
+  expect(chips()).toContain('Sun');
+  cleanup();
+
+  mount({ debug: true, theme: 'dark', sun: SUN });
+  open();
+  expect(chips()).toContain('Sun');
+});
+
+test('a Sun choice kept from a visit that had a sun entity leaves the configured theme as it is when there is none', () => {
+  localStorage.setItem('hashsome:theme', 'sun');
+  mount({ debug: true, theme: 'dark', sunIs: 'on' });
+  // Following the sun would be light (it is up); there is no sun to follow, so it stays dark.
+  expect(bg()).toBe(DARK_BG);
 });
 
 test('Fullscreen asks the browser for it in the touch itself, and leaves it again', () => {
