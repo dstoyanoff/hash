@@ -122,6 +122,11 @@ Devices are addressed as `<integration>:<id>`, such as `ha:light.kitchen` or `ma
 dashboard owns its whole layout: add the top bar, a left navigation rail or a bottom dock, or leave
 them out for a bare kiosk panel. Icons are plain strings (`'lu:lightbulb'`, `'tb:vacuum-cleaner'`).
 
+While you lay a dashboard out on the device it is for, start with `HASHSOME_DEBUG=1` (for `dev`, or when
+building: a production build has the menu only if it was built with the flag). A bug button at the bottom
+left then opens a menu that shows the module grid over the page, makes the page fullscreen and switches
+the theme (light, dark, system or sun). What it sets is kept on that device.
+
 ### Or ask your agent
 
 If you use Claude Code or another coding agent, the repo ships the skills it needs. Once it is

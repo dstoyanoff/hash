@@ -11,6 +11,14 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
+import {
+  DebugContext,
+  debugFromEnv,
+  useDebugState,
+  useFullscreenKept,
+  type ThemeChoice,
+} from './debug.ts';
+import { DebugMenu } from './layout/debug-menu.tsx';
 import { DetailProvider } from './layout/detail-provider.tsx';
 import { EntityDrawer } from './layout/entity-drawer.tsx';
 import { UNITS_PER_SPACE, type Density } from './theme/density.ts';
@@ -59,6 +67,9 @@ export interface HashsomeProviderProps {
 
   /** Partial changes to the built-in theme — colors per light/dark, radii, typography, spacing, density sizes. Pass a constant defined outside the component: a new object each render rebuilds the theme each render. */
   overrides?: ThemeOverrides;
+
+  /** Shows the debug menu: a floating button at the bottom left whose popover shows the module grid, makes the page fullscreen and changes the theme, on the device, kept there. Default: on when `HASHSOME_DEBUG=1` (or `true`) was in the environment of `hashsome dev` or `build`. */
+  debug?: boolean;
 
   /** The app. */
   children: ReactNode;
@@ -180,6 +191,21 @@ function rememberedSun(): boolean | undefined {
   }
 }
 
+/** The theme in effect: what the debug menu chose, if it chose, else what the project configured. */
+function chosenTheme(configured: ThemeMode, choice: ThemeChoice | null): ThemeMode {
+  if (choice === null) {
+    return configured;
+  }
+
+  if (choice === 'sun') {
+    return typeof configured === 'object' && 'sun' in configured
+      ? configured
+      : { sun: 'ha:sun.sun' };
+  }
+
+  return choice;
+}
+
 /** Resolves the configured mode: `'system'` against the live OS/browser preference (updating if it
  * changes while open — a kiosk tablet left running overnight should follow a scheduled OS-level dark
  * mode, for example), a time range against the clock (re-checked at each boundary and whenever the
@@ -282,6 +308,7 @@ export function HashsomeProvider({
   font = DEFAULT_FONT,
   density = 'comfortable',
   overrides,
+  debug = debugFromEnv(),
   children,
 }: HashsomeProviderProps) {
   const instance = useMemo<Client>(
@@ -290,7 +317,14 @@ export function HashsomeProvider({
   );
 
   useMotionMode(motion);
-  const themeMode = useThemeMode(theme, instance);
+  const debugState = useDebugState();
+  useFullscreenKept(debugState.fullscreen, debugState.setFullscreen);
+  // The debug menu can choose a theme over the configured one; a sun needs an entity, the configured one or Home Assistant's.
+  const themeMode = useThemeMode(
+    chosenTheme(theme, debug ? debugState.themeChoice : null),
+    instance,
+  );
+
   // Memoized: Emotion recomputes the merged theme (and every `css` prop) when the function changes.
   const withDensity = useMemo(
     () =>
@@ -326,10 +360,13 @@ export function HashsomeProvider({
         <ThemeProvider theme={resolvedTheme}>
           <EmotionThemeProvider theme={withDensity}>
             <Global styles={globalStyles} />
-            <DetailProvider>
-              {children}
-              <EntityDrawer />
-            </DetailProvider>
+            <DebugContext.Provider value={debugState}>
+              <DetailProvider>
+                {children}
+                <EntityDrawer />
+                {debug ? <DebugMenu configured={theme} /> : null}
+              </DetailProvider>
+            </DebugContext.Provider>
           </EmotionThemeProvider>
         </ThemeProvider>
       </ThemeModeContext.Provider>

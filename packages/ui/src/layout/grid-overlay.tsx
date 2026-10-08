@@ -15,13 +15,23 @@ interface Measured {
 
   /** What the page centered the grid by, as `top bottom` px. */
   centered: string;
+
+  /** What the device is: the visible viewport, the whole screen and the pixel ratio, for sizing a page for it. */
+  device: string;
   cards: { x: number; y: number; width: number; height: number; off: boolean }[];
 }
 
 const SAME = (a: Measured | null, b: Measured) =>
   a !== null && JSON.stringify(a) === JSON.stringify(b);
 
-/** Draws the grid over the page it sits in (the `Page`, when `?grid` is on the address): a faint
+/** The viewport the page has now (it is smaller than the screen while the browser shows bars), the
+ * screen, both in CSS px, and the pixel ratio: multiply by it for the panel's own pixels. */
+function describeDevice(): string {
+  const ratio = Math.round(window.devicePixelRatio * 100) / 100;
+  return `viewport ${window.innerWidth}×${window.innerHeight} · screen ${window.screen.width}×${window.screen.height} @${ratio}`;
+}
+
+/** Draws the grid over the page it sits in (the `Page`, when the debug menu has it on): a faint
  * line at every module, a stronger one at every tile pitch, and a box round every card (anything
  * marked `data-grid-card`) with its height in modules, green when its top and height are on the grid
  * and red when they are not. For laying out a dashboard for one device: see where things fall, and
@@ -59,6 +69,7 @@ export function GridOverlay() {
           bottom: parseFloat(style.paddingBottom) - slackBelow,
         },
         centered,
+        device: describeDevice(),
         cards: [...host.querySelectorAll('[data-grid-card]')].map((card) => {
           const rect = card.getBoundingClientRect();
           const x = rect.left - box.left + host.scrollLeft;
@@ -171,10 +182,13 @@ export function GridOverlay() {
           <Box
             position="fixed"
             css={{
-              left: 8,
+              // Clear of the debug menu's button, which is how the grid is turned on.
+              left: 60,
               bottom: 8,
               zIndex: 100,
               pointerEvents: 'none',
+              // On a narrow screen it wraps instead of running off the edge.
+              maxWidth: 'calc(100vw - 68px)',
               background: 'rgba(0, 0, 0, 0.78)',
               color: '#fff',
               font: '600 11px/1.3 system-ui, sans-serif',
@@ -182,7 +196,7 @@ export function GridOverlay() {
               borderRadius: 6,
             }}
           >
-            {`grid · 1u = ${Math.round(module * 100) / 100}px · gap 3u · tile ${Math.round(metrics.tile / module)}u · ${off === 0 ? 'all on grid' : `${off} off grid`}${top + bottom > 0 ? ` · centered +${top}/${bottom}px` : ''}`}
+            {`grid · 1u = ${Math.round(module * 100) / 100}px · gap 3u · tile ${Math.round(metrics.tile / module)}u · ${off === 0 ? 'all on grid' : `${off} off grid`}${top + bottom > 0 ? ` · centered +${top}/${bottom}px` : ''}${view.device ? ` · ${view.device}` : ''}`}
           </Box>
         </>
       ) : null}

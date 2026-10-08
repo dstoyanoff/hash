@@ -62,14 +62,3 @@ export function centeringOffsets(
 
   return { top, bottom: leftover - top };
 }
-
-/** Whether the address asks for the grid: `?grid` (or `?grid=on`). Nothing is kept, so it is on for
- * that address only, and a link inside the app, or a reload without it, turns it off. */
-export function gridFromAddress(): boolean {
-  try {
-    const asked = new URLSearchParams(window.location.search).get('grid');
-    return asked === '' || asked === 'on';
-  } catch {
-    return false;
-  }
-}
