@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import { DENSITY } from '../density.ts';
-import { gridFromDevice, gridMetrics, offGrid } from '../grid.ts';
+import { centeringOffsets, gridFromDevice, gridMetrics, offGrid } from '../grid.ts';
 
 test('the module is the spacing unit, and the gap, tile and header are whole modules in either density', () => {
   for (const density of ['comfortable', 'compact'] as const) {
@@ -34,6 +34,20 @@ test('a box is off the grid when its top or its height is not a whole number of 
   expect(offGrid(60, 47, 4)).toBe(true);
   // A pixel of rounding on the screen is not a miss for the fractional compact module.
   expect(offGrid(60.3, 48.2, 4)).toBe(false);
+});
+
+test('what is left of a height after whole modules is shared between the top and the bottom, in whole pixels', () => {
+  // 435px of room is 108 modules of 4px and 3px over: 1 on top, 2 below.
+  expect(centeringOffsets(435, 4)).toEqual({ top: 1, bottom: 2 });
+  expect(centeringOffsets(436, 4)).toEqual({ top: 0, bottom: 0 });
+  expect(centeringOffsets(437, 4)).toEqual({ top: 0, bottom: 1 });
+  // The compact module is fractional: the leftover is still whole pixels, never more than a module.
+  const { top, bottom } = centeringOffsets(400, 8 / 3);
+  expect(Number.isInteger(top) && Number.isInteger(bottom)).toBe(true);
+  expect(top + bottom).toBeLessThan(8 / 3);
+  // No room at all, or a page that is not measured yet: nothing to share.
+  expect(centeringOffsets(0, 4)).toEqual({ top: 0, bottom: 0 });
+  expect(centeringOffsets(-5, 4)).toEqual({ top: 0, bottom: 0 });
 });
 
 beforeEach(() => localStorage.clear());

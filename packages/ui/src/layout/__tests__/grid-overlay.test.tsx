@@ -55,3 +55,13 @@ test('the overlay is hidden from assistive technology', async () => {
   await act(() => new Promise((done) => requestAnimationFrame(() => done(undefined))));
   expect(document.querySelector('[data-grid-overlay]')?.getAttribute('aria-hidden')).toBe('true');
 });
+
+test('the page pads its top and bottom with half of what its height has over whole modules each', () => {
+  vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(459);
+  renderWithMock(<Page>{null}</Page>, {});
+  const main = document.querySelector('main') as HTMLElement;
+  // 459 - 2 x 12 = 435 = 108 modules + 3px: 1px more on top, 2px more below.
+  expect(main.dataset['centered']).toBe('1 2');
+  expect(getComputedStyle(main).paddingTop).toBe('13px');
+  expect(getComputedStyle(main).paddingBottom).toBe('14px');
+});

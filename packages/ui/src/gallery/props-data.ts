@@ -27,7 +27,7 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
     ],
   },
   Page: {
-    doc: "The page every dashboard renders into: padded by the density's spacing, a column with gaps, exactly viewport height, and scrolling inside itself (the document never scrolls — the entity drawer is `position: fixed` and relies on that). It pads further for a `NavRail` or `NavDock` the dashboard includes. Render it once, in the app's root layout. `?grid` on the address draws the module grid over it, with every card boxed green or red by whether it sits on the grid (`?grid=off` stops): for laying a dashboard out for one device.",
+    doc: "The page every dashboard renders into: padded by the density's spacing, a column with gaps, exactly viewport height, and scrolling inside itself (the document never scrolls — the entity drawer is `position: fixed` and relies on that). It pads further for a `NavRail` or `NavDock` the dashboard includes. Render it once, in the app's root layout. `?grid` on the address draws the module grid over it, with every card boxed green or red by whether it sits on the grid (`?grid=off` stops): for laying a dashboard out for one device. The height is rarely a whole number of grid modules; what is left over (under one module) is shared between the top and the bottom padding, so the content sits centered and the grid stays whole.",
     props: [
       {
         doc: 'The dashboard.',

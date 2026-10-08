@@ -46,6 +46,17 @@ export function offGrid(top: number, height: number, module: number): boolean {
   return off(top) || off(height);
 }
 
+/** How a height's leftover (what is under one module after as many whole ones as fit) is shared between the top and the bottom padding: half each, in whole pixels, the odd one to the bottom. `available` is the height inside the page's padding. */
+export function centeringOffsets(
+  available: number,
+  module: number,
+): { top: number; bottom: number } {
+  const leftover = available > 0 ? Math.floor(available % module) : 0;
+  const top = Math.floor(leftover / 2);
+
+  return { top, bottom: leftover - top };
+}
+
 const GRID_KEY = 'hashsome:grid';
 
 /** Whether this device asked to see the grid: `?grid` (or `?grid=on`) on the address, which is also

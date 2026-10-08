@@ -9,6 +9,9 @@ interface Measured {
   top: number;
   width: number;
   height: number;
+
+  /** What the page centered the grid by, as `top bottom` px. */
+  centered: string;
   cards: { x: number; y: number; width: number; height: number; off: boolean }[];
 }
 
@@ -44,6 +47,7 @@ export function GridOverlay() {
         top,
         width: host.scrollWidth - left - parseFloat(style.paddingRight),
         height: host.scrollHeight - top - parseFloat(style.paddingBottom),
+        centered: host.dataset['centered'] ?? '',
         cards: [...host.querySelectorAll('[data-grid-card]')].map((card) => {
           const rect = card.getBoundingClientRect();
           const x = rect.left - box.left + host.scrollLeft - left;
@@ -90,6 +94,7 @@ export function GridOverlay() {
   // A line every module, unless that is too fine to read, then every gap (3 modules).
   const minor = module >= 3.5 ? module : module * 3;
   const off = view?.cards.filter((card) => card.off).length ?? 0;
+  const [top = 0, bottom = 0] = (view?.centered ?? '').split(' ').map(Number);
 
   return (
     <div ref={ref} data-grid-overlay aria-hidden="true">
@@ -154,7 +159,7 @@ export function GridOverlay() {
               borderRadius: 6,
             }}
           >
-            {`grid · 1u = ${Math.round(module * 100) / 100}px · gap 3u · tile ${Math.round(metrics.tile / module)}u · ${off === 0 ? 'all on grid' : `${off} off grid`}`}
+            {`grid · 1u = ${Math.round(module * 100) / 100}px · gap 3u · tile ${Math.round(metrics.tile / module)}u · ${off === 0 ? 'all on grid' : `${off} off grid`}${top + bottom > 0 ? ` · centered +${top}/${bottom}px` : ''}`}
           </Box>
         </>
       ) : null}
