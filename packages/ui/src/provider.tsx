@@ -4,6 +4,7 @@ import { ThemeProvider } from 'e-prim';
 import { MotionGlobalConfig } from 'motion/react';
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -225,11 +226,20 @@ function useThemeMode(mode: ThemeMode, client: Client): ThemeModeState {
     };
   }, [from, to]);
 
-  const sun = useSyncExternalStore(
-    (onChange) => (sunRef ? client.subscribe(sunRef, onChange) : () => undefined),
-    () => (sunRef ? client.getEntity(sunRef) : undefined),
-    () => undefined,
+  // Memoized, like every other `subscribe` given to `useSyncExternalStore` (see hooks.ts): a new
+  // function each render makes React resubscribe, which against a remote runtime is an unsubscribe and
+  // a subscribe whose reply is a new entity object, which renders again, without end.
+  const subscribeSun = useCallback(
+    (onChange: () => void) => (sunRef ? client.subscribe(sunRef, onChange) : () => undefined),
+    [client, sunRef],
   );
+
+  const readSun = useCallback(
+    () => (sunRef ? client.getEntity(sunRef) : undefined),
+    [client, sunRef],
+  );
+
+  const sun = useSyncExternalStore(subscribeSun, readSun, () => undefined);
 
   const sunDown = sunIsDown(sun);
   useEffect(() => {
