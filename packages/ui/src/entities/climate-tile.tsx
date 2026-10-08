@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { IconName } from '../icon-data.ts';
 import { fallbackName, type EntityHandle } from '../entity-handle.ts';
 import { useEntityHandle } from '../hooks.ts';
+import { AnimatedNumber, decimalsOf } from '../layout/animated-number.tsx';
 import { ChipRow, StepButton } from '../layout/drawer-controls.tsx';
 import type { EnergyChartProps } from '../layout/energy-chart.tsx';
 import type { LogbookEntry } from '../layout/history-section.tsx';
@@ -86,7 +87,14 @@ export function ClimateTile({ entity, name, icon, energy, history }: ClimateTile
       icon={icon ?? 'lu:thermometer'}
       kind="Climate"
       status={status}
-      secondary={current !== undefined ? `${current} ${unit}` : undefined}
+      secondary={
+        current !== undefined ? (
+          <AnimatedNumber
+            value={current}
+            format={(n) => `${n.toFixed(decimalsOf(current))} ${unit}`}
+          />
+        ) : undefined
+      }
       detail={
         <ClimateDetailBody
           climate={climate}

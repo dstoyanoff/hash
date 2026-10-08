@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useEntityHandle } from '../hooks.ts';
 import { useEntityHistory } from '../use-entity-history.ts';
 import { usageFromDaily } from './energy-usage.ts';
+import { AnimatedNumber, decimalsOf } from './animated-number.tsx';
 import { useDetail } from './detail-provider.tsx';
 import { RangeSwitcher, SeriesChart } from './series-chart.tsx';
 
@@ -149,9 +150,14 @@ function PowerReading({ entity, fallbackUnit }: { entity: EntityRef; fallbackUni
   const unit = sensor?.unit ?? fallbackUnit;
   return (
     <Typography as="span" variant="stat" aria-live="off">
-      {handle.status === 'ready' && sensor?.numeric !== undefined
-        ? `${sensor.numeric} ${unit}`
-        : '—'}
+      {handle.status === 'ready' && sensor?.numeric !== undefined ? (
+        <AnimatedNumber
+          value={sensor.numeric}
+          format={(n) => `${n.toFixed(decimalsOf(sensor.numeric ?? 0))} ${unit}`}
+        />
+      ) : (
+        '—'
+      )}
     </Typography>
   );
 }
