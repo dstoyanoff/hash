@@ -876,7 +876,7 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
           <ComponentDoc
             title="Media Player Full"
             components={['MediaPlayerFull', 'MediaQueue']}
-            description="The big player: the player centered with its queue beside it (`MediaQueue`: tap a track to jump to it, the cross takes it out, Clear empties it), and its library below, where every track can be played, played next or added to the queue, and an open album or playlist can be played, shuffled or added whole. The media cards' drawers show the player and library too. A dashboard puts it in a page of its own, around it whatever it likes."
+            description="The big player: the player centered with its queue beside it (`MediaQueue`: tap a track to jump to it, the cross takes it out, Clear empties it), and its library below, where every track can be played, played next or added to the queue, and an open album or playlist can be played, shuffled or added whole. The media cards' drawers show the player and library too. Where the queue has no room beside the player (a narrow column, the side drawer), Library and Queue are tabs above the list; `tabs={false}` leaves only the library, `defaultTab` and `tab` / `onTabChange` choose which is open. A dashboard puts it in a page of its own, around it whatever it likes."
           >
             {/* No fixed height: it fills whatever it is given, so here it is as tall as what it shows,
                 with no spare room under it. */}
