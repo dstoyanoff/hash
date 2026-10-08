@@ -49,8 +49,14 @@ export interface TileProps {
   /** Called once when a drag ends or an arrow key is pressed. */
   onFillChange?: (fill: number) => void;
 
-  /** Controls shown on the right (steppers, icon buttons). */
+  /** Controls shown on the right (steppers, icon buttons). In two rows they are on the second row, after `below`. */
   trailing?: ReactNode;
+
+  /** `2` puts the second row under the icon and name: `below` and `trailing`, the height of two tiles and the gap between them. Default `1`: everything on one line. A tile that has to decide for itself (by its width) asks `useStacked`. */
+  rows?: 1 | 2;
+
+  /** What fills the second row in two rows, before `trailing` (a slider, say); it takes the room that is left. Ignored in one row. */
+  below?: ReactNode;
 
   /** Replaces the label and status with custom content (e.g. color swatches) while set; the tile stops being one big button. `openDetail` opens the drawer. */
   overlay?: (controls: { openDetail: () => void }) => ReactNode;
@@ -107,6 +113,8 @@ export function Tile({
   fill,
   onFillChange,
   trailing,
+  rows = 1,
+  below,
   overlay,
   title,
   detail,
@@ -278,7 +286,9 @@ export function Tile({
   const line = useColorByKey('line') ?? '';
 
   const accented = active && ready;
-  const isDimmable = fill !== undefined;
+  const stacked = rows === 2;
+  // In two rows the level has a track of its own, so the card stays neutral either way.
+  const isDimmable = fill !== undefined || stacked;
   // A dimmable tile never gets a solid accent-colored CARD — its own `fill` bar is the "how on"
   // indicator instead, growing from neutral `surface`/`text` — unlike a solid on/off tile, whose
   // whole card turns `accent`. `solidAccent` still gates `cardBg` (and the hold-progress wash
@@ -338,10 +348,12 @@ export function Tile({
       as={motion.div}
       radius="card"
       position="relative"
-      align="center"
+      direction={stacked ? 'column' : 'row'}
+      align={stacked ? 'stretch' : 'center'}
       overflow="hidden"
       minWidth={0}
       data-status={status}
+      data-rows={stacked ? 2 : undefined}
       data-active={accented}
       data-solid-accent={solidAccent}
       data-fill={fill !== undefined}
@@ -353,9 +365,18 @@ export function Tile({
       initial={false}
       animate={{ backgroundColor: cardBg, color: cardColor, opacity: cardOpacity }}
       transition={COLOR_TRANSITION}
-      css={({ palette }) =>
-        feedback === 'error' ? { outline: `2px solid ${palette.danger}`, outlineOffset: -2 } : null
-      }
+      css={({ palette, spacing, density }) => ({
+        // Two regular tiles and the gap between them, so one of these stands where two would.
+        ...(stacked
+          ? {
+              justifyContent: 'space-between',
+              minHeight: `calc(${spacing(4)} * 2 + 64px + ${density.space}px)`,
+            }
+          : {}),
+        ...(feedback === 'error'
+          ? { outline: `2px solid ${palette.danger}`, outlineOffset: -2 }
+          : {}),
+      })}
     >
       {hasFill ? (
         <Box
@@ -385,7 +406,7 @@ export function Tile({
           align="center"
           gap={2.5}
           minWidth={0}
-          grow={1}
+          grow={stacked ? 0 : 1}
           position="relative"
           pt={2}
           pr={2}
@@ -414,7 +435,7 @@ export function Tile({
           align="center"
           gap={2.5}
           minWidth={0}
-          grow={1}
+          grow={stacked ? 0 : 1}
           position="relative"
           cursor={ready ? 'pointer' : 'default'}
           pt={2}
@@ -473,7 +494,27 @@ export function Tile({
           ) : null}
         </Flex>
       )}
-      {trailing ? (
+      {stacked ? (
+        below || trailing ? (
+          <Flex align="center" gap={2} pl={2} pr={2.5} pb={2} position="relative" minWidth={0}>
+            {below ? (
+              <Flex grow={1} minWidth={0} align="center">
+                {below}
+              </Flex>
+            ) : null}
+            {trailing ? (
+              <Flex
+                align="center"
+                gap={2}
+                // With nothing of its own beside it, the second row's controls share it out.
+                css={{ flex: below ? 'none' : '1 1 auto', justifyContent: 'space-between' }}
+              >
+                {trailing}
+              </Flex>
+            ) : null}
+          </Flex>
+        ) : null
+      ) : trailing ? (
         // `position: relative` (any value but `static`) is required here, not optional: an
         // absolutely-positioned element always paints above a `position: static` one in the same
         // stacking context regardless of DOM order, so once the fill bar above started reaching

@@ -780,7 +780,7 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
           <ComponentDoc
             title="Light Tile"
             components={['LightTile']}
-            description="Tap to toggle, hold to open its detail drawer. Dimmable lights drag to set brightness; color-capable lights add a palette button that opens swatches in the card (white temperatures by default, overridable with `colors`), and the card's icon shows the light's current color. The drawer has the full temperature and hue bars."
+            description="Tap to toggle, hold to open its detail drawer. Dimmable lights drag to set brightness; color-capable lights add a palette button that opens swatches in the card (white temperatures by default, overridable with `colors`), and the card's icon shows the light's current color. The drawer has the full temperature and hue bars. With `rows={2}` (or `rows='auto'`, in a tile narrower than 200px) the brightness has a track of its own under the name, with the color button at its end, and the tile is as tall as two regular ones: more room to drag on a touch display. A light that can neither dim nor change color has nothing for a second row and stays one."
           >
             <Grid>
               <LightTile entity="ha:light.plain_on" energy={lampEnergy} history={lampHistory} />
@@ -796,12 +796,37 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
               <LightTile entity="ha:light.unavailable" />
               <LightTile entity="ha:light.missing" />
             </Grid>
+            <Flex direction="column" gap={3} pt={4}>
+              <Typography as="span" variant="eyebrow" uppercase color="textMuted">
+                Two rows
+              </Typography>
+              <Grid>
+                <LightTile entity="ha:light.dimmable" rows={2} />
+                <LightTile entity="ha:light.color" icon="lu:lamp-desk" rows={2} />
+                <LightTile entity="ha:light.cct" icon="lu:lamp-desk" rows={2} />
+                <LightTile entity="ha:light.unavailable" rows={2} />
+                {/* Nothing to dim or color: it stays a single row beside the two-row tiles. */}
+                <LightTile entity="ha:light.plain_on" rows={2} />
+                <LightTile entity="ha:light.plain_off" rows={2} />
+              </Grid>
+              <Typography as="span" variant="eyebrow" uppercase color="textMuted">
+                Auto: narrower than 200px it is two rows by itself
+              </Typography>
+              <Flex gap={3}>
+                <Flex width={180}>
+                  <LightTile entity="ha:light.dimmable" rows="auto" />
+                </Flex>
+                <Flex width={260}>
+                  <LightTile entity="ha:light.dimmable" rows="auto" />
+                </Flex>
+              </Flex>
+            </Flex>
           </ComponentDoc>
 
           <ComponentDoc
             title="Climate Tile"
             components={['ClimateTile']}
-            description="A heater/thermostat tile: a mode button that opens mode swatches in the card (like light colors), plus a target-temperature stepper. Hold for the drawer: modes, a target bar with fine +/- (hold to repeat), presets, energy and history."
+            description="A heater/thermostat tile: a mode button that opens mode swatches in the card (like light colors), plus a target-temperature stepper. Hold for the drawer: modes, a target bar with fine +/- (hold to repeat), presets, energy and history. With `rows={2}` (or `rows='auto'`, in a tile narrower than 340px) the mode button and the stepper are on a second row under the name, and the tile is as tall as two regular ones."
           >
             <Grid columns={1}>
               <ClimateTile
@@ -816,6 +841,27 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
               />
               <ClimateTile entity="ha:climate.unavailable" />
             </Grid>
+            <Flex direction="column" gap={3} pt={4}>
+              <Typography as="span" variant="eyebrow" uppercase color="textMuted">
+                Two rows
+              </Typography>
+              <Grid columns={2}>
+                <ClimateTile entity="ha:climate.heater" rows={2} />
+                <ClimateTile entity="ha:climate.off" rows={2} />
+                <ClimateTile entity="ha:climate.unavailable" rows={2} />
+              </Grid>
+              <Typography as="span" variant="eyebrow" uppercase color="textMuted">
+                Auto: narrower than 340px it is two rows by itself
+              </Typography>
+              <Flex gap={3}>
+                <Flex width={300}>
+                  <ClimateTile entity="ha:climate.heater" rows="auto" />
+                </Flex>
+                <Flex width={420}>
+                  <ClimateTile entity="ha:climate.heater" rows="auto" />
+                </Flex>
+              </Flex>
+            </Flex>
           </ComponentDoc>
 
           <ComponentDoc

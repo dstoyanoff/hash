@@ -10,6 +10,7 @@ import type { LogbookEntry } from '../layout/history-section.tsx';
 import { Stepper, StepperValue } from '../layout/stepper.tsx';
 import { SwatchRow } from '../layout/swatch-row.tsx';
 import { IconButton, Tile } from '../layout/tile.tsx';
+import { useStacked, type TileRows } from '../layout/use-stacked.ts';
 
 export interface ClimateTileProps {
   /** A thermostat or heater, as a ref like `ha:climate.living_room` or a handle (a custom source). */
@@ -26,7 +27,13 @@ export interface ClimateTileProps {
 
   /** Recent activity, shown in the drawer: who or what changed it, and when. Left out, it comes from the backend's own record when it keeps one (Home Assistant's logbook), fetched when the drawer opens. */
   history?: LogbookEntry[];
+
+  /** `2` puts the mode button and the target stepper on a second row under the name and the temperature, each with room, and the tile is as tall as two regular ones with the gap between them. `auto` is two rows once the tile is narrower than 340 px. Default `1`. */
+  rows?: TileRows;
 }
+
+/** Narrower than this, a tile with `rows="auto"` is two rows. */
+const TWO_ROWS_BELOW = 340;
 
 interface ModeMeta {
   icon: IconName;
@@ -56,9 +63,10 @@ function title(text: string): string {
 
 /** Heater / thermostat: a mode button that opens mode swatches in the card, a target temperature
  * stepper, and (on hold) a drawer with modes, a target bar, presets, energy and history. */
-export function ClimateTile({ entity, name, icon, energy, history }: ClimateTileProps) {
+export function ClimateTile({ entity, name, icon, energy, history, rows = 1 }: ClimateTileProps) {
   const handle = useEntityHandle('climate', entity);
   const [picking, setPicking] = useState(false);
+  const [cell, stacked] = useStacked(rows, TWO_ROWS_BELOW);
 
   const { status } = handle;
   const climate = handle.entity;
@@ -80,11 +88,12 @@ export function ClimateTile({ entity, name, icon, energy, history }: ClimateTile
 
   const setMode = (next: ClimateMode) => void handle.command('setMode', { mode: next });
 
-  return (
+  const tile = (
     <Tile
       label={name ?? climate?.name ?? fallbackName(entity)}
       icon={icon ?? 'lu:thermometer'}
       kind="Climate"
+      rows={stacked ? 2 : 1}
       status={status}
       secondary={current !== undefined ? `${current} ${unit}` : undefined}
       detail={
@@ -161,6 +170,9 @@ export function ClimateTile({ entity, name, icon, energy, history }: ClimateTile
       }
     />
   );
+
+  // `auto` asks the width the tile is given, so its cell is the thing measured.
+  return rows === 'auto' ? <div ref={cell}>{tile}</div> : tile;
 }
 
 function ClimateDetailBody({

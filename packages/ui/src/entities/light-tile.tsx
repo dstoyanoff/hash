@@ -9,6 +9,7 @@ import { Icon } from '../icon.tsx';
 import { PowerButton, StepButton, ValueBar } from '../layout/drawer-controls.tsx';
 import { PlainButton } from '../layout/plain-button.tsx';
 import { SwatchRow } from '../layout/swatch-row.tsx';
+import { useStacked, type TileRows } from '../layout/use-stacked.ts';
 import { IconButton, Tile } from '../layout/tile.tsx';
 import type { EnergyChartProps } from '../layout/energy-chart.tsx';
 import type { LogbookEntry } from '../layout/history-section.tsx';
@@ -50,7 +51,13 @@ export interface LightTileProps {
 
   /** Holding the tile opens a drawer with the full controls, the color bars, the energy chart and the recent activity. `false` leaves the tile as it is without it: a toggle that dims by dragging, with the color swatches if the light has color, and no drawer built, which is lighter on a small display. Default `true`. */
   drawer?: boolean;
+
+  /** `2` puts the brightness on a track of its own under the name, with the color button at its end, and the tile is as tall as two regular ones with the gap between them: more room to drag on a touch display, where dragging the whole tile competes with tap and hold. `auto` is two rows once the tile is narrower than 200 px. A light that cannot dim has nothing for a second row and stays one. Default `1`. */
+  rows?: TileRows;
 }
+
+/** Narrower than this, a tile with `rows="auto"` is two rows. */
+const TWO_ROWS_BELOW = 200;
 
 const HUE_GRADIENT =
   'linear-gradient(to right, hsl(0 100% 50%), hsl(60 100% 50%), hsl(120 100% 50%), hsl(180 100% 50%), hsl(240 100% 50%), hsl(300 100% 50%), hsl(360 100% 50%))';
@@ -69,10 +76,13 @@ export function LightTile({
   history,
   colors = DEFAULT_COLOR_PRESETS,
   drawer = true,
+  rows = 1,
 }: LightTileProps) {
   const handle = useEntityHandle('light', entity);
   const [picking, setPicking] = useState(false);
   const [colorOpen, setColorOpen] = useState(false);
+  const [drag, setDrag] = useState<number | null>(null);
+  const [cell, narrow] = useStacked(rows, TWO_ROWS_BELOW);
 
   const { status } = handle;
   const light = handle.entity;
@@ -94,14 +104,29 @@ export function LightTile({
 
   const showPicker = color && status === 'ready';
 
-  return (
+  // The track the brightness is dragged on, in two rows; a light that cannot dim has no use for them.
+  const stacked = narrow && (dimmable || showPicker);
+  const level = on ? (percent ?? 100) : 0;
+  if (drag !== null && drag === level) {
+    setDrag(null);
+  }
+
+  const tile = (
     <Tile
       label={name ?? light?.name ?? fallbackName(entity)}
       icon={icon ?? (on ? 'lu:lightbulb' : 'lu:lightbulb-off')}
       kind="Light"
       status={status}
       active={on}
-      secondary={on ? (dimmable && percent !== undefined ? `${percent}%` : undefined) : 'Off'}
+      secondary={
+        stacked && drag !== null
+          ? `${drag}%`
+          : on
+            ? dimmable && percent !== undefined
+              ? `${percent}%`
+              : undefined
+            : 'Off'
+      }
       onPress={() => void handle.command('toggle')}
       {...(drawer
         ? {
@@ -148,7 +173,26 @@ export function LightTile({
       {...(drawer && energy ? { energy } : {})}
       {...(drawer && history ? { history } : {})}
       {...(drawer && typeof entity === 'string' ? { logbook: entity } : {})}
-      {...(dimmable
+      {...(stacked ? { rows: 2 as const } : {})}
+      {...(stacked && dimmable
+        ? {
+            below: (
+              <ValueBar
+                label="Brightness"
+                value={drag ?? level}
+                min={0}
+                max={100}
+                keyStep={5}
+                onDrag={setDrag}
+                onCommit={(next) => {
+                  setDrag(next);
+                  void handle.command('setBrightness', { brightness: next / 100 });
+                }}
+              />
+            ),
+          }
+        : {})}
+      {...(dimmable && !stacked
         ? {
             fill: on ? (brightness ?? 1) : 0,
             onFillChange: (fill: number) =>
@@ -203,6 +247,9 @@ export function LightTile({
       }
     />
   );
+
+  // `auto` asks the width the tile is given, so its cell is the thing measured.
+  return rows === 'auto' ? <div ref={cell}>{tile}</div> : tile;
 }
 
 /** The drawer's collapsible "Color" card: temperature and hue bars. `custom` from the card's

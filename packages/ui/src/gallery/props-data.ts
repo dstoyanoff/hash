@@ -141,8 +141,20 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: '(fill: number) => void',
       },
       {
-        doc: 'Controls shown on the right (steppers, icon buttons).',
+        doc: 'Controls shown on the right (steppers, icon buttons). In two rows they are on the second row, after `below`.',
         name: 'trailing',
+        optional: true,
+        type: 'ReactNode',
+      },
+      {
+        doc: '`2` puts the second row under the icon and name: `below` and `trailing`, the height of two tiles and the gap between them. Default `1`: everything on one line. A tile that has to decide for itself (by its width) asks `useStacked`.',
+        name: 'rows',
+        optional: true,
+        type: '1 | 2',
+      },
+      {
+        doc: 'What fills the second row in two rows, before `trailing` (a slider, say); it takes the room that is left. Ignored in one row.',
+        name: 'below',
         optional: true,
         type: 'ReactNode',
       },
@@ -314,6 +326,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         optional: true,
         type: 'boolean',
       },
+      {
+        doc: '`2` puts the brightness on a track of its own under the name, with the color button at its end, and the tile is as tall as two regular ones with the gap between them: more room to drag on a touch display, where dragging the whole tile competes with tap and hold. `auto` is two rows once the tile is narrower than 200 px. A light that cannot dim has nothing for a second row and stays one. Default `1`.',
+        name: 'rows',
+        optional: true,
+        type: 'TileRows',
+      },
     ],
   },
   ClimateTile: {
@@ -348,6 +366,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         name: 'history',
         optional: true,
         type: 'LogbookEntry[]',
+      },
+      {
+        doc: '`2` puts the mode button and the target stepper on a second row under the name and the temperature, each with room, and the tile is as tall as two regular ones with the gap between them. `auto` is two rows once the tile is narrower than 340 px. Default `1`.',
+        name: 'rows',
+        optional: true,
+        type: 'TileRows',
       },
     ],
   },
