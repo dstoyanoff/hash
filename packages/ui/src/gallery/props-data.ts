@@ -853,7 +853,7 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'Density',
       },
       {
-        doc: "`'reduced'` turns animations and transitions off, for a slow display, `'full'` keeps them and `'auto'` (the default) leaves things as they are. A device can choose for itself with `?motion=reduced` (or `full`) on the address it opens: the choice is kept on the device, so reloads and links inside the app keep it, and `?motion=auto` forgets it. That wins over this prop.",
+        doc: "`'reduced'` turns animations and transitions off, for a slow display, `'full'` keeps them and `'auto'` (the default) leaves things as they are. A device can choose for itself with `?motion=reduced` (or `full`) on the address it opens, which wins over this prop. Nothing is kept: it holds while the app is open, moving between its pages, and a reload without the parameter goes back to this prop.",
         name: 'motion',
         optional: true,
         type: 'MotionPreference',
