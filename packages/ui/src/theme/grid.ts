@@ -6,6 +6,12 @@ export const BADGE = 32;
 /** The height of a room header, in px. */
 export const HEADER = 32;
 
+/** The height of the top row, in px: the clock's line and the tallest things beside it (the switcher, the
+ * scene buttons), with no padding of its own, so its content sits as far from the page's edge as
+ * everything else does. Sizes that do not scale with density are multiples of 8, so they are whole
+ * modules in both (4px and 2.67px). */
+export const TOP_ROW = 40;
+
 /** The vertical grid every card sits on. The module is the theme's spacing unit (a third of a
  * space: 4px in comfortable density, 2.67px in compact), so the gap between cards is always 3
  * modules, and a tile and a header are whole numbers of them in either density. Sizes are in px;
@@ -57,24 +63,12 @@ export function centeringOffsets(
   return { top, bottom: leftover - top };
 }
 
-const GRID_KEY = 'hashsome:grid';
-
-/** Whether this device asked to see the grid: `?grid` (or `?grid=on`) on the address, which is also
- * remembered, or what an earlier visit remembered. `?grid=off` forgets it. */
-export function gridFromDevice(): boolean {
+/** Whether the address asks for the grid: `?grid` (or `?grid=on`). Nothing is kept, so it is on for
+ * that address only, and a link inside the app, or a reload without it, turns it off. */
+export function gridFromAddress(): boolean {
   try {
     const asked = new URLSearchParams(window.location.search).get('grid');
-    if (asked === '' || asked === 'on') {
-      localStorage.setItem(GRID_KEY, 'on');
-      return true;
-    }
-
-    if (asked === 'off') {
-      localStorage.removeItem(GRID_KEY);
-      return false;
-    }
-
-    return localStorage.getItem(GRID_KEY) === 'on';
+    return asked === '' || asked === 'on';
   } catch {
     return false;
   }

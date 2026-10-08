@@ -14,6 +14,7 @@ import {
 } from '../hooks.ts';
 import { Icon } from '../icon.tsx';
 import { statusLabels } from '../status.ts';
+import { TOP_ROW } from '../theme/grid.ts';
 import { DrawerTrigger } from '../layout/use-drawer.tsx';
 import { useWeatherForecast } from '../use-weather-forecast.ts';
 import { SensorReadout } from './sensor-readout.tsx';
@@ -138,7 +139,14 @@ export function TopBar({
   showStatus = true,
 }: TopBarProps) {
   return (
-    <Flex align="center" justify="space-between" gap={4} py={2}>
+    <Flex
+      align="center"
+      justify="space-between"
+      gap={4}
+      // A whole number of grid modules whatever is in it, so what is under it starts on the grid, and
+      // no padding of its own, so its content is as far from the page's edge as the rest.
+      css={{ minHeight: TOP_ROW }}
+    >
       <Flex align="center" gap={3}>
         {dashboards && dashboards.length > 1 ? (
           <DashboardSwitcher title={title} dashboards={dashboards} />
@@ -720,7 +728,7 @@ export function Clock({ format = 'auto' }: ClockProps) {
 
   return (
     <Flex align="flex-start" gap={1}>
-      <Typography as="span" variant="clock">
+      <Typography as="span" variant="clock" css={{ lineHeight: `${TOP_ROW}px` }}>
         {time}
       </Typography>
       {dayPeriod ? (

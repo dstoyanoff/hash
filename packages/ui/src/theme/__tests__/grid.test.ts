@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, expect, test } from 'vitest';
+import { afterEach, expect, test } from 'vitest';
 import { DENSITY } from '../density.ts';
-import { centeringOffsets, gridFromDevice, gridMetrics, offGrid } from '../grid.ts';
+import { centeringOffsets, gridFromAddress, gridMetrics, offGrid } from '../grid.ts';
 
 test('the module is the spacing unit, and the gap, tile and header are whole modules in either density', () => {
   for (const density of ['comfortable', 'compact'] as const) {
@@ -50,24 +50,24 @@ test('what is left of a height after whole modules is shared between the top and
   expect(centeringOffsets(-5, 4)).toEqual({ top: 0, bottom: 0 });
 });
 
-beforeEach(() => localStorage.clear());
 afterEach(() => {
   localStorage.clear();
   window.history.replaceState({}, '', '/');
 });
 
-test('?grid turns the grid on, and the device keeps it until ?grid=off', () => {
-  expect(gridFromDevice()).toBe(false);
+test('?grid on the address turns the grid on for that address only, and nothing is kept', () => {
+  expect(gridFromAddress()).toBe(false);
 
   window.history.replaceState({}, '', '/?grid');
-  expect(gridFromDevice()).toBe(true);
+  expect(gridFromAddress()).toBe(true);
+  expect(localStorage.length).toBe(0);
+
+  window.history.replaceState({}, '', '/?grid=on');
+  expect(gridFromAddress()).toBe(true);
 
   window.history.replaceState({}, '', '/elsewhere');
-  expect(gridFromDevice()).toBe(true);
+  expect(gridFromAddress()).toBe(false);
 
   window.history.replaceState({}, '', '/?grid=off');
-  expect(gridFromDevice()).toBe(false);
-
-  window.history.replaceState({}, '', '/elsewhere');
-  expect(gridFromDevice()).toBe(false);
+  expect(gridFromAddress()).toBe(false);
 });

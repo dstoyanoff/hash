@@ -37,7 +37,7 @@ Then open `http://localhost:3000/<id>` (and any other page/route it has).
 Add `?grid` to the address to see the module grid over the page: a faint line at every spacing unit
 (4px in the comfortable density), a stronger one at every tile pitch, and a box round each card with its
 height in units, green when its top and height sit on the grid and red when they do not. The legend at
-the bottom counts the red ones. It is remembered on the device; `?grid=off` stops it.
+the bottom counts the red ones. The grid spans the whole page, its padding included (the first 3 units on each side, inside the dashed frame, which is where cards start). Nothing is remembered: it is on for that address only, so a link inside the app, or a reload without it, turns it off.
 
 `pnpm dev` at the repo root is a thin `pnpm --filter @hashsome/example dev` passthrough — Vite's
 dev server actually runs rooted at `example` and watches `dashboards/*` like any other source

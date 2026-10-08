@@ -1,7 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import { useTheme } from '@emotion/react';
 import { Flex } from 'e-prim';
-import { centeringOffsets, gridFromDevice, gridMetrics } from '../theme/grid.ts';
+import { centeringOffsets, gridFromAddress, gridMetrics } from '../theme/grid.ts';
 import { GridOverlay } from './grid-overlay.tsx';
 import {
   createContext,
@@ -37,8 +37,7 @@ export interface PageProps {
  * exactly viewport height, and scrolling inside itself (the document never scrolls — the entity
  * drawer is `position: fixed` and relies on that). It pads further for a `NavRail` or `NavDock`
  * the dashboard includes. Render it once, in the app's root layout. `?grid` on the address draws the
- * module grid over it, with every card boxed green or red by whether it sits on the grid (`?grid=off`
- * stops): for laying a dashboard out for one device. The height is rarely a whole number of grid
+ * module grid over it, spanning the whole page (its padding is the grid's first three modules), with every card boxed green or red by whether it sits on the grid (only for the address that has it): for laying a dashboard out for one device. The height is rarely a whole number of grid
  * modules; what is left over (under one module) is shared between the top and the bottom padding, so the
  * content sits centered and the grid stays whole. */
 export function Page({ children, height = '100dvh' }: PageProps) {
@@ -50,7 +49,7 @@ export function Page({ children, height = '100dvh' }: PageProps) {
 
   const value = useMemo(() => reserve, [reserve]);
   // `?grid` on the address draws the module grid over the page, for laying a dashboard out.
-  const [showGrid] = useState(gridFromDevice);
+  const [showGrid] = useState(gridFromAddress);
 
   // What is left of the height after whole modules goes half to the top padding and half to the
   // bottom one (in whole pixels, so edges stay crisp).
