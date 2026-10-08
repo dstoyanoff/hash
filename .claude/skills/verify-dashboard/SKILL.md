@@ -34,10 +34,13 @@ pnpm dev
 
 Then open `http://localhost:3000/<id>` (and any other page/route it has).
 
-Add `?grid` to the address to see the module grid over the page: a faint line at every spacing unit
-(4px in the comfortable density), a stronger one at every tile pitch, and a box round each card with its
-height in units, green when its top and height sit on the grid and red when they do not. The legend at
-the bottom counts the red ones. The grid spans the whole page, its padding included (the first 3 units on each side, inside the dashed frame, which is where cards start). Nothing is remembered: it is on for that address only, so a link inside the app, or a reload without it, turns it off.
+Start it with `HASHSOME_DEBUG=1` (for `dev`, or `build` for a production build) to get a bug button at the
+bottom left of the page. Its popover has **Show grid**, which draws the module grid over the page: a faint
+line at every spacing unit (4px in the comfortable density), a stronger one at every tile pitch, and a box
+round each card with its height in units, green when its top and height sit on the grid and red when they
+do not, with a legend at the bottom (it also gives the viewport, the screen and the pixel ratio). The popover
+also makes the page **Fullscreen** and changes the **Theme** (light, dark, system or sun). The choices are
+kept on the device.
 
 `pnpm dev` at the repo root is a thin `pnpm --filter @hashsome/example dev` passthrough — Vite's
 dev server actually runs rooted at `example` and watches `dashboards/*` like any other source
