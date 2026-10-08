@@ -1,7 +1,8 @@
 /** @jsxImportSource @emotion/react */
 import type { BrowseItem, BrowseKind, EntityRef } from '@hashsome/core';
 import { Box, Flex, Typography } from 'e-prim';
-import type { ReactNode } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { useState, type ReactNode } from 'react';
 import type { IconName } from '../icon-data.ts';
 import { Icon } from '../icon.tsx';
 import { useEntityHandle } from '../hooks.ts';
@@ -25,7 +26,13 @@ export interface MediaBrowserProps {
 
   /** How items are laid out. `list` is rows, compact enough for a narrow drawer. `theater` is a single row of large cards that scrolls sideways, for a wide space. `auto` is `theater` inside an expanded drawer and `list` anywhere else. Default `list`. */
   layout?: 'list' | 'theater' | 'auto';
+
+  /** How the search is offered, for a library that can be searched. `bar` is a field above the list. `icon` is a search icon at the right end of the row of tabs (or of the heading), after a thin line, which becomes the field when pressed, in that same row, so search takes no room of its own; its close button puts the tabs back. Default `bar`. */
+  search?: 'bar' | 'icon';
 }
+
+/** The height of the search field, and of the row of tabs it replaces. */
+const SEARCH_HEIGHT = 36;
 
 const KIND_ICONS: Record<BrowseKind, IconName> = {
   folder: 'lu:folder',
@@ -41,11 +48,18 @@ const KIND_ICONS: Record<BrowseKind, IconName> = {
  * as rows with artwork. Tap a folder to open it, a track or station to play it, or the play button
  * on an album, playlist or artist to play all of it. A search box appears when the library can be
  * searched. */
-export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserProps) {
+export function MediaBrowser({
+  entity,
+  onPlay,
+  layout = 'list',
+  search: searchMode = 'bar',
+}: MediaBrowserProps) {
   const handle = useEntityHandle('mediaPlayer', entity);
   const { detail } = useDetail();
   const theater = layout === 'theater' || (layout === 'auto' && detail?.expanded === true);
   const browser = useMediaBrowser(entity);
+  // `icon`: the field is open (or has something in it); otherwise only the icon is there.
+  const [searchOpen, setSearchOpen] = useState(false);
   const player = handle.entity;
   // A player with a queue can be told to add to it, play next and shuffle; one without can only play.
   const queueable = player?.capabilities.queue === true;
@@ -116,6 +130,34 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
       </Flex>
     ) : null;
 
+  const canSearch = player?.capabilities.search === true;
+  const onDemand = searchMode === 'icon' && canSearch;
+  const fieldShown = onDemand && (searchOpen || browser.query !== '');
+  const closeSearch = () => {
+    browser.search('');
+    setSearchOpen(false);
+  };
+
+  /** `icon`: a thin line and the search icon, fixed at the end of the row. */
+  const searchTrigger = onDemand ? (
+    <Flex align="center" gap={2} css={{ flexShrink: 0 }}>
+      <Box width={1} height={20} background="border" />
+      {/* No circle behind it: it is a mark at the end of the row, the size of a touch target. */}
+      <PlainButton
+        aria-label="Search"
+        title="Search"
+        onClick={() => setSearchOpen(true)}
+        center
+        color="textMuted"
+        width={SEARCH_HEIGHT}
+        height={SEARCH_HEIGHT}
+        css={{ flex: 'none' }}
+      >
+        <Icon name="lu:search" size={18} />
+      </PlainButton>
+    </Flex>
+  ) : null;
+
   const header = (
     <Flex align="center" gap={2} css={{ flexShrink: 0 }}>
       {browser.canGoBack ? (
@@ -125,17 +167,18 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
         {browser.title ?? 'Library'}
       </Typography>
       {actionsHere}
+      {searchTrigger}
     </Flex>
   );
 
-  const search = player?.capabilities.search ? (
+  const search = canSearch ? (
     <Flex
       align="center"
       gap={2}
       background="surfaceRaised"
       radius="full"
       px={3}
-      height={36}
+      height={SEARCH_HEIGHT}
       color="textMuted"
       // Fixed height: when the list takes all the room, the search keeps its size and the list scrolls.
       css={{ flexShrink: 0 }}
@@ -152,9 +195,30 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
         minWidth={0}
         value={browser.query}
         onChange={(event: { target: { value: string } }) => browser.search(event.target.value)}
+        // Opened by pressing the icon, so it is for typing straight away.
+        {...(onDemand
+          ? {
+              autoFocus: true,
+              onKeyDown: (event: { key: string }) => {
+                if (event.key === 'Escape') {
+                  closeSearch();
+                }
+              },
+            }
+          : {})}
         css={{ background: 'none', outline: 'none' }}
       />
-      {browser.query !== '' ? (
+      {onDemand ? (
+        <PlainButton
+          aria-label="Close search"
+          title="Close search"
+          onClick={closeSearch}
+          center
+          css={{ flex: 'none' }}
+        >
+          <Icon name="lu:x" size={16} />
+        </PlainButton>
+      ) : browser.query !== '' ? (
         <PlainButton
           aria-label="Clear search"
           title="Clear search"
@@ -168,38 +232,61 @@ export function MediaBrowser({ entity, onPlay, layout = 'list' }: MediaBrowserPr
     </Flex>
   ) : null;
 
+  /** The categories (and, with `search='icon'`, the search icon at the end). */
+  const tabsRow = browser.tabs ? (
+    // With the search icon in it, as tall as the field that replaces it, so the list below stays put.
+    <Flex align="center" gap={3} {...(onDemand ? { minHeight: SEARCH_HEIGHT } : {})}>
+      <Flex direction="column" grow={1} minWidth={0}>
+        <ChipRow
+          tabs
+          options={browser.tabs.map((item) =>
+            // Inside a shelf the selected tab becomes the way back, so nothing is added to the
+            // layout and nothing below it moves.
+            item.id === browser.activeTab && inside
+              ? {
+                  value: item.id,
+                  label: browser.title ?? item.title,
+                  icon: 'lu:arrow-left' as const,
+                  ariaLabel: 'Back',
+                }
+              : { value: item.id, label: item.title },
+          )}
+          value={browser.activeTab}
+          onChange={(id) =>
+            id === browser.activeTab && inside ? browser.back() : browser.selectTab(id)
+          }
+        />
+      </Flex>
+      {actionsHere}
+      {searchTrigger}
+    </Flex>
+  ) : null;
+
   return (
-    <Flex direction="column" gap={3} minHeight={0}>
+    <Flex direction="column" gap={3} minHeight={0} position="relative">
       {/* With shelves, search and tabs are a fixed frame and only what is below them changes; a
           list has no frame, so its heading row, always there, comes first. */}
-      {browser.tabs === undefined ? header : null}
-      {search}
-      {browser.tabs ? (
-        <Flex align="center" gap={3}>
-          <Flex direction="column" grow={1} minWidth={0}>
-            <ChipRow
-              tabs
-              options={browser.tabs.map((item) =>
-                // Inside a shelf the selected tab becomes the way back, so nothing is added to the
-                // layout and nothing below it moves.
-                item.id === browser.activeTab && inside
-                  ? {
-                      value: item.id,
-                      label: browser.title ?? item.title,
-                      icon: 'lu:arrow-left' as const,
-                      ariaLabel: 'Back',
-                    }
-                  : { value: item.id, label: item.title },
-              )}
-              value={browser.activeTab}
-              onChange={(id) =>
-                id === browser.activeTab && inside ? browser.back() : browser.selectTab(id)
-              }
-            />
-          </Flex>
-          {actionsHere}
-        </Flex>
-      ) : null}
+      {onDemand ? (
+        // The field comes in from the icon's side as the row fades out under it; the row is as tall as
+        // the field, so neither moves what is below. Nothing to wait for: they cross.
+        <AnimatePresence initial={false} mode="popLayout">
+          <motion.div
+            key={fieldShown ? 'field' : 'row'}
+            initial={{ opacity: 0, x: fieldShown ? 28 : 0 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: fieldShown ? 0 : 28 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+          >
+            {fieldShown ? search : browser.tabs === undefined ? header : tabsRow}
+          </motion.div>
+        </AnimatePresence>
+      ) : (
+        <>
+          {browser.tabs === undefined ? header : null}
+          {search}
+          {tabsRow}
+        </>
+      )}
       {browser.error ? (
         <Message theater={theater}>
           <Typography as="p" variant="body" color="danger" role="alert" m={0}>

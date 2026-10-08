@@ -588,6 +588,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         optional: true,
         type: "'list' | 'theater' | 'auto'",
       },
+      {
+        doc: 'How the search is offered, for a library that can be searched. `bar` is a field above the list. `icon` is a search icon at the right end of the row of tabs (or of the heading), after a thin line, which becomes the field when pressed, in that same row, so search takes no room of its own; its close button puts the tabs back. Default `bar`.',
+        name: 'search',
+        optional: true,
+        type: "'bar' | 'icon'",
+      },
     ],
   },
   MediaQueue: {

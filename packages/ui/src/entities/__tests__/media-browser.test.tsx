@@ -374,3 +374,62 @@ test('every tab is the same height, whatever its label holds, so opening a playl
   expect(screen.getByRole('tab', { name: 'Back' }).textContent).toContain('\u{1F50A}');
   expect(heights()).toEqual(before);
 });
+
+// `search="icon"`: the search is an icon at the end of the row of tabs, and the field takes the row's place.
+
+const renderIcon = (entities = rooms) =>
+  renderWithMock(<MediaBrowser entity="ha:room" search="icon" />, entities, {
+    library: mockLibrary(),
+  });
+
+test('with search="icon" there is no field until the icon is pressed, and the icon is after the tabs', async () => {
+  renderIcon();
+  await screen.findByRole('tab', { name: 'Albums' });
+
+  expect(screen.queryByRole('searchbox')).toBeNull();
+  const icon = screen.getByRole('button', { name: 'Search' });
+  // The tabs first, then the icon at the end of the same row.
+  const tabs = screen.getByRole('tab', { name: 'Radio' });
+  expect(tabs.compareDocumentPosition(icon) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(icon.parentElement?.parentElement?.contains(tabs)).toBe(true);
+});
+
+test('pressing the icon turns the row into the search field, which finds things and is closed by its button', async () => {
+  renderIcon();
+  await screen.findByRole('tab', { name: 'Albums' });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+  const box = screen.getByRole('searchbox', { name: 'Search the library' });
+  expect(document.activeElement).toBe(box);
+  // The tabs and the icon give their place to the field (the row fades out as the field comes in).
+  await waitFor(() => expect(screen.queryByRole('tab', { name: 'Albums' })).toBeNull());
+  expect(screen.queryByRole('button', { name: 'Search' })).toBeNull();
+
+  act(() => {
+    fireEvent.change(box, { target: { value: 'dream' } });
+  });
+
+  expect(await screen.findByRole('button', { name: 'Play Dreams' })).toBeTruthy();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Close search' }));
+  // The search is empty again and the tabs and the icon are back.
+  expect(await screen.findByRole('tab', { name: 'Albums' })).toBeTruthy();
+  await waitFor(() => expect(screen.queryByRole('searchbox')).toBeNull());
+  expect(screen.getByRole('button', { name: 'Search' })).toBeTruthy();
+});
+
+test('Escape closes the search too, and a library that cannot be searched has no icon', async () => {
+  const { unmount } = renderIcon();
+  await screen.findByRole('tab', { name: 'Albums' });
+  fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+  fireEvent.keyDown(screen.getByRole('searchbox'), { key: 'Escape' });
+  expect(await screen.findByRole('tab', { name: 'Albums' })).toBeTruthy();
+  unmount();
+
+  renderIcon({
+    room: mockMediaPlayer({ name: 'Room', capabilities: { browse: true, search: false } }),
+  });
+
+  await screen.findByRole('tab', { name: 'Albums' });
+  expect(screen.queryByRole('button', { name: 'Search' })).toBeNull();
+});

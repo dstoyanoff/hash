@@ -2,7 +2,14 @@
 import { Box, Flex, Typography } from 'e-prim';
 import { motion } from 'motion/react';
 import { MarqueeText } from './marquee-text.tsx';
-import { useEffect, useRef, type ElementType, type KeyboardEvent, type PointerEvent } from 'react';
+import {
+  useEffect,
+  useId,
+  useRef,
+  type ElementType,
+  type KeyboardEvent,
+  type PointerEvent,
+} from 'react';
 import type { IconName } from '../icon-data.ts';
 import { Icon } from '../icon.tsx';
 import { FadeScroll } from './fade-scroll.tsx';
@@ -254,6 +261,9 @@ export function ChipRow({
   onChange: (value: string) => void;
   tabs?: boolean;
 }) {
+  // The accent behind the selected chip is one pill that glides to the next; its own id, so two rows
+  // on a page do not share it.
+  const pill = useId();
   // Tabs scroll sideways when there are more than fit, and fade at the edge that has more.
   const Wrap: ElementType = tabs ? FadeScroll : Flex;
   return (
@@ -262,8 +272,13 @@ export function ChipRow({
       {...(tabs ? { role: 'tablist' } : {})}
       css={
         tabs
-          ? { flexShrink: 0, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }
-          : { flexWrap: 'wrap' }
+          ? {
+              flexShrink: 0,
+              isolation: 'isolate',
+              scrollbarWidth: 'none',
+              '&::-webkit-scrollbar': { display: 'none' },
+            }
+          : { flexWrap: 'wrap', isolation: 'isolate' }
       }
     >
       {options.map((option) => {
@@ -284,18 +299,42 @@ export function ChipRow({
             // which would make this one chip taller than the rest.
             height={CHIP_HEIGHT}
             px={3}
-            background={selected ? 'accent' : 'surface'}
+            background="surface"
             color={selected ? 'accentText' : 'text'}
             css={{
               flex: 'none',
+              position: 'relative',
               whiteSpace: 'nowrap',
-              transition: 'background-color 160ms ease, color 160ms ease',
+              transition: 'color 160ms ease',
             }}
           >
-            {option.icon ? <Icon name={option.icon} size={14} /> : null}
-            <Typography as="span" variant="body" css={{ minWidth: 0, maxWidth: 220 }}>
-              <MarqueeText>{option.label}</MarqueeText>
-            </Typography>
+            {selected ? (
+              <Box
+                as={motion.span}
+                layoutId={pill}
+                position="absolute"
+                radius="full"
+                background="accent"
+                transition={{ type: 'spring', duration: 0.32, bounce: 0.12 }}
+                // Above every chip's own background, whichever way it is going: a later chip paints over
+                // an earlier one's pill otherwise.
+                css={{ inset: 0, zIndex: 1 }}
+              />
+            ) : null}
+            {/* Above the pill. */}
+            <Flex
+              as="span"
+              align="center"
+              gap={1.5}
+              position="relative"
+              minWidth={0}
+              css={{ zIndex: 2 }}
+            >
+              {option.icon ? <Icon name={option.icon} size={14} /> : null}
+              <Typography as="span" variant="body" css={{ minWidth: 0, maxWidth: 220 }}>
+                <MarqueeText>{option.label}</MarqueeText>
+              </Typography>
+            </Flex>
           </Flex>
         );
       })}
