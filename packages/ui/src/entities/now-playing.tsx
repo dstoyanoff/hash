@@ -20,6 +20,7 @@ export function NowPlaying({
   fallback,
   name,
   extra,
+  leading,
   onOpenArtwork,
   size,
   shuffle: shufflePlacement = 'transport',
@@ -34,6 +35,9 @@ export function NowPlaying({
 
   /** One more button, to the right of the transport (the browse button). Shuffle takes the slot on the left, unless it sits by the title. */
   extra?: ReactNode;
+
+  /** One more button, to the left of the transport, in the slot shuffle has when it sits by the title. Not shown while shuffle is in the row. */
+  leading?: ReactNode;
 
   /** Makes the artwork a button that calls this (opens the library). */
   onOpenArtwork?: () => void;
@@ -60,7 +64,7 @@ export function NowPlaying({
   );
 
   return (
-    <Flex direction="column" gap={4} data-status={status}>
+    <Flex direction="column" gap={4} data-status={status} css={{ minHeight: 0 }}>
       <ArtworkRing
         artworkUrl={player?.media?.artworkUrl}
         seek={seek}
@@ -152,6 +156,8 @@ export function NowPlaying({
             disabled={!ready}
             onClick={() => void handle.command('setShuffle', { shuffle: player?.shuffle !== true })}
           />
+        ) : shufflePlacement === 'title' ? (
+          (leading ?? <span />)
         ) : (
           <span />
         )}

@@ -504,7 +504,7 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
     ],
   },
   MediaPlayerColumn: {
-    doc: 'The player as an upright card for a narrow column beside a dashboard (a quarter to a third of the width): the artwork in a ring that shows (and seeks) the position, title, transport and a volume bar that is always visible. It is only as tall as it needs to be. Holding the card or pressing the artwork opens the drawer with the player and its library; the browse button opens that drawer expanded.',
+    doc: 'The player as an upright card for a narrow column beside a dashboard (a quarter to a third of the width): the artwork in a ring that shows (and seeks) the position, title, transport and a volume bar that is always visible. It is only as tall as it needs to be. Holding the card or pressing the artwork opens the drawer with the player and its library; the browse button opens that drawer expanded. With `overlays` there is no drawer: the library and the queue open full size, each on its own.',
     props: [
       {
         doc: 'A media player, as a ref like `ma:kitchen` or `ha:media_player.kitchen`, or a handle (a custom source).',
@@ -523,6 +523,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         name: 'browse',
         optional: true,
         type: 'ReactNode | false',
+      },
+      {
+        doc: "The library and the queue each open as a full-size overlay of their own, from a library button and a queue button beside the transport, instead of one half-size drawer with the whole player in it: for a small display, where the drawer's half state is no use. The library overlay is a `MediaBrowser` as a list (or your `browse` content), the queue overlay a `MediaQueue`; each button is left out when the player has none, or for `browse={false}`. Holding the card and pressing the artwork then do nothing. Shuffle moves up beside the title. Default `false`.",
+        name: 'overlays',
+        optional: true,
+        type: 'boolean',
       },
     ],
   },
