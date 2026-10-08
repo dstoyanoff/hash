@@ -69,7 +69,7 @@ pnpm dev
 Open **http://localhost:3000/home**. It runs on mock data, so there is something to click without a
 smart home connected. The other examples are at `/second-floor`, `/kitchen` and `/hello`.
 
-For the component gallery on its own: `pnpm --filter @hashsome/ui docs`.
+For the component gallery on its own: `pnpm docs:dev`.
 
 ### Connect your home
 

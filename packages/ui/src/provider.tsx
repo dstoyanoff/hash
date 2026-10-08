@@ -9,6 +9,7 @@ import { ThemeProvider } from 'e-prim';
 import { MotionGlobalConfig } from 'motion/react';
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -67,7 +68,7 @@ export interface HashsomeProviderProps {
   /** `'compact'` for small square displays: tighter spacing, shorter tiles, smaller icon circles. Default `'comfortable'`. */
   density?: Density;
 
-  /** `'reduced'` turns animations and transitions off, for a slow display, `'full'` keeps them and `'auto'` (the default) leaves things as they are. A device can choose for itself with `?motion=reduced` (or `full`) on the address it opens: the choice is kept on the device, so reloads and links inside the app keep it, and `?motion=auto` forgets it. That wins over this prop. */
+  /** `'reduced'` turns animations and transitions off, for a slow display, `'full'` keeps them and `'auto'` (the default) leaves things as they are. A device can choose for itself with `?motion=reduced` (or `full`) on the address it opens, which wins over this prop. Nothing is kept: it holds while the app is open, moving between its pages, and a reload without the parameter goes back to this prop. */
   motion?: MotionPreference;
 
   /** Partial changes to the built-in theme — colors per light/dark, radii, typography, spacing, density sizes. Pass a constant defined outside the component: a new object each render rebuilds the theme each render. */
@@ -142,25 +143,13 @@ export function useThemeToggle(): ThemeModeState {
   return value;
 }
 
-const MOTION_KEY = 'hashsome:motion';
-
-/** What this device chose for motion: `?motion=reduced` or `?motion=full` on the address (which is
- * also remembered), or what an earlier visit remembered. `?motion=auto` forgets it. */
-function motionFromDevice(): 'full' | 'reduced' | undefined {
+/** What the address asks for motion: `?motion=reduced` or `?motion=full`. Nothing is kept, and the
+ * app reads it once, when it starts, so moving between pages inside the app keeps it and a reload
+ * without it does not. `?motion=auto` (or anything else) leaves it to the prop. */
+function motionFromAddress(): 'full' | 'reduced' | undefined {
   try {
     const asked = new URLSearchParams(window.location.search).get('motion');
-    if (asked === 'reduced' || asked === 'full') {
-      localStorage.setItem(MOTION_KEY, asked);
-      return asked;
-    }
-
-    if (asked === 'auto') {
-      localStorage.removeItem(MOTION_KEY);
-      return undefined;
-    }
-
-    const kept = localStorage.getItem(MOTION_KEY);
-    return kept === 'reduced' || kept === 'full' ? kept : undefined;
+    return asked === 'reduced' || asked === 'full' ? asked : undefined;
   } catch {
     return undefined;
   }
@@ -171,7 +160,7 @@ function motionFromDevice(): 'full' | 'reduced' | undefined {
  * transitions and animations too. */
 function useMotionMode(preference: MotionPreference): MotionPreference {
   const [mode] = useState<MotionPreference>(() => {
-    const chosen = motionFromDevice() ?? preference;
+    const chosen = motionFromAddress() ?? preference;
     MotionGlobalConfig.skipAnimations = chosen === 'reduced';
     if (typeof document !== 'undefined') {
       if (chosen === 'reduced') {
@@ -280,11 +269,20 @@ function useThemeMode(mode: ThemeMode, client: Client): ThemeModeState {
     };
   }, [from, to]);
 
-  const sun = useSyncExternalStore(
-    (onChange) => (sunRef ? client.subscribe(sunRef, onChange) : () => undefined),
-    () => (sunRef ? client.getEntity(sunRef) : undefined),
-    () => undefined,
+  // Memoized, like every other `subscribe` given to `useSyncExternalStore` (see hooks.ts): a new
+  // function each render makes React resubscribe, which against a remote runtime is an unsubscribe and
+  // a subscribe whose reply is a new entity object, which renders again, without end.
+  const subscribeSun = useCallback(
+    (onChange: () => void) => (sunRef ? client.subscribe(sunRef, onChange) : () => undefined),
+    [client, sunRef],
   );
+
+  const readSun = useCallback(
+    () => (sunRef ? client.getEntity(sunRef) : undefined),
+    [client, sunRef],
+  );
+
+  const sun = useSyncExternalStore(subscribeSun, readSun, () => undefined);
 
   const sunDown = sunIsDown(sun);
   useEffect(() => {
