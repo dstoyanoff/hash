@@ -46,7 +46,7 @@ isn't documented clearly. Only proceed if it's genuinely missing.
    and CI fails if it doesn't match; if the catalog output looks wrong, fix the source comment,
    not the generated file.
 7. **Verify**: `pnpm lint && pnpm format:check && pnpm typecheck && pnpm test`, plus look at it in
-   `pnpm --filter @hashsome/ui docs` (the gallery is `packages/ui`'s own standalone dev command, not
+   `pnpm docs:dev` (the gallery is `packages/ui`'s own standalone dev command, not
    part of `packages/runtime` or any project's own routes).
 8. **Then**, and only then, use the new component from the dashboard that needed it.
 

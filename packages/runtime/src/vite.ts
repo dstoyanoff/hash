@@ -38,11 +38,20 @@ function hashsomeDevServer(proxy: Proxy, config: ResolvedConfig): Plugin {
   };
 }
 
+/** Whether `HASHSOME_DEBUG` asks for the debug menu: `1` or `true`. */
+export function debugRequested(env: NodeJS.ProcessEnv = process.env): boolean {
+  const asked = (env['HASHSOME_DEBUG'] ?? '').toLowerCase();
+  return asked === '1' || asked === 'true';
+}
+
 /** `proxy` is only passed for `dev`; `build` needs no server settings (its prerender starts a private preview server). */
 export function createViteConfig(config: ResolvedConfig, proxy?: Proxy): InlineConfig {
   return {
     root: config.root,
     configFile: join(config.root, 'vite.config.ts'),
+    // `HASHSOME_DEBUG=1` in the environment shows the debug menu: a constant `@hashsome/ui` reads,
+    // replaced in the code Vite serves and builds, the packages' own included.
+    define: { HASHSOME_DEBUG_ON: JSON.stringify(debugRequested()) },
     ...(proxy
       ? {
           plugins: [hashsomeDevServer(proxy, config)],

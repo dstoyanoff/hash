@@ -95,7 +95,7 @@ A dashboard owns its whole layout. There is no runtime-rendered chrome: a page b
 Read `example/dashboards/home/pages/home.tsx` and
 `example/dashboards/second-floor/pages/home.tsx` as the reference layout (two separate
 dashboards, each a single page — see "Layout and chrome" above), and
-run `pnpm --filter @hashsome/ui docs` to see
+run `pnpm docs:dev` to see
 every component live, documented with its supported states. Concretely:
 
 - Group by room: a `<RoomHeader title="..." icon={...} readouts={...} />` followed by that room's

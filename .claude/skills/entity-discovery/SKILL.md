@@ -55,7 +55,7 @@ verbatim — copy it as-is, it isn't `domain.name` like a Home Assistant entity 
 ## No live Home Assistant / Music Assistant available
 
 Mock data works everywhere without credentials — used by every dashboard in
-`example/dashboards/*`, the `@hashsome/ui` gallery (`pnpm --filter @hashsome/ui docs`, its own
+`example/dashboards/*`, the `@hashsome/ui` gallery (`pnpm docs:dev`, its own
 self-contained fixtures in `packages/ui/src/gallery/fixtures.ts`), and every `@hashsome/ui` test. See
 `MockIntegration` in `packages/core/src/mock.ts` and `example/hashsome.config.ts`'s `ha`/`ma`
 entries for the shape used by `pnpm dev` (state + attributes per entity id).
