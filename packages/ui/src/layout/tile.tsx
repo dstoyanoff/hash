@@ -15,6 +15,7 @@ import type { IconName } from '../icon-data.ts';
 import { Icon } from '../icon.tsx';
 import { RoundButton } from './round-button.tsx';
 import { statusLabels, type EntityStatus } from '../status.ts';
+import { BADGE } from '../theme/grid.ts';
 import { useDrawer } from './use-drawer.tsx';
 import { EnergyChart, type EnergyChartProps } from './energy-chart.tsx';
 import { HistorySection, type LogbookEntry } from './history-section.tsx';
@@ -354,9 +355,14 @@ export function Tile({
       initial={false}
       animate={{ backgroundColor: cardBg, color: cardColor, opacity: cardOpacity }}
       transition={COLOR_TRANSITION}
-      css={({ palette }) =>
-        feedback === 'error' ? { outline: `2px solid ${palette.danger}`, outlineOffset: -2 } : null
-      }
+      css={({ palette, spacing }) => ({
+        // The badge between its padding, written down rather than left to the content, so a tile is a
+        // whole number of grid modules (12, in the comfortable density) whatever is in it.
+        minHeight: `calc(${spacing(4)} + ${BADGE}px)`,
+        ...(feedback === 'error'
+          ? { outline: `2px solid ${palette.danger}`, outlineOffset: -2 }
+          : {}),
+      })}
     >
       {hasFill ? (
         <Box

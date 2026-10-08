@@ -5,10 +5,13 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { gridMetrics, offGrid } from '../theme/grid.ts';
 
 interface Measured {
-  left: number;
+  /** Where the grid starts, in the page's scrolling area: its edge, less what centering left over. */
   top: number;
   width: number;
   height: number;
+
+  /** The page's padding, which is the first modules of the grid: where the cards start. */
+  content: { left: number; top: number; right: number; bottom: number };
 
   /** What the page centered the grid by, as `top bottom` px. */
   centered: string;
@@ -39,18 +42,26 @@ export function GridOverlay() {
     let frame = 0;
     const measure = () => {
       const style = getComputedStyle(host);
-      const left = parseFloat(style.paddingLeft);
-      const top = parseFloat(style.paddingTop);
+      const centered = host.dataset['centered'] ?? '';
+      const [slack = 0, slackBelow = 0] = centered.split(' ').map(Number);
+      // The grid spans the whole page, its padding included: it starts at the page's edge, less the
+      // sliver centering left over, so the padding is its first modules and the cards start after it.
+      const top = slack;
       const box = host.getBoundingClientRect();
       const next: Measured = {
-        left,
         top,
-        width: host.scrollWidth - left - parseFloat(style.paddingRight),
-        height: host.scrollHeight - top - parseFloat(style.paddingBottom),
-        centered: host.dataset['centered'] ?? '',
+        width: host.scrollWidth,
+        height: host.scrollHeight - slack - slackBelow,
+        content: {
+          left: parseFloat(style.paddingLeft),
+          top: parseFloat(style.paddingTop) - slack,
+          right: parseFloat(style.paddingRight),
+          bottom: parseFloat(style.paddingBottom) - slackBelow,
+        },
+        centered,
         cards: [...host.querySelectorAll('[data-grid-card]')].map((card) => {
           const rect = card.getBoundingClientRect();
-          const x = rect.left - box.left + host.scrollLeft - left;
+          const x = rect.left - box.left + host.scrollLeft;
           const y = rect.top - box.top + host.scrollTop - top;
 
           return {
@@ -97,13 +108,15 @@ export function GridOverlay() {
   const [top = 0, bottom = 0] = (view?.centered ?? '').split(' ').map(Number);
 
   return (
-    <div ref={ref} data-grid-overlay aria-hidden="true">
+    // `display: contents`: the page is a flex column with a gap, and a box here, empty as it is, would
+    // be one more item in it, with a gap of its own before it.
+    <Box ref={ref} data-grid-overlay aria-hidden="true" css={{ display: 'contents' }}>
       {view ? (
         <>
           <Box
             position="absolute"
             css={{
-              left: view.left,
+              left: 0,
               top: view.top,
               width: view.width,
               height: view.height,
@@ -123,6 +136,16 @@ export function GridOverlay() {
               ].join(', '),
             }}
           >
+            <Box
+              position="absolute"
+              css={{
+                left: view.content.left,
+                top: view.content.top,
+                right: view.content.right,
+                bottom: view.content.bottom,
+                outline: '1px dashed rgba(0, 150, 255, 0.9)',
+              }}
+            />
             {view.cards.map((card) => (
               <Box
                 key={`${card.x}:${card.y}:${card.width}:${card.height}`}
@@ -163,6 +186,6 @@ export function GridOverlay() {
           </Box>
         </>
       ) : null}
-    </div>
+    </Box>
   );
 }

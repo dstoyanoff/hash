@@ -65,3 +65,13 @@ test('the page pads its top and bottom with half of what its height has over who
   expect(getComputedStyle(main).paddingTop).toBe('13px');
   expect(getComputedStyle(main).paddingBottom).toBe('14px');
 });
+
+test('the overlay is not a box in the page, so the page keeps its gaps and its height with it on', async () => {
+  window.history.replaceState({}, '', '/?grid');
+  renderWithMock(<Page>{null}</Page>, {});
+  await act(() => new Promise((done) => requestAnimationFrame(() => done(undefined))));
+  // A box here would be one more item in the page's flex column, and one more gap.
+  expect(
+    getComputedStyle(document.querySelector('[data-grid-overlay]') as HTMLElement).display,
+  ).toBe('contents');
+});
