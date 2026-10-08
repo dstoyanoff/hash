@@ -286,6 +286,29 @@ test('a sun schedule starts from what the sun last said, until the entity is kno
   expect(bgOf()).toBe(DARK_BG);
 });
 
+const SUN = { sun: 'ha:sun.sun' } as const;
+
+test('a sun schedule subscribes to the sun once, however often the provider renders again', async () => {
+  // Against a remote runtime a resubscribe is an unsubscribe and a subscribe whose reply is a new entity
+  // object, which renders again and resubscribes, without end: it must stay at one.
+  const client = new LocalClient([sunWith('on')]);
+  const subscribe = vi.spyOn(client, 'subscribe');
+  // A new element each time: the same one would be skipped, not rendered again.
+  const tree = () => (
+    <HashsomeProvider client={client} theme={SUN}>
+      <Probe />
+    </HashsomeProvider>
+  );
+
+  const view = render(tree());
+  await waitFor(() => expect(bgOf()).toBe(LIGHT_BG));
+  for (let i = 0; i < 4; i += 1) {
+    view.rerender(tree());
+  }
+
+  expect(subscribe.mock.calls.filter(([ref]) => ref === 'ha:sun.sun')).toHaveLength(1);
+});
+
 // Motion: one device can ask for no animations with ?motion=reduced.
 
 const resetMotion = () => {
