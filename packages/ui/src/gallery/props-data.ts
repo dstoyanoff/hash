@@ -26,8 +26,59 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
       },
     ],
   },
+  Board: {
+    doc: 'A page laid out on a grid, for a dashboard made for one device. The page is `columns` equal columns (a gap between them) and rows as tall as what is in them, with twice that gap between rows. Nothing says where a cell goes: each `Cell` only says how big it is, and the board puts it in the first place it fits, in the order written. Every card is a whole number of grid modules tall and every gap is 3, so whatever the board makes stays on the grid. It takes the height that is left of the page. Opt in: a page of plain flex columns keeps working the same.',
+    props: [
+      {
+        doc: 'How many equal columns the page is divided into. Default 12.',
+        name: 'columns',
+        optional: true,
+        type: 'number',
+      },
+      {
+        doc: '`Cell`s, each saying how big it is; the board places them.',
+        name: 'children',
+        optional: false,
+        type: 'ReactNode',
+      },
+    ],
+  },
+  Cell: {
+    doc: "Something on a `Board`, and how big it is: `cols` wide and `rows` tall. Where it goes is the board's business. A room is one cell (its header and its tiles), a player beside three of them is one that covers three rows, or fills.",
+    props: [
+      {
+        doc: 'How many columns wide. Default: all of them.',
+        name: 'cols',
+        optional: true,
+        type: 'number',
+      },
+      {
+        doc: "How many rows of the board it covers, counting rows as tall as their content (a room is one): `3` ends where the third row does, and the cell is as tall as those rows, whatever is in it (a card in it that is too tall squeezes). `'fill'` starts where the cell is placed and goes down to the bottom of the page (or of the content, if that is longer), whatever rows are beside it; they keep their place. Default 1.",
+        name: 'rows',
+        optional: true,
+        type: "number | 'fill'",
+      },
+      {
+        doc: "What is in it, one under the other with the gap between. In a cell of more than one row, or `'fill'`, the last card stretches to the cell's height.",
+        name: 'children',
+        optional: false,
+        type: 'ReactNode',
+      },
+    ],
+  },
+  TopRow: {
+    doc: 'The row along the top of a page you build yourself instead of with `TopBar`: its pieces (`DateChip`, `WeatherChip`, `Clock`, `SystemStatus`) in a line at the right, in the height the grid gives the top row, with no padding of its own.',
+    props: [
+      {
+        doc: 'What goes in the row: the date, the weather, the clock.',
+        name: 'children',
+        optional: false,
+        type: 'ReactNode',
+      },
+    ],
+  },
   Page: {
-    doc: "The page every dashboard renders into: padded by the density's spacing, a column with gaps, exactly viewport height, and scrolling inside itself (the document never scrolls — the entity drawer is `position: fixed` and relies on that). It pads further for a `NavRail` or `NavDock` the dashboard includes. Render it once, in the app's root layout. `?grid` on the address draws the module grid over it, spanning the whole page (its padding is the grid's first three modules), with every card boxed green or red by whether it sits on the grid (only for the address that has it): for laying a dashboard out for one device. The height is rarely a whole number of grid modules; what is left over (under one module) is shared between the top and the bottom padding, so the content sits centered and the grid stays whole.",
+    doc: "The page every dashboard renders into: padded by the density's spacing, a column with gaps, exactly viewport height, and scrolling inside itself (the document never scrolls — the entity drawer is `position: fixed` and relies on that). It pads further for a `NavRail` or `NavDock` the dashboard includes. Render it once, in the app's root layout. The debug menu (`HASHSOME_DEBUG=1`) can draw the module grid over the page, spanning all of it (its padding is the grid's first three modules), with every card boxed green or red by whether it sits on the grid: for laying a dashboard out for one device. The height is rarely a whole number of grid modules; what is left over (under one module) is shared between the top and the bottom padding, so the content sits centered and the grid stays whole.",
     props: [
       {
         doc: 'The dashboard.',
@@ -565,6 +616,30 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         optional: true,
         type: 'boolean',
       },
+      {
+        doc: 'In the narrow layout, where the queue has no room beside the player, a Library and a Queue tab above the list switch between them (shown when there is a `browser`, a `queue` and a player with a queue). `false` leaves the library alone, as before. In the wide layout the queue is beside the player and there are no tabs. Default `true`.',
+        name: 'tabs',
+        optional: true,
+        type: 'boolean',
+      },
+      {
+        doc: "The tab that is open first, when the tabs are on. Default `'library'`.",
+        name: 'defaultTab',
+        optional: true,
+        type: 'ListTab',
+      },
+      {
+        doc: 'The open tab, to keep it yourself (to remember it between visits, or open the queue from elsewhere); the tabs ask for a change through `onTabChange`. Without it, the component keeps it, until it is gone.',
+        name: 'tab',
+        optional: true,
+        type: 'ListTab',
+      },
+      {
+        doc: 'Called with the tab someone chose.',
+        name: 'onTabChange',
+        optional: true,
+        type: '(tab: ListTab) => void',
+      },
     ],
   },
   MediaBrowser: {
@@ -859,7 +934,7 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'Density',
       },
       {
-        doc: "`'reduced'` turns animations and transitions off, for a slow display, `'full'` keeps them and `'auto'` (the default) leaves things as they are. A device can choose for itself with `?motion=reduced` (or `full`) on the address it opens: the choice is kept on the device, so reloads and links inside the app keep it, and `?motion=auto` forgets it. That wins over this prop.",
+        doc: "`'reduced'` turns animations and transitions off, for a slow display, `'full'` keeps them and `'auto'` (the default) leaves things as they are. A device can choose for itself with `?motion=reduced` (or `full`) on the address it opens, which wins over this prop. Nothing is kept: it holds while the app is open, moving between its pages, and a reload without the parameter goes back to this prop.",
         name: 'motion',
         optional: true,
         type: 'MotionPreference',
@@ -869,6 +944,18 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         name: 'overrides',
         optional: true,
         type: 'ThemeOverrides',
+      },
+      {
+        doc: 'Shows the debug menu: a floating button at the bottom left whose popover shows the module grid, makes the page fullscreen and changes the theme, on the device, kept there. Default: on when `HASHSOME_DEBUG=1` (or `true`) was in the environment of `hashsome dev` or `build`.',
+        name: 'debug',
+        optional: true,
+        type: 'boolean',
+      },
+      {
+        doc: "The daylight sensor (`on` while the sun is up) the debug menu's Sun theme follows, when `theme` is not a sun schedule already (`theme={{ sun: … }}` names one). Without either, the menu has no Sun choice: Hashsome does not know which entity is the sun.",
+        name: 'sun',
+        optional: true,
+        type: 'EntityRef',
       },
       {
         doc: 'The app.',

@@ -1,4 +1,5 @@
 /** @jsxImportSource @emotion/react */
+import { useTheme } from '@emotion/react';
 import { Flex, Grid, Typography } from 'e-prim';
 import type { ReactNode } from 'react';
 import type { EntityHandle } from '../entity-handle.ts';
@@ -49,6 +50,8 @@ export function NowPlaying({
   shuffle?: 'transport' | 'title';
 }) {
   const player = handle.entity;
+  const { iconCircle, space } = useTheme().density;
+  const transportWidth = 5 * iconCircle + 4 * space;
   const { status } = handle;
   const ready = status === 'ready';
   const caps = player?.capabilities;
@@ -72,6 +75,8 @@ export function NowPlaying({
         seekable={caps?.seek === true}
         onOpen={onOpenArtwork}
         {...(size !== undefined ? { size } : {})}
+        // No wider than the row of five buttons under it (268px: five circles and the gaps between them).
+        maxSize={transportWidth}
       />
       <Flex direction="column" align="center" gap={0.5} color={ready ? 'text' : 'textMuted'}>
         {/* In the drawer, shuffle sits by the title, so the transport below is just previous, play and next. */}

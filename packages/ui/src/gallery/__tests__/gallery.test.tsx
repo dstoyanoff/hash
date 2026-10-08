@@ -81,8 +81,12 @@ test('the active media player demo shows artwork, the unavailable one shows the 
     </MemoryRouter>,
   );
 
-  // The bar demos come first; the column and page below them hold players of their own.
-  const bars = [...container.querySelectorAll('div[data-status]')]
+  // The bar's own section: other sections (the board, the column, the page) hold players of their own.
+  const section = [...container.querySelectorAll('section')].find(
+    (candidate) => candidate.querySelector('h2')?.textContent === 'Media Player Bar',
+  );
+
+  const bars = [...(section?.querySelectorAll('div[data-status]') ?? [])]
     .filter((bar) => bar.querySelector('button[aria-label="Pause"], button[aria-label="Play"]'))
     .slice(0, 2);
 
