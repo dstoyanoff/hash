@@ -784,3 +784,34 @@ describe('the queue in the expanded drawer of a media card', () => {
     expect(screen.queryByRole('button', { name: 'Clear the queue' })).toBeNull();
   });
 });
+
+test('the column with overlays opens the library and the queue full size, each alone, and holding opens nothing', async () => {
+  renderWithMock(
+    <MediaPlayerColumn entity="ha:room" overlays />,
+    playing({ queue: true }),
+    library,
+  );
+
+  // Library left of the transport, the queue right of it; shuffle is not in the row.
+  const labels = screen.getAllByRole('button').map((b) => b.getAttribute('aria-label'));
+  expect(labels.indexOf('Browse media')).toBeLessThan(labels.indexOf('Previous'));
+  expect(labels.indexOf('Queue')).toBeGreaterThan(labels.indexOf('Next'));
+
+  fireEvent.click(screen.getByRole('button', { name: 'Browse media' }));
+  expect(await screen.findByText('Playlists')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: /^(Collapse|Expand)$/ })).toBeNull();
+  // The player is not drawn again inside the overlay.
+  expect(screen.getAllByText('Dreams')).toHaveLength(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+  fireEvent.click(screen.getByRole('button', { name: 'Queue' }));
+  expect(await screen.findByText(/24 tracks/)).toBeTruthy();
+  expect(screen.queryByText('Playlists')).toBeNull();
+});
+
+test('the column with overlays has no buttons for a library or queue the player lacks, and the artwork opens nothing', () => {
+  renderWithMock(<MediaPlayerColumn entity="ha:room" overlays browse={false} />, playing());
+  expect(screen.queryByRole('button', { name: 'Browse media' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Queue' })).toBeNull();
+  expect(screen.queryByRole('button', { name: /Artwork|Open/ })).toBeNull();
+});

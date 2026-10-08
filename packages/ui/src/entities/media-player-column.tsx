@@ -22,14 +22,23 @@ export interface MediaPlayerColumnProps {
 
   /** Content for the media browser shown with the player in the drawer. By default a `MediaBrowser` over the player's own library, shown only for a ref whose player has one; pass your own content to replace it, or `false` for no drawer. */
   browse?: ReactNode | false;
+
+  /** The library and the queue each open as a full-size overlay of their own, from a library button and a queue button beside the transport, instead of one half-size drawer with the whole player in it: for a small display, where the drawer's half state is no use. The library overlay is a `MediaBrowser` as a list (or your `browse` content), the queue overlay a `MediaQueue`; each button is left out when the player has none, or for `browse={false}`. Holding the card and pressing the artwork then do nothing. Shuffle moves up beside the title. Default `false`. */
+  overlays?: boolean;
 }
 
 /** The player as an upright card for a narrow column beside a dashboard (a quarter to a third of
  * the width): the artwork in a ring that shows (and seeks) the position, title, transport and a
  * volume bar that is always visible. It is only as tall as it needs to be. Holding the card or
  * pressing the artwork opens the drawer with the player and its library; the browse button opens
- * that drawer expanded. */
-export function MediaPlayerColumn({ entity, name, browse }: MediaPlayerColumnProps) {
+ * that drawer expanded. With `overlays` there is no drawer: the library and the queue open full
+ * size, each on its own. */
+export function MediaPlayerColumn({
+  entity,
+  name,
+  browse,
+  overlays = false,
+}: MediaPlayerColumnProps) {
   const handle = useEntityHandle('mediaPlayer', entity);
   const player = handle.entity;
   const ref = typeof entity === 'string' ? entity : undefined;
@@ -42,6 +51,68 @@ export function MediaPlayerColumn({ entity, name, browse }: MediaPlayerColumnPro
         ) : undefined));
 
   const fallback = fallbackName(entity);
+
+  if (overlays) {
+    // What the overlays hold: the library as a list, the queue; each only when the player has one.
+    const title = name ?? player?.name ?? fallback;
+    const libraryBody =
+      browse === false
+        ? undefined
+        : (browse ??
+          (ref && player?.capabilities.browse ? (
+            <MediaBrowser entity={ref} layout="list" />
+          ) : undefined));
+
+    const queueBody =
+      ref && player?.capabilities.queue === true ? <MediaQueue entity={ref} /> : undefined;
+
+    return handle.status === 'ready' ? (
+      <DrawerTrigger icon="lu:library" label="Library" kind={title} body={libraryBody ?? null}>
+        {(_open, _expanded, openLibrary) => (
+          <DrawerTrigger icon="lu:list-music" label="Queue" kind={title} body={queueBody ?? null}>
+            {(_openToo, _expandedToo, openQueue) => (
+              <Card>
+                <NowPlaying
+                  handle={handle}
+                  fallback={fallback}
+                  shuffle="title"
+                  {...(name !== undefined ? { name } : {})}
+                  {...(libraryBody
+                    ? {
+                        leading: (
+                          <IconButton
+                            icon="lu:library"
+                            label="Browse media"
+                            glyph={18}
+                            onClick={openLibrary}
+                          />
+                        ),
+                      }
+                    : {})}
+                  {...(queueBody
+                    ? {
+                        extra: (
+                          <IconButton
+                            icon="lu:list-music"
+                            label="Queue"
+                            glyph={18}
+                            onClick={openQueue}
+                          />
+                        ),
+                      }
+                    : {})}
+                />
+              </Card>
+            )}
+          </DrawerTrigger>
+        )}
+      </DrawerTrigger>
+    ) : (
+      <Card>
+        <NowPlaying handle={handle} fallback={fallback} {...(name !== undefined ? { name } : {})} />
+      </Card>
+    );
+  }
 
   return browser !== undefined && handle.status === 'ready' ? (
     <DrawerTrigger
@@ -93,8 +164,15 @@ function Card({ open, children }: { open?: () => void; children: ReactNode }) {
       radius="card"
       p={4}
       width="100%"
-      // Only as tall as it needs, even in a parent that stretches its children.
-      css={{ alignSelf: 'flex-start', position: 'relative', overflow: 'hidden' }}
+      // Only as tall as it needs, even in a parent that stretches its children, and no taller than
+      // the parent: the artwork gives way.
+      css={{
+        alignSelf: 'flex-start',
+        position: 'relative',
+        overflow: 'hidden',
+        maxHeight: '100%',
+        minHeight: 0,
+      }}
       {...hold.handlers}
     >
       {children}

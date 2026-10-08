@@ -8,6 +8,9 @@ import type { SeekHold } from './media-seek.ts';
 /** The ring's diameter when none is given. */
 const DEFAULT_SIZE = 168;
 
+/** The smallest it shrinks to, when the space is short. */
+const MIN_SIZE = 72;
+
 /** The player's artwork in a circle, like the one in the bar but larger: an inner outline around
  * it, and an outer ring that shows how far along playback is. With `onSeek` the ring is a slider:
  * drag around it, or use the arrow keys. Not exported from the package: `MediaPlayerColumn` and
@@ -32,7 +35,7 @@ export function ArtworkRing({
   /** Makes the artwork itself a button, for opening something (the library). */
   onOpen?: (() => void) | undefined;
 
-  /** The ring's diameter in px. Default 168. */
+  /** The ring's diameter in px, when there is room for it; it shrinks in a column that is shorter. Default 168. */
   size?: number;
 }) {
   const ring = useRef<HTMLDivElement>(null);
@@ -96,7 +99,18 @@ export function ArtworkRing({
   };
 
   return (
-    <Box position="relative" width={SIZE} height={SIZE} mx="auto" css={{ flex: 'none' }}>
+    // `SIZE` is the size it wants; in a column that is shorter it shrinks, staying round, to what fits
+    // (never below `MIN_SIZE`).
+    <Box
+      position="relative"
+      css={{
+        flex: `0 1 ${SIZE}px`,
+        alignSelf: 'center',
+        aspectRatio: '1',
+        minHeight: MIN_SIZE,
+        maxWidth: '100%',
+      }}
+    >
       <Box
         ref={ring}
         position="absolute"
@@ -157,7 +171,7 @@ export function ArtworkRing({
           : {})}
         css={{ inset: 0, touchAction: 'none' }}
       >
-        <svg viewBox="0 0 100 100" width={SIZE} height={SIZE} aria-hidden="true">
+        <svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden="true">
           <circle
             cx="50"
             cy="50"
