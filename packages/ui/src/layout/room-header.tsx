@@ -20,6 +20,7 @@ export function RoomHeader({ title, icon, readouts }: RoomHeaderProps) {
   return (
     <Flex
       as="header"
+      data-grid-card
       align="center"
       color="textMuted"
       minHeight={32}
