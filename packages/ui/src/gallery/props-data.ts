@@ -78,7 +78,7 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
     ],
   },
   Page: {
-    doc: "The page every dashboard renders into: padded by the density's spacing, a column with gaps, exactly viewport height, and scrolling inside itself (the document never scrolls — the entity drawer is `position: fixed` and relies on that). It pads further for a `NavRail` or `NavDock` the dashboard includes. Render it once, in the app's root layout. `?grid` on the address draws the module grid over it, spanning the whole page (its padding is the grid's first three modules), with every card boxed green or red by whether it sits on the grid (only for the address that has it): for laying a dashboard out for one device. The height is rarely a whole number of grid modules; what is left over (under one module) is shared between the top and the bottom padding, so the content sits centered and the grid stays whole.",
+    doc: "The page every dashboard renders into: padded by the density's spacing, a column with gaps, exactly viewport height, and scrolling inside itself (the document never scrolls — the entity drawer is `position: fixed` and relies on that). It pads further for a `NavRail` or `NavDock` the dashboard includes. Render it once, in the app's root layout. The debug menu (`HASHSOME_DEBUG=1`) can draw the module grid over the page, spanning all of it (its padding is the grid's first three modules), with every card boxed green or red by whether it sits on the grid: for laying a dashboard out for one device. The height is rarely a whole number of grid modules; what is left over (under one module) is shared between the top and the bottom padding, so the content sits centered and the grid stays whole.",
     props: [
       {
         doc: 'The dashboard.',
@@ -904,7 +904,7 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'Density',
       },
       {
-        doc: "`'reduced'` turns animations and transitions off, for a slow display, `'full'` keeps them and `'auto'` (the default) leaves things as they are. A device can choose for itself with `?motion=reduced` (or `full`) on the address it opens: the choice is kept on the device, so reloads and links inside the app keep it, and `?motion=auto` forgets it. That wins over this prop.",
+        doc: "`'reduced'` turns animations and transitions off, for a slow display, `'full'` keeps them and `'auto'` (the default) leaves things as they are. A device can choose for itself with `?motion=reduced` (or `full`) on the address it opens, which wins over this prop. Nothing is kept: it holds while the app is open, moving between its pages, and a reload without the parameter goes back to this prop.",
         name: 'motion',
         optional: true,
         type: 'MotionPreference',
@@ -914,6 +914,18 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         name: 'overrides',
         optional: true,
         type: 'ThemeOverrides',
+      },
+      {
+        doc: 'Shows the debug menu: a floating button at the bottom left whose popover shows the module grid, makes the page fullscreen and changes the theme, on the device, kept there. Default: on when `HASHSOME_DEBUG=1` (or `true`) was in the environment of `hashsome dev` or `build`.',
+        name: 'debug',
+        optional: true,
+        type: 'boolean',
+      },
+      {
+        doc: "The daylight sensor (`on` while the sun is up) the debug menu's Sun theme follows, when `theme` is not a sun schedule already (`theme={{ sun: … }}` names one). Without either, the menu has no Sun choice: Hashsome does not know which entity is the sun.",
+        name: 'sun',
+        optional: true,
+        type: 'EntityRef',
       },
       {
         doc: 'The app.',

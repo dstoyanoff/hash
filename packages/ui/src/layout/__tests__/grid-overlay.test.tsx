@@ -12,7 +12,7 @@ afterEach(() => {
   window.history.replaceState({}, '', '/');
 });
 
-test('a page draws no grid unless the device asked for it', () => {
+test('a page draws no grid unless the debug menu turned it on', () => {
   renderWithMock(
     <Page>
       <RoomHeader title="Kitchen" />
@@ -23,8 +23,8 @@ test('a page draws no grid unless the device asked for it', () => {
   expect(document.querySelector('[data-grid-overlay]')).toBeNull();
 });
 
-test('?grid draws the grid over the page, boxes each card and says how many are off the grid', async () => {
-  window.history.replaceState({}, '', '/?grid');
+test("the debug menu's grid draws the grid over the page, boxes each card and says how many are off the grid", async () => {
+  localStorage.setItem('hashsome:grid', 'on');
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
     this: HTMLElement,
   ) {
@@ -50,7 +50,7 @@ test('?grid draws the grid over the page, boxes each card and says how many are 
 });
 
 test('the overlay is hidden from assistive technology', async () => {
-  window.history.replaceState({}, '', '/?grid');
+  localStorage.setItem('hashsome:grid', 'on');
   renderWithMock(<Page>{null}</Page>, {});
   await act(() => new Promise((done) => requestAnimationFrame(() => done(undefined))));
   expect(document.querySelector('[data-grid-overlay]')?.getAttribute('aria-hidden')).toBe('true');
@@ -67,11 +67,24 @@ test('the page pads its top and bottom with half of what its height has over who
 });
 
 test('the overlay is not a box in the page, so the page keeps its gaps and its height with it on', async () => {
-  window.history.replaceState({}, '', '/?grid');
+  localStorage.setItem('hashsome:grid', 'on');
   renderWithMock(<Page>{null}</Page>, {});
   await act(() => new Promise((done) => requestAnimationFrame(() => done(undefined))));
   // A box here would be one more item in the page's flex column, and one more gap.
   expect(
     getComputedStyle(document.querySelector('[data-grid-overlay]') as HTMLElement).display,
   ).toBe('contents');
+});
+
+test('the legend says what the device is: its viewport, its screen and its pixel ratio', async () => {
+  localStorage.setItem('hashsome:grid', 'on');
+  vi.stubGlobal('innerWidth', 1000);
+  vi.stubGlobal('innerHeight', 600);
+  vi.stubGlobal('devicePixelRatio', 1.6);
+  vi.stubGlobal('screen', { width: 1280, height: 800 });
+  renderWithMock(<Page>{null}</Page>, {});
+  await act(() => new Promise((done) => requestAnimationFrame(() => done(undefined))));
+
+  expect(document.body.textContent).toContain('viewport 1000×600 · screen 1280×800 @1.6');
+  vi.unstubAllGlobals();
 });
