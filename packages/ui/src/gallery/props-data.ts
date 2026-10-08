@@ -26,6 +26,29 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
       },
     ],
   },
+  AnimatedNumber: {
+    doc: 'A number that moves to its new value instead of jumping to it: a power reading that changes, a temperature. The first value is shown at once, and a new one is moved to from what is shown now, even if it has not arrived yet; the text is changed directly (no render per step), so many of them cost little, and none moves when the app is set to reduced motion.',
+    props: [
+      {
+        doc: 'The number to show. When it changes, what is shown moves to it instead of jumping.',
+        name: 'value',
+        optional: false,
+        type: 'number',
+      },
+      {
+        doc: 'How a number is written, with its unit: `(n) => \\`${n.toFixed(1)} W\\``. Called for every step of the move, with a number between the old value and the new one, so it should round. Default: the number with as many decimals as `value` has.',
+        name: 'format',
+        optional: true,
+        type: '(n: number) => string',
+      },
+      {
+        doc: 'Seconds the move takes. Default 0.6.',
+        name: 'duration',
+        optional: true,
+        type: 'number',
+      },
+    ],
+  },
   Board: {
     doc: 'A page laid out on a grid, for a dashboard made for one device. The page is `columns` equal columns (a gap between them) and rows as tall as what is in them, with twice that gap between rows. Nothing says where a cell goes: each `Cell` only says how big it is, and the board puts it in the first place it fits, in the order written. Every card is a whole number of grid modules tall and every gap is 3, so whatever the board makes stays on the grid. It takes the height that is left of the page. Opt in: a page of plain flex columns keeps working the same.',
     props: [

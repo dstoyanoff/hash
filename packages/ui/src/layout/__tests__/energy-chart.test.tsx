@@ -11,11 +11,12 @@ const entities = {
   lamp_energy: mockSensor({ value: '1.64', unit: 'kWh' }),
 };
 
-test('the headline follows the live power sensor as it updates', () => {
+test('the headline follows the live power sensor as it updates', async () => {
   const { ha } = renderWithMock(<EnergyChart power="ha:lamp_power" />, entities);
   expect(screen.getByText('9 W')).toBeTruthy();
   act(() => ha.update('lamp_power', { value: '12', numeric: 12 }));
-  expect(screen.getByText('12 W')).toBeTruthy();
+  // It moves there, so it is a moment before it reads 12.
+  expect(await screen.findByText('12 W')).toBeTruthy();
 });
 
 test('an unavailable power sensor shows a dash, not a stale number', () => {

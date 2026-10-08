@@ -6,6 +6,7 @@ import type { IconName } from '../icon-data.ts';
 import { Icon } from '../icon.tsx';
 import { fallbackName, type EntityHandle } from '../entity-handle.ts';
 import { useEntityHandle } from '../hooks.ts';
+import { AnimatedNumber } from '../layout/animated-number.tsx';
 import { SensorHistory, type SensorSample } from '../layout/sensor-history.tsx';
 import { PlainButton } from '../layout/plain-button.tsx';
 import { DrawerTrigger } from '../layout/use-drawer.tsx';
@@ -119,6 +120,10 @@ export function SensorReadout({
   const level = ready ? rangeLevel(sensor.value, range) : undefined;
   const label = name ?? sensor?.name ?? fallbackName(entity);
   const valueText = ready ? `${formatValue(sensor.value)}${unit ? ` ${unit}` : ''}` : '';
+  // A number that changes moves to its new value; written to one decimal, as `valueText` is.
+  const reading = (n: number) => `${formatValue(String(n))}${unit ? ` ${unit}` : ''}`;
+  const moving =
+    ready && sensor.numeric !== undefined ? Math.round(sensor.numeric * 10) / 10 : undefined;
 
   const warning = level === 'low' || level === 'high';
   const hint =
@@ -130,7 +135,15 @@ export function SensorReadout({
     <>
       <Icon name={resolvedIcon} size={16} />
       <Typography as="span" variant="body" noWrap>
-        {ready ? valueText : statusLabels[status as Exclude<typeof status, 'ready'>]}
+        {ready ? (
+          moving !== undefined ? (
+            <AnimatedNumber value={moving} format={reading} />
+          ) : (
+            valueText
+          )
+        ) : (
+          statusLabels[status as Exclude<typeof status, 'ready'>]
+        )}
       </Typography>
       {warning ? <Icon name="lu:triangle-alert" size={16} /> : null}
     </>
@@ -146,6 +159,7 @@ export function SensorReadout({
         body={
           <SensorDetailBody
             valueText={valueText}
+            {...(moving !== undefined ? { moving, reading } : {})}
             level={level}
             range={range}
             unit={unit}
@@ -192,6 +206,8 @@ export function SensorReadout({
 
 function SensorDetailBody({
   valueText,
+  moving,
+  reading,
   level,
   range,
   unit,
@@ -200,6 +216,10 @@ function SensorDetailBody({
   history,
 }: {
   valueText: string;
+
+  /** The reading as a number, and how it is written, when it is one: it moves when it changes. */
+  moving?: number;
+  reading?: (n: number) => string;
   level: RangeLevel | undefined;
   range: SafeRange | undefined;
   unit: string;
@@ -215,7 +235,11 @@ function SensorDetailBody({
           Now
         </Typography>
         <Typography as="span" variant="stat">
-          {valueText}
+          {moving !== undefined && reading ? (
+            <AnimatedNumber value={moving} format={reading} />
+          ) : (
+            valueText
+          )}
         </Typography>
         {range ? (
           <Flex

@@ -33,6 +33,7 @@ import {
   type EnergySample,
   type EnergyUsage,
 } from '../layout/energy-chart.tsx';
+import { AnimatedNumber } from '../layout/animated-number.tsx';
 import { Board, Cell } from '../layout/board.tsx';
 import { Grid } from '../layout/grid.tsx';
 import { HistorySection } from '../layout/history-section.tsx';
@@ -175,6 +176,28 @@ function ComponentDoc({
         <PropsTable key={name} name={name} />
       ))}
     </section>
+  );
+}
+
+/** A reading that changes every time the button is pressed, to see it move. */
+function AnimatedNumberDemo() {
+  const [watts, setWatts] = useState(40.1);
+  return (
+    <Flex align="center" gap={4}>
+      <Typography as="span" variant="stat">
+        <AnimatedNumber value={watts} format={(n) => `${n.toFixed(1)} W`} />
+      </Typography>
+      <ActionButton
+        label="Change the reading"
+        icon="lu:refresh-cw"
+        onPress={() => {
+          // Down to a few watts, then back up to the lamp's own.
+          setWatts((current) => (current > 20 ? 3.2 : 38) + Math.round(Math.random() * 60) / 10);
+
+          return Promise.resolve();
+        }}
+      />
+    </Flex>
   );
 }
 
@@ -880,6 +903,14 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
               />
               <ClimateTile entity="ha:climate.unavailable" />
             </Grid>
+          </ComponentDoc>
+
+          <ComponentDoc
+            title="Animated Number"
+            components={['AnimatedNumber']}
+            description="A number that moves to its new value instead of jumping: a power reading, a temperature. The first value is shown at once; a new one is moved to from what is shown now, even if the last move has not finished. The text is changed directly, with no render for each step, so many of them cost little, and nothing moves when the app is set to reduced motion. `format` writes a number with its unit and should round, as it is called for each step. The drawer's power reading, the sensor readouts and a thermostat's current temperature use it."
+          >
+            <AnimatedNumberDemo />
           </ComponentDoc>
 
           <ComponentDoc
