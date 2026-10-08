@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.6.0 (2026-10-08)
+
+### Features
+
+- **ui:** the library's search can be an icon in the row of chips, and the selected chip's accent glides (#84) ([d565354](https://github.com/dstoyanoff/hashsome/commit/d5653542c4ad2e97ae77d4e0283d85e096e218ce))
+- **ui:** the full player has Library and Queue tabs where the queue has no room beside it (#83) ([7192d90](https://github.com/dstoyanoff/hashsome/commit/7192d90db29a9da1bab040c193476d343cb9a7ce))
+- **ui:** the artwork of a player card that is stretched grows, up to the width of its buttons (#82) ([6bed7c3](https://github.com/dstoyanoff/hashsome/commit/6bed7c34a979598a2957dddd366b7905fb079d8c))
+- **ui:** Board, Cell and TopRow lay a page out by sizes on the module grid (#81) ([370430e](https://github.com/dstoyanoff/hashsome/commit/370430e26635a51cb5af3f838bccc1501ad9c251))
+- **runtime:** hashsome start builds first, and --no-build serves what is already built (#80) ([0655640](https://github.com/dstoyanoff/hashsome/commit/065564031f2969efb2732820459a89e05e7ce272))
+- **ui:** a debug menu with the grid, fullscreen and the theme, switched on by HASHSOME_DEBUG (#79) ([021bcff](https://github.com/dstoyanoff/hashsome/commit/021bcffb2f8dcc775d2449a090bbf9caf783f670))
+- **ui:** the top row and tiles have explicit heights, and ?grid spans the whole page (#75) ([8c08481](https://github.com/dstoyanoff/hashsome/commit/8c084812df71fc00a96be51bc35baca6e606e4d3))
+- **ui:** ?grid draws the module grid over a page, and the page centers its content on it (#74) ([3385a61](https://github.com/dstoyanoff/hashsome/commit/3385a61719368e99106809bcb65388e226ff4e37))
+- **ui:** the player column can open its library and queue as overlays, and fits a short space (#73) ([f57ccc8](https://github.com/dstoyanoff/hashsome/commit/f57ccc80713b4bb0d9073880cb5edbb0cc5c4d38))
+
+### Fixes
+
+- **ui:** ?motion=reduced is for the visit, not kept in local storage (#77) ([11759dd](https://github.com/dstoyanoff/hashsome/commit/11759ddbaa163f78d3df36595fcef880ed1d6c53))
+- **ui:** a theme that follows the sun no longer re-renders the whole page in a loop (#76) ([1466491](https://github.com/dstoyanoff/hashsome/commit/146649123705e987eb669ca051c720cee088b52e))
+
 ## 0.5.0 (2026-10-07)
 
 ### Features
