@@ -33,10 +33,12 @@ import {
   type EnergySample,
   type EnergyUsage,
 } from '../layout/energy-chart.tsx';
+import { Board, Cell } from '../layout/board.tsx';
 import { Grid } from '../layout/grid.tsx';
 import { HistorySection } from '../layout/history-section.tsx';
 import { RoomHeader } from '../layout/room-header.tsx';
 import { Tile } from '../layout/tile.tsx';
+import { TopRow } from '../layout/top-row.tsx';
 import type { LogbookEntry } from '../layout/history-section.tsx';
 import { HashsomeProvider } from '../provider.tsx';
 import { createGalleryIntegration } from './fixtures.ts';
@@ -659,6 +661,68 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
               <Icon name="lu:moon" size={14} />
             </button>
           </header>
+
+          <ComponentDoc
+            title="Board & Cell"
+            components={['Board', 'Cell']}
+            description="A page for one known device, laid out on a grid. Each cell says only how big it is (`cols` wide, `rows` tall); the board places them in order, in the first spot they fit. Rows are as tall as their content, so a cell of `rows={2}` ends where the second row does, and `rows='fill'` runs from where the cell is placed down to the bottom of the page, whatever rows are beside it. Every card is a whole number of grid modules tall, the gap between columns and inside a cell is three modules and between rows six, so the result stays on the grid (turn on the debug menu's Show grid to see it)."
+          >
+            <Flex direction="column" gap={5}>
+              {/* The player covers the two rows beside it, and ends where the second does. */}
+              <Board>
+                <Cell cols={8}>
+                  <RoomHeader title="Kitchen" icon="lu:utensils-crossed" />
+                  <Grid columns={2}>
+                    <Tile label="Lamp" icon="lu:lightbulb" />
+                    <Tile label="Ceiling" icon="lu:lightbulb" />
+                  </Grid>
+                </Cell>
+                <Cell cols={4} rows={2}>
+                  <MediaPlayerColumn entity="ha:media_player.off" />
+                </Cell>
+                <Cell cols={8}>
+                  <RoomHeader title="Stairs" icon="lu:footprints" />
+                  <Grid columns={2}>
+                    <Tile label="Lamp" icon="lu:lightbulb" />
+                    <Tile label="Spotlights" icon="lu:lightbulb" />
+                  </Grid>
+                </Cell>
+              </Board>
+
+              {/* A page as tall as a small display, so `fill` has a bottom to reach. */}
+              <Flex direction="column" height={460} css={{ outline: '1px dashed currentColor' }}>
+                <Board>
+                  <Cell>
+                    <TopRow>
+                      <DateChip />
+                      <Clock format="24h" />
+                    </TopRow>
+                  </Cell>
+                  <Cell cols={8}>
+                    <RoomHeader title="Kitchen" icon="lu:utensils-crossed" />
+                    <Grid columns={2}>
+                      <Tile label="Lamp" icon="lu:lightbulb" />
+                      <Tile label="Ceiling" icon="lu:lightbulb" />
+                    </Grid>
+                  </Cell>
+                  <Cell cols={4} rows="fill">
+                    <MediaPlayerColumn entity="ha:media_player.off" />
+                  </Cell>
+                </Board>
+              </Flex>
+            </Flex>
+          </ComponentDoc>
+
+          <ComponentDoc
+            title="Top Row"
+            components={['TopRow']}
+            description="The row along the top of a page you build yourself instead of with `TopBar`: the date, the weather, the clock and the status in a line at the right, in the height the grid gives the top row (40px), with no padding of its own."
+          >
+            <TopRow>
+              <DateChip />
+              <Clock format="24h" />
+            </TopRow>
+          </ComponentDoc>
 
           <ComponentDoc
             title="Grid"
