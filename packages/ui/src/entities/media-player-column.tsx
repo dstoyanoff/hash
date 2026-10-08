@@ -173,6 +173,8 @@ function Card({ open, children }: { open?: () => void; children: ReactNode }) {
         overflow: 'hidden',
         maxHeight: '100%',
         minHeight: 0,
+        // Stretched beside other cards, the artwork takes the room and the controls stay at the bottom.
+        '& > [data-status]': { flex: '1 1 auto' },
       }}
       {...hold.handlers}
     >

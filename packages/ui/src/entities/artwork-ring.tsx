@@ -22,6 +22,7 @@ export function ArtworkRing({
   seekable,
   onOpen,
   size: SIZE = DEFAULT_SIZE,
+  maxSize = Infinity,
 }: {
   artworkUrl?: string | undefined;
 
@@ -37,6 +38,9 @@ export function ArtworkRing({
 
   /** The ring's diameter in px, when there is room for it; it shrinks in a column that is shorter. Default 168. */
   size?: number;
+
+  /** The most it grows to, in px, when the column has more room than `size` (a card stretched beside other cards). Default: as far as the width allows. */
+  maxSize?: number;
 }) {
   const ring = useRef<HTMLDivElement>(null);
 
@@ -99,131 +103,145 @@ export function ArtworkRing({
   };
 
   return (
-    // `SIZE` is the size it wants; in a column that is shorter it shrinks, staying round, to what fits
-    // (never below `MIN_SIZE`).
+    // The room the ring has: `SIZE` tall when the column has no more to give, taller when it has (a card
+    // stretched beside other cards), and shorter when it has less (never below `MIN_SIZE`). The ring in it is a
+    // square as big as that room allows, its width or its height, whichever is less.
     <Box
-      position="relative"
       css={{
-        flex: `0 1 ${SIZE}px`,
-        alignSelf: 'center',
-        aspectRatio: '1',
+        flex: `1 1 ${SIZE}px`,
         minHeight: MIN_SIZE,
-        maxWidth: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        containerType: 'size',
       }}
     >
       <Box
-        ref={ring}
-        position="absolute"
-        cursor={total !== undefined ? 'pointer' : 'default'}
-        {...(total !== undefined
-          ? {
-              role: 'slider',
-              tabIndex: 0,
-              'aria-label': 'Position',
-              'aria-valuemin': 0,
-              'aria-valuemax': Math.round(total ?? 0),
-              'aria-valuenow': Math.round(shown ?? 0),
-              onKeyDown,
-              onPointerDown: (event: PointerEvent<HTMLDivElement>) => {
-                const box = event.currentTarget.getBoundingClientRect();
-                const distance = Math.hypot(
-                  event.clientX - (box.left + box.width / 2),
-                  event.clientY - (box.top + box.height / 2),
-                );
+        position="relative"
+        css={{
+          aspectRatio: '1',
+          // A browser that does not know container units keeps the first, fixed size.
+          width: [
+            `${SIZE}px`,
+            `min(100cqw, 100cqh, ${Math.max(maxSize, SIZE)}px)`,
+          ] as unknown as string,
+          flex: 'none',
+        }}
+      >
+        <Box
+          ref={ring}
+          position="absolute"
+          cursor={total !== undefined ? 'pointer' : 'default'}
+          {...(total !== undefined
+            ? {
+                role: 'slider',
+                tabIndex: 0,
+                'aria-label': 'Position',
+                'aria-valuemin': 0,
+                'aria-valuemax': Math.round(total ?? 0),
+                'aria-valuenow': Math.round(shown ?? 0),
+                onKeyDown,
+                onPointerDown: (event: PointerEvent<HTMLDivElement>) => {
+                  const box = event.currentTarget.getBoundingClientRect();
+                  const distance = Math.hypot(
+                    event.clientX - (box.left + box.width / 2),
+                    event.clientY - (box.top + box.height / 2),
+                  );
 
-                // Only the ring itself seeks, not the artwork inside it.
-                if (distance < box.width * 0.4) {
-                  return;
-                }
-
-                // Where it was pressed is where the position starts.
-                const turn = turnAt(event) ?? 0;
-                drag.current = { turn, along: turn };
-                event.currentTarget.setPointerCapture?.(event.pointerId);
-                seek.preview(Math.round(turn * total));
-              },
-              onPointerMove: (event: PointerEvent<HTMLDivElement>) => {
-                if (drag.current) {
-                  seek.preview(follow(event) ?? 0);
-                }
-              },
-              onPointerUp: (event: PointerEvent<HTMLDivElement>) => {
-                if (drag.current) {
-                  const next = follow(event);
-                  drag.current = null;
-                  if (next !== undefined) {
-                    seek.commit(next);
+                  // Only the ring itself seeks, not the artwork inside it.
+                  if (distance < box.width * 0.4) {
+                    return;
                   }
-                }
-              },
-              // A touch the browser took or lost never ends with a release: let go of the position.
-              onPointerCancel: () => {
-                drag.current = null;
-                seek.cancel();
-              },
-              onLostPointerCapture: () => {
-                if (drag.current) {
+
+                  // Where it was pressed is where the position starts.
+                  const turn = turnAt(event) ?? 0;
+                  drag.current = { turn, along: turn };
+                  event.currentTarget.setPointerCapture?.(event.pointerId);
+                  seek.preview(Math.round(turn * total));
+                },
+                onPointerMove: (event: PointerEvent<HTMLDivElement>) => {
+                  if (drag.current) {
+                    seek.preview(follow(event) ?? 0);
+                  }
+                },
+                onPointerUp: (event: PointerEvent<HTMLDivElement>) => {
+                  if (drag.current) {
+                    const next = follow(event);
+                    drag.current = null;
+                    if (next !== undefined) {
+                      seek.commit(next);
+                    }
+                  }
+                },
+                // A touch the browser took or lost never ends with a release: let go of the position.
+                onPointerCancel: () => {
                   drag.current = null;
                   seek.cancel();
-                }
-              },
-            }
-          : {})}
-        css={{ inset: 0, touchAction: 'none' }}
-      >
-        <svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden="true">
-          <circle
-            cx="50"
-            cy="50"
-            r="47"
-            fill="none"
-            strokeWidth="3"
-            css={({ palette }) => ({ stroke: palette.border })}
-          />
-          {fraction !== undefined ? (
+                },
+                onLostPointerCapture: () => {
+                  if (drag.current) {
+                    drag.current = null;
+                    seek.cancel();
+                  }
+                },
+              }
+            : {})}
+          css={{ inset: 0, touchAction: 'none' }}
+        >
+          <svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden="true">
             <circle
               cx="50"
               cy="50"
               r="47"
               fill="none"
               strokeWidth="3"
-              strokeLinecap="round"
-              pathLength={100}
-              strokeDasharray={`${fraction * 100} 100`}
-              transform="rotate(-90 50 50)"
-              css={({ palette }) => ({ stroke: palette.accent })}
+              css={({ palette }) => ({ stroke: palette.border })}
             />
-          ) : null}
-        </svg>
+            {fraction !== undefined ? (
+              <circle
+                cx="50"
+                cy="50"
+                r="47"
+                fill="none"
+                strokeWidth="3"
+                strokeLinecap="round"
+                pathLength={100}
+                strokeDasharray={`${fraction * 100} 100`}
+                transform="rotate(-90 50 50)"
+                css={({ palette }) => ({ stroke: palette.accent })}
+              />
+            ) : null}
+          </svg>
+        </Box>
+        <Box position="absolute" radius="full" border css={{ inset: '9%' }} />
+        <Flex
+          center
+          position="absolute"
+          radius="full"
+          overflow="hidden"
+          background="surfaceRaised"
+          color="textMuted"
+          cursor={onOpen ? 'pointer' : 'inherit'}
+          css={{ inset: '14%' }}
+          {...(onOpen
+            ? {
+                role: 'button',
+                tabIndex: 0,
+                'aria-label': 'Open media browser',
+                title: 'Open media browser',
+                onClick: onOpen,
+                onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onOpen();
+                  }
+                },
+              }
+            : {})}
+        >
+          {artworkUrl ? <Cover src={artworkUrl} /> : <Icon name="lu:music" size={40} />}
+        </Flex>
       </Box>
-      <Box position="absolute" radius="full" border css={{ inset: '9%' }} />
-      <Flex
-        center
-        position="absolute"
-        radius="full"
-        overflow="hidden"
-        background="surfaceRaised"
-        color="textMuted"
-        cursor={onOpen ? 'pointer' : 'inherit'}
-        css={{ inset: '14%' }}
-        {...(onOpen
-          ? {
-              role: 'button',
-              tabIndex: 0,
-              'aria-label': 'Open media browser',
-              title: 'Open media browser',
-              onClick: onOpen,
-              onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  onOpen();
-                }
-              },
-            }
-          : {})}
-      >
-        {artworkUrl ? <Cover src={artworkUrl} /> : <Icon name="lu:music" size={40} />}
-      </Flex>
     </Box>
   );
 }
