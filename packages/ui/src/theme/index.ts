@@ -43,6 +43,7 @@ const shared = {
     scrim: 20,
     drawer: 21,
     popover: 30,
+    modal: 40,
   },
   shadow: {
     drawer: '0 20px 48px rgba(0, 0, 0, 0.5)',

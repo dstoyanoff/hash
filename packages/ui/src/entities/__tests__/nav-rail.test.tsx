@@ -1,8 +1,10 @@
 import { LocalClient, MockIntegration } from '@hashsome/core';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'e-prim';
 import { MemoryRouter } from 'react-router';
-import { expect, test } from 'vitest';
+import { afterEach, expect, test } from 'vitest';
+
+afterEach(cleanup);
 import { HashsomeProvider } from '../../provider.tsx';
 import { darkTheme } from '../../theme/index.ts';
 import { NavRail } from '../nav-rail.tsx';
@@ -53,4 +55,23 @@ test('showThemeToggle is off by default, and toggles the theme when on', () => {
   const toggle = screen.getByRole('button', { name: /switch to light theme/i });
   fireEvent.click(toggle);
   expect(screen.getByRole('button', { name: /switch to dark theme/i })).toBeTruthy();
+});
+
+test('an item with attention says so to a screen reader, and the others do not', () => {
+  render(
+    <ThemeProvider theme={darkTheme}>
+      <MemoryRouter>
+        <NavRail
+          base="/home"
+          items={[
+            { to: '', label: 'Home', icon: 'lu:house' },
+            { to: 'maintenance', label: 'Maintenance', icon: 'lu:wrench', attention: 'urgent' },
+          ]}
+        />
+      </MemoryRouter>
+    </ThemeProvider>,
+  );
+
+  expect(screen.getByRole('link', { name: 'Maintenance, needs attention' })).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'Home' })).toBeTruthy();
 });

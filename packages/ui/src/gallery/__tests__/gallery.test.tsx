@@ -29,9 +29,12 @@ test('gallery renders every component', () => {
   expect(screen.getAllByText('Unavailable').length).toBeGreaterThan(3);
   expect(screen.getAllByText('Not found').length).toBeGreaterThan(0);
   // NavRail and NavDock are demoed as separate contained previews here (not as this page's own
-  // chrome), so "Home" resolves to one link per component.
+  // chrome), each plain and each with dots on two pages, so "Home" resolves to one link per preview.
   const homeLinks = screen.getAllByRole('link', { name: 'Home' });
-  expect(homeLinks).toHaveLength(2);
+  expect(homeLinks).toHaveLength(4);
+  // The pages with a dot say so.
+  expect(screen.getAllByRole('link', { name: 'Lights, needs attention' })).toHaveLength(2);
+  expect(screen.getAllByRole('link', { name: 'Climate, needs attention' })).toHaveLength(2);
   for (const link of homeLinks) {
     expect(link.getAttribute('aria-current')).toBe('page');
   }

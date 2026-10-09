@@ -268,6 +268,112 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
     doc: '',
     props: [],
   },
+  TaskTile: {
+    doc: 'A recurring task as a tile: its name, where it stands (up to date, due soon, overdue) and when it is due. Tapping it asks whether it is done, with the day it was done on (today, or an earlier one if it was forgotten), and only a confirmation calls `onComplete`, so a stray tap does nothing.',
+    props: [
+      {
+        doc: 'What is to be done, e.g. `Septic additive`.',
+        name: 'label',
+        optional: false,
+        type: 'string',
+      },
+      {
+        doc: 'Icon id, e.g. `lu:wrench`.',
+        name: 'icon',
+        optional: true,
+        type: 'IconName',
+      },
+      {
+        doc: 'Where the task stands. Whoever has the task decides it: how soon is "soon" is different for a weekly task and a yearly one.',
+        name: 'state',
+        optional: false,
+        type: 'TaskState',
+      },
+      {
+        doc: 'When it is next due. Shown as "Due in 2 days" or "Overdue by 3 days".',
+        name: 'dueAt',
+        optional: true,
+        type: 'Date | undefined',
+      },
+      {
+        doc: 'When it was last done, shown in the question that marks it done again.',
+        name: 'lastDoneAt',
+        optional: true,
+        type: 'Date | undefined',
+      },
+      {
+        doc: 'Status of the thing behind it, as for `Tile`: anything but `ready` shows why instead and disables the tile.',
+        name: 'status',
+        optional: true,
+        type: 'EntityStatus',
+      },
+      {
+        doc: 'The person confirmed it is done, on this day (today unless they chose another, in case it was forgotten at the time). Rejecting shows the error in the dialog and leaves it open.',
+        name: 'onComplete',
+        optional: false,
+        type: '(doneOn: Date) => void | Promise<void>',
+      },
+    ],
+  },
+  ConfirmDialog: {
+    doc: 'A question that has to be answered before something is done, so a stray tap cannot do it: a card in the middle of the page over a dimmed scrim, with a way to back out (Cancel, a tap outside, Escape) and a button to go ahead. It is drawn over the whole page, whatever it is opened from. Focus moves into it while it is open and returns to what had it after, and Tab stays inside.',
+    props: [
+      {
+        doc: 'Whether the dialog is showing.',
+        name: 'open',
+        optional: false,
+        type: 'boolean',
+      },
+      {
+        doc: 'What is being asked, as a short question: "Mark the septic additive as done?".',
+        name: 'title',
+        optional: false,
+        type: 'string',
+      },
+      {
+        doc: 'A line under the title.',
+        name: 'description',
+        optional: true,
+        type: 'ReactNode',
+      },
+      {
+        doc: 'Label of the button that goes ahead. Default `Confirm`.',
+        name: 'confirmLabel',
+        optional: true,
+        type: 'string',
+      },
+      {
+        doc: 'Label of the button that backs out. Default `Cancel`.',
+        name: 'cancelLabel',
+        optional: true,
+        type: 'string',
+      },
+      {
+        doc: 'The person went ahead.',
+        name: 'onConfirm',
+        optional: false,
+        type: '() => void',
+      },
+      {
+        doc: 'The person backed out: the Cancel button, a tap outside, or Escape.',
+        name: 'onCancel',
+        optional: false,
+        type: '() => void',
+      },
+      {
+        doc: 'Something is being done with the answer: both buttons wait.',
+        name: 'busy',
+        optional: true,
+        type: 'boolean',
+      },
+      {
+        doc: 'More to ask for before going ahead, e.g. a date.',
+        name: 'children',
+        optional: true,
+        type: 'ReactNode',
+      },
+    ],
+  },
   EnergyChart: {
     doc: "A power-draw chart for an entity's detail drawer, e.g. from a Shelly's energy monitoring. Generic — any entity type can supply it. Deliberately two-tier: a bare sparkline while the drawer is at its normal (side) width, and the full interactive chart — axes, tooltip, a selectable time range — only once it's expanded to fullscreen, where there's room for it.",
     props: [
