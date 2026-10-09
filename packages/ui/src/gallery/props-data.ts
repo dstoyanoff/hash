@@ -832,6 +832,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         optional: true,
         type: 'boolean',
       },
+      {
+        doc: "How long, in ms, the display may be left alone on a page other than the main one (the item whose `to` is `''`) before it goes back to that page; `false` for never. Any touch, click, key or scroll starts the time again. Defaults to `HashsomeProvider`'s `idleReturn`, which is off unless the app turns it on.",
+        name: 'idleReturn',
+        optional: true,
+        type: 'number | false',
+      },
     ],
   },
   NavDock: {
@@ -854,6 +860,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         name: 'showThemeToggle',
         optional: true,
         type: 'boolean',
+      },
+      {
+        doc: "How long, in ms, the display may be left alone on a page other than the main one (the item whose `to` is `''`) before it goes back to that page; `false` for never. Any touch, click, key or scroll starts the time again. Defaults to `HashsomeProvider`'s `idleReturn`, which is off unless the app turns it on.",
+        name: 'idleReturn',
+        optional: true,
+        type: 'number | false',
       },
     ],
   },
@@ -1085,6 +1097,12 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         name: 'sun',
         optional: true,
         type: 'EntityRef',
+      },
+      {
+        doc: "How long, in ms, a display is left alone on a dashboard's page other than its main one before it goes back to the main page, so a wall display does not stay on the music page for hours. Any touch, click, key or scroll starts the time again, and the main page itself is left alone. It is done by the dashboard's `NavRail` or `NavDock`, which can set their own `idleReturn` (a time, or `false`) over this. Default `false`: off.",
+        name: 'idleReturn',
+        optional: true,
+        type: 'number | false',
       },
       {
         doc: 'The app.',

@@ -4,7 +4,8 @@ import { NavLink } from 'react-router';
 import { Icon } from '../icon.tsx';
 import { usePageInset } from '../layout/page.tsx';
 import { AttentionDot } from './attention-dot.tsx';
-import type { NavItem } from './nav-rail.tsx';
+import { useIdleReturn, useIdleReturnDefault } from '../layout/use-idle-return.ts';
+import { mainPath, type NavItem } from './nav-rail.tsx';
 import { useThemeToggle } from '../provider.tsx';
 
 export interface NavDockProps {
@@ -16,12 +17,17 @@ export interface NavDockProps {
 
   /** Adds a light/dark toggle at the end of the dock. Off by default — meant for development or a project that deliberately exposes it, not every kiosk install. */
   showThemeToggle?: boolean;
+
+  /** How long, in ms, the display may be left alone on a page other than the main one (the item whose `to` is `''`) before it goes back to that page; `false` for never. Any touch, click, key or scroll starts the time again. Defaults to `HashsomeProvider`'s `idleReturn`, which is off unless the app turns it on. */
+  idleReturn?: number | false;
 }
 
 /** Floating bottom pill for switching between a dashboard's pages. Must be rendered inside a
  * router. `position: fixed`, floating over the page; it reserves the space it takes in the
  * surrounding `Page`, which pads for it. */
-export function NavDock({ items, base, showThemeToggle }: NavDockProps) {
+export function NavDock({ items, base, showThemeToggle, idleReturn }: NavDockProps) {
+  const appDefault = useIdleReturnDefault();
+  useIdleReturn({ to: mainPath(items, base), after: idleReturn ?? appDefault });
   usePageInset('bottom', 88);
 
   return (
