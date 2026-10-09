@@ -5,12 +5,16 @@ import type { IconName } from '../icon-data.ts';
 import { Icon } from '../icon.tsx';
 import { usePageInset } from '../layout/page.tsx';
 import { useThemeToggle } from '../provider.tsx';
+import { AttentionDot } from './attention-dot.tsx';
 
 export interface NavItem {
   /** Route path relative to `base`, e.g. `''` (the dashboard's home) or `'lights'`. */
   to: string;
   label: string;
   icon: IconName;
+
+  /** A dot on the item for something on that page that needs a look: `notice` (warm) or `urgent` (red). Nothing by default. */
+  attention?: 'notice' | 'urgent';
 }
 
 export interface NavRailProps {
@@ -49,7 +53,7 @@ export function NavRail({ items, base, showThemeToggle }: NavRailProps) {
           key={item.to}
           to={item.to ? `${base}/${item.to}` : base}
           end
-          aria-label={item.label}
+          aria-label={item.attention ? `${item.label}, needs attention` : item.label}
           title={item.label}
         >
           {({ isActive }) => (
@@ -61,10 +65,12 @@ export function NavRail({ items, base, showThemeToggle }: NavRailProps) {
               height={44}
               radius="chrome"
               cursor="pointer"
+              position="relative"
               color={isActive ? 'accentText' : 'line'}
               {...(isActive ? { background: 'accent' } : {})}
             >
               <Icon name={item.icon} size={22} />
+              {item.attention ? <AttentionDot level={item.attention} /> : null}
             </Flex>
           )}
         </NavLink>

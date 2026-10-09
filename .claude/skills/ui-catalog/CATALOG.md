@@ -151,6 +151,44 @@ function IconButton({
 });
 ```
 
+### `taskLine`
+
+The line under a task's name.
+
+```ts
+function taskLine(state: TaskState, dueAt: Date | undefined, now: Date): string;
+```
+
+### `TaskTile`
+
+A recurring task as a tile: its name, where it stands (up to date, due soon, overdue) and when it is due. Tapping it asks whether it is done, with the day it was done on (today, or an earlier one if it was forgotten), and only a confirmation calls `onComplete`, so a stray tap does nothing.
+
+| Prop         | Type                                      | Required |                                                                                                                                                                                   |
+| ------------ | ----------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `label`      | `string`                                  | yes      | What is to be done, e.g. `Septic additive`.                                                                                                                                       |
+| `icon`       | `IconName`                                | no       | Icon id, e.g. `lu:wrench`.                                                                                                                                                        |
+| `state`      | `TaskState`                               | yes      | Where the task stands. Whoever has the task decides it: how soon is "soon" is different for a weekly task and a yearly one.                                                       |
+| `dueAt`      | `Date \| undefined`                       | no       | When it is next due. Shown as "Due in 2 days" or "Overdue by 3 days".                                                                                                             |
+| `lastDoneAt` | `Date \| undefined`                       | no       | When it was last done, shown in the question that marks it done again.                                                                                                            |
+| `status`     | `EntityStatus`                            | no       | Status of the thing behind it, as for `Tile`: anything but `ready` shows why instead and disables the tile.                                                                       |
+| `onComplete` | `(doneOn: Date) => void \| Promise<void>` | yes      | The person confirmed it is done, on this day (today unless they chose another, in case it was forgotten at the time). Rejecting shows the error in the dialog and leaves it open. |
+
+### `ConfirmDialog`
+
+A question that has to be answered before something is done, so a stray tap cannot do it: a card in the middle of the page over a dimmed scrim, with a way to back out (Cancel, a tap outside, Escape) and a button to go ahead. It is drawn over the whole page, whatever it is opened from. Focus moves into it while it is open and returns to what had it after, and Tab stays inside.
+
+| Prop           | Type         | Required |                                                                                |
+| -------------- | ------------ | -------- | ------------------------------------------------------------------------------ |
+| `open`         | `boolean`    | yes      | Whether the dialog is showing.                                                 |
+| `title`        | `string`     | yes      | What is being asked, as a short question: "Mark the septic additive as done?". |
+| `description`  | `ReactNode`  | no       | A line under the title.                                                        |
+| `confirmLabel` | `string`     | no       | Label of the button that goes ahead. Default `Confirm`.                        |
+| `cancelLabel`  | `string`     | no       | Label of the button that backs out. Default `Cancel`.                          |
+| `onConfirm`    | `() => void` | yes      | The person went ahead.                                                         |
+| `onCancel`     | `() => void` | yes      | The person backed out: the Cancel button, a tap outside, or Escape.            |
+| `busy`         | `boolean`    | no       | Something is being done with the answer: both buttons wait.                    |
+| `children`     | `ReactNode`  | no       | More to ask for before going ahead, e.g. a date.                               |
+
 ### `EnergyChart`
 
 A power-draw chart for an entity's detail drawer, e.g. from a Shelly's energy monitoring. Generic — any entity type can supply it. Deliberately two-tier: a bare sparkline while the drawer is at its normal (side) width, and the full interactive chart — axes, tooltip, a selectable time range — only once it's expanded to fullscreen, where there's room for it.

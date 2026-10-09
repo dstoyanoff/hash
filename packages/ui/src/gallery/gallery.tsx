@@ -38,6 +38,8 @@ import { Board, Cell } from '../layout/board.tsx';
 import { Grid } from '../layout/grid.tsx';
 import { HistorySection } from '../layout/history-section.tsx';
 import { RoomHeader } from '../layout/room-header.tsx';
+import { ConfirmDialog } from '../layout/confirm-dialog.tsx';
+import { TaskTile } from '../layout/task-tile.tsx';
 import { Tile } from '../layout/tile.tsx';
 import { TopRow } from '../layout/top-row.tsx';
 import type { LogbookEntry } from '../layout/history-section.tsx';
@@ -56,6 +58,15 @@ const NAV_ITEMS = [
   { to: 'climate', label: 'Climate', icon: 'lu:thermometer' as const },
   { to: 'music', label: 'Music', icon: 'lu:music' as const },
 ];
+
+/** The same pages with something to look at on two of them: a warm dot (`notice`) and a red one (`urgent`). */
+const ATTENTION_ITEMS = NAV_ITEMS.map((item) =>
+  item.to === 'lights'
+    ? { ...item, attention: 'notice' as const }
+    : item.to === 'climate'
+      ? { ...item, attention: 'urgent' as const }
+      : item,
+);
 
 const codeStyles = {
   fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace",
@@ -176,6 +187,46 @@ function ComponentDoc({
         <PropsTable key={name} name={name} />
       ))}
     </section>
+  );
+}
+
+/** A day `n` days from today, at the start of it. */
+const inDays = (n: number) => {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + n);
+};
+
+/** What marking something done takes in a demo: a moment, and nothing else. */
+const pause = () => new Promise<void>((resolve) => setTimeout(resolve, 600));
+
+function ConfirmDialogDemo() {
+  const [open, setOpen] = useState(false);
+  const [answer, setAnswer] = useState<string>();
+  return (
+    <Flex align="center" gap={4}>
+      <ActionButton
+        label="Empty the trash?"
+        icon="lu:trash-2"
+        onPress={async () => setOpen(true)}
+      />
+      <Typography as="span" variant="body" color="textMuted">
+        {answer ?? 'Not asked yet'}
+      </Typography>
+      <ConfirmDialog
+        open={open}
+        title="Empty the trash?"
+        description="Nothing in it can be brought back."
+        confirmLabel="Empty it"
+        onConfirm={() => {
+          setAnswer('Emptied');
+          setOpen(false);
+        }}
+        onCancel={() => {
+          setAnswer('Left alone');
+          setOpen(false);
+        }}
+      />
+    </Flex>
   );
 }
 
@@ -811,6 +862,54 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
           </ComponentDoc>
 
           <ComponentDoc
+            title="Task Tile"
+            components={['TaskTile']}
+            description="A recurring task (a filter to change, an additive to add) as a tile: its name, where it stands (up to date, due soon, overdue) and when it is due. Whoever has the task decides the state, since how soon is 'soon' differs between a weekly task and a yearly one. Tap one: it asks whether it is done, and for the day it was done on (today, or an earlier one if it was forgotten), and only a confirmation calls `onComplete`. Marking one done here only waits a moment."
+          >
+            <Grid>
+              <TaskTile
+                label="Filter"
+                icon="lu:wrench"
+                state="ok"
+                dueAt={inDays(20)}
+                lastDoneAt={inDays(-10)}
+                onComplete={pause}
+              />
+              <TaskTile
+                label="Additive"
+                icon="lu:pipette"
+                state="dueSoon"
+                dueAt={inDays(2)}
+                lastDoneAt={inDays(-5)}
+                onComplete={pause}
+              />
+              <TaskTile
+                label="Salt"
+                icon="lu:shaker"
+                state="overdue"
+                dueAt={inDays(-3)}
+                lastDoneAt={inDays(-10)}
+                onComplete={pause}
+              />
+              <TaskTile
+                label="Not found"
+                icon="lu:wrench"
+                state="ok"
+                status="missing"
+                onComplete={pause}
+              />
+            </Grid>
+          </ComponentDoc>
+
+          <ComponentDoc
+            title="Confirm Dialog"
+            components={['ConfirmDialog']}
+            description="A question that has to be answered before something is done, so a stray tap cannot do it. It is drawn over the whole page, with a way to back out (Cancel, a tap outside, Escape) and a button to go ahead; more to ask for (a date, say) goes inside it."
+          >
+            <ConfirmDialogDemo />
+          </ComponentDoc>
+
+          <ComponentDoc
             title="Icon"
             components={['Icon']}
             description="A plain prefixed string, no import: `lu:` is Lucide, `tb:` is Tabler outline. It takes the surrounding text color and scales with `size` (default 24px)."
@@ -1020,7 +1119,7 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
           <ComponentDoc
             title="Navigation"
             components={['NavRail', 'NavDock', 'Page']}
-            description="Routes within one dashboard. A dashboard includes one itself, usually in its layout route: NavRail is fixed to the left and NavDock floats at the bottom, and both reserve the space they take in the Page around them, which pads so content never sits under them."
+            description="Routes within one dashboard. A dashboard includes one itself, usually in its layout route: NavRail is fixed to the left and NavDock floats at the bottom, and both reserve the space they take in the Page around them, which pads so content never sits under them. An item can carry a dot (`attention`: `notice` or `urgent`) when something on its page needs a look, so it is seen without opening the page."
           >
             <Flex direction="column" gap={5}>
               <SubPreview label="NavRail, in a Page" height={240}>
@@ -1033,6 +1132,17 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
               </SubPreview>
               <SubPreview label="NavDock" height={140}>
                 <NavDock base="/gallery" items={NAV_ITEMS} />
+              </SubPreview>
+              <SubPreview label="NavRail, with something to look at on two pages" height={240}>
+                <Page height="100%">
+                  <NavRail base="/gallery" items={ATTENTION_ITEMS} />
+                  <Typography as="p" variant="body" color="textMuted">
+                    A warm dot says something is coming up, a red one that it needs doing now.
+                  </Typography>
+                </Page>
+              </SubPreview>
+              <SubPreview label="NavDock, with something to look at on two pages" height={140}>
+                <NavDock base="/gallery" items={ATTENTION_ITEMS} />
               </SubPreview>
             </Flex>
           </ComponentDoc>

@@ -72,6 +72,9 @@ declare module 'e-prim' {
 
     /** A floating panel anchored to a control (the date picker's calendar), above what it sits in. */
     popover: number;
+
+    /** A dialog (`ConfirmDialog`) and the scrim behind it, over everything else on the page. */
+    modal: number;
   }
 
   interface TTypography {

@@ -3,6 +3,7 @@ import { Flex } from 'e-prim';
 import { NavLink } from 'react-router';
 import { Icon } from '../icon.tsx';
 import { usePageInset } from '../layout/page.tsx';
+import { AttentionDot } from './attention-dot.tsx';
 import type { NavItem } from './nav-rail.tsx';
 import { useThemeToggle } from '../provider.tsx';
 
@@ -45,7 +46,7 @@ export function NavDock({ items, base, showThemeToggle }: NavDockProps) {
           key={item.to}
           to={item.to ? `${base}/${item.to}` : base}
           end
-          aria-label={item.label}
+          aria-label={item.attention ? `${item.label}, needs attention` : item.label}
           title={item.label}
         >
           {({ isActive }) => (
@@ -57,10 +58,12 @@ export function NavDock({ items, base, showThemeToggle }: NavDockProps) {
               height={44}
               radius="full"
               cursor="pointer"
+              position="relative"
               color={isActive ? 'accentText' : 'line'}
               {...(isActive ? { background: 'accent' } : {})}
             >
               <Icon name={item.icon} size={22} />
+              {item.attention ? <AttentionDot level={item.attention} /> : null}
             </Flex>
           )}
         </NavLink>

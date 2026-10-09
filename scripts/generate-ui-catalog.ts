@@ -55,6 +55,8 @@ const sections: Section[] = [
       'layout/animated-outlet.tsx',
       'layout/room-header.tsx',
       'layout/tile.tsx',
+      'layout/task-tile.tsx',
+      'layout/confirm-dialog.tsx',
       'layout/energy-chart.tsx',
       'layout/history-section.tsx',
       'icon.tsx',
