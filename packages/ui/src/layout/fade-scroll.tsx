@@ -4,7 +4,7 @@ import { Flex, type FlexProps } from 'e-prim';
 import { useCallback, useEffect, useRef, useState, type ElementType } from 'react';
 
 /** How wide the fade at a scrolled edge is. */
-const FADE = 40;
+export const FADE = 40;
 
 const maskFor = (start: boolean, end: boolean) =>
   `linear-gradient(to right, ${start ? 'transparent' : '#000'} 0, #000 ${start ? FADE : 0}px, #000 calc(100% - ${end ? FADE : 0}px), ${end ? 'transparent' : '#000'} 100%)`;

@@ -935,3 +935,168 @@ test('Clear with nothing playing empties the whole queue, since there is nothing
   await clearing;
   expect(deletions(socket)).toEqual([]);
 });
+
+test('after a skip, the old track stays on show, with its time, whatever the queue and the player report until the new one starts', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket, [player({ current_media: { title: 'Old', artist: 'A' } })]);
+  const at = (seconds: number) => vi.setSystemTime(new Date(Date.UTC(2026, 0, 1) + seconds * 1000));
+  const queue = (uri: string, elapsed: number) =>
+    socket().receive({
+      event: 'queue_updated',
+      object_id: 'kitchen_speaker',
+      data: {
+        queue_id: 'kitchen_speaker',
+        state: 'playing',
+        elapsed_time: elapsed,
+        current_item: { media_item: { uri } },
+      },
+    });
+
+  const title = (name: string) =>
+    socket().receive({
+      event: 'player_updated',
+      object_id: 'kitchen_speaker',
+      data: player({ current_media: { title: name, artist: 'A' } }),
+    });
+
+  at(0);
+  queue('old', 6);
+  at(10);
+  queue('new', 0);
+  title('New');
+  expect(ma.getEntity('kitchen_speaker')).toMatchObject({ media: { title: 'Old' }, position: 6 });
+
+  // Three seconds on, both report the old track again, at its own position...
+  at(13);
+  queue('old', 13.4);
+  title('Old');
+  expect(ma.getEntity('kitchen_speaker')).toMatchObject({ media: { title: 'Old' }, position: 6 });
+
+  // ...before the new one really starts.
+  at(14);
+  queue('new', 0.5);
+  title('New');
+  expect(ma.getEntity('kitchen_speaker')).toMatchObject({ media: { title: 'New' }, position: 0.5 });
+});
+
+test('a skip as Music Assistant really reports it keeps the old track on show until the new one has started', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket, [player({ current_media: { title: 'One', artist: 'A' } })]);
+  const at = (seconds: number) => vi.setSystemTime(new Date(Date.UTC(2026, 0, 1) + seconds * 1000));
+
+  const queue = (state: string, elapsed: number, uri = 'two') =>
+    socket().receive({
+      event: 'queue_updated',
+      object_id: 'kitchen_speaker',
+      data: {
+        queue_id: 'kitchen_speaker',
+        state,
+        elapsed_time: elapsed,
+        current_item: { media_item: { uri } },
+      },
+    });
+
+  const playback = (state: string, title = 'Two') =>
+    socket().receive({
+      event: 'player_updated',
+      object_id: 'kitchen_speaker',
+      data: player({ playback_state: state, current_media: { title, artist: 'A' } }),
+    });
+
+  const shown: (number | undefined)[] = [];
+  const note = () =>
+    shown.push((ma.getEntity('kitchen_speaker') as { position?: number } | undefined)?.position);
+
+  at(0);
+  queue('playing', 6, 'one');
+  at(10);
+  queue('playing', 0);
+  playback('playing');
+  note();
+  at(11);
+  queue('playing', 0);
+  note();
+  // Three seconds after the skip the player flips to idle and back before the track really starts.
+  at(13);
+  playback('idle');
+  queue('idle', 0);
+  note();
+  at(13.1);
+  playback('playing');
+  queue('idle', 0);
+  note();
+  at(13.6);
+  queue('playing', 0.5);
+  note();
+
+  // The old track stays on show, and keeps its time, until the new one has really started.
+  expect(shown).toEqual([6, 6, 6, 6, 0.5]);
+});
+
+test('a Sonos that keeps playing the old track for 23 s after a skip: the old one stays on show until the new one has started', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket, [
+    player({ current_media: { title: 'Old (Radio Edit)', artist: 'A' } }),
+  ]);
+
+  const at = (seconds: number) => vi.setSystemTime(new Date(Date.UTC(2026, 0, 1) + seconds * 1000));
+
+  const queue = (state: string, elapsed: number, uri: string) =>
+    socket().receive({
+      event: 'queue_updated',
+      object_id: 'kitchen_speaker',
+      data: {
+        queue_id: 'kitchen_speaker',
+        state,
+        elapsed_time: elapsed,
+        current_item: { media_item: { uri } },
+      },
+    });
+
+  const playback = (state: string, title: string) =>
+    socket().receive({
+      event: 'player_updated',
+      object_id: 'kitchen_speaker',
+      data: player({ playback_state: state, current_media: { title, artist: 'A' } }),
+    });
+
+  const seen: string[] = [];
+  const note = () => {
+    const entity = ma.getEntity('kitchen_speaker') as {
+      playback: string;
+      media?: { title?: string };
+      position?: number;
+    };
+
+    seen.push(`${entity.media?.title}@${entity.position}`);
+  };
+
+  at(0);
+  queue('playing', 0.7, 'old');
+  at(5);
+  // Next: the new track is announced, and the player says so.
+  queue('playing', 0, 'new');
+  playback('playing', 'New');
+  note();
+  // The Sonos goes on with the old one for 23 s, then reports it, with its own position.
+  at(28);
+  queue('playing', 19.2, 'old');
+  playback('idle', 'Old (Radio Edit)');
+  note();
+  at(28.2);
+  queue('playing', 0, 'old');
+  playback('playing', 'Old (Radio Edit)');
+  note();
+  // And then the new one really starts.
+  at(28.7);
+  queue('playing', 0.48, 'new');
+  playback('playing', 'New');
+  note();
+
+  expect(seen).toEqual([
+    'Old (Radio Edit)@0.7',
+    'Old (Radio Edit)@0.7',
+    'Old (Radio Edit)@0.7',
+    'New@0.48',
+  ]);
+});

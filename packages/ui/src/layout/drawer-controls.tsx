@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import { Box, Flex, Typography } from 'e-prim';
-import { motion } from 'motion/react';
+import { animate, motion } from 'motion/react';
 import { MarqueeText } from './marquee-text.tsx';
 import {
   useEffect,
@@ -12,7 +12,7 @@ import {
 } from 'react';
 import type { IconName } from '../icon-data.ts';
 import { Icon } from '../icon.tsx';
-import { FadeScroll } from './fade-scroll.tsx';
+import { FADE, FadeScroll } from './fade-scroll.tsx';
 import { RoundButton } from './round-button.tsx';
 
 /** Fine adjustment: a press nudges by `delta` (1%); holding repeats in steps of 10 until released. */
@@ -264,6 +264,53 @@ export function ChipRow({
   // The accent behind the selected chip is one pill that glides to the next; its own id, so two rows
   // on a page do not share it.
   const pill = useId();
+  // The selected tab is brought into view when it is not (it is a long name that has just opened, or a
+  // tab part way out of the row), by scrolling the row so it is at its start.
+  const marker = useRef<HTMLSpanElement>(null);
+  const selectedLabel = options.find((option) => option.value === value)?.label;
+  useEffect(() => {
+    const chip = marker.current?.parentElement;
+    const scroller = chip?.parentElement;
+    if (!tabs || !chip || !scroller) {
+      return;
+    }
+
+    let scroll: { stop: () => void } | undefined;
+    const reveal = () => {
+      const at = chip.getBoundingClientRect();
+      const row = scroller.getBoundingClientRect();
+      // Out of view includes under the fade at an edge that has more beyond it, which hides it nearly as much.
+      const inLeft = row.left + (scroller.scrollLeft > 1 ? FADE : 0);
+      const more = scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1;
+      const inRight = row.right - (more ? FADE : 0);
+      if (at.left >= inLeft && at.right <= inRight) {
+        return;
+      }
+
+      scroll?.stop();
+      const from = scroller.scrollLeft;
+      // To the start of the row, clear of the fade there (a position before the start is the start).
+      scroll = animate(from, from + (at.left - row.left) - FADE, {
+        duration: 0.35,
+        ease: 'easeOut',
+        onUpdate: (to) => {
+          scroller.scrollLeft = to;
+        },
+      });
+    };
+
+    reveal();
+    // The row can get narrower after the tab is selected (the actions of what opened come in beside it).
+    const resize = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(reveal);
+    resize?.observe(scroller);
+    return () => {
+      scroll?.stop();
+      resize?.disconnect();
+    };
+    // `selectedLabel` is not read inside: a new name for the selected tab is its length changing, which is a reason to look again.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
+  }, [tabs, value, selectedLabel]);
+
   // Tabs scroll sideways when there are more than fit, and fade at the edge that has more.
   const Wrap: ElementType = tabs ? FadeScroll : Flex;
   return (
@@ -308,6 +355,7 @@ export function ChipRow({
               transition: 'color 160ms ease',
             }}
           >
+            {selected ? <span ref={marker} hidden /> : null}
             {selected ? (
               <Box
                 as={motion.span}

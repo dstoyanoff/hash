@@ -3,9 +3,13 @@ import { cleanup, render, type RenderResult } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { MemoryRouter } from 'react-router';
 import { afterEach } from 'vitest';
+import { resetMediaPending } from './entities/media-pending.ts';
 import { HashsomeProvider } from './provider.tsx';
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  resetMediaPending();
+});
 
 /** Renders `ui` against a mock backend and returns the backend for assertions. */
 export function renderWithMock(

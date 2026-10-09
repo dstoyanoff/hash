@@ -99,16 +99,35 @@ test('transport icons are smaller than their circles', () => {
   expect(getComputedStyle(button.querySelector('svg') as SVGElement).width).toBe('18px');
 });
 
-test('previous and next confirm the press: dimmed while in flight, then flashed, then back to normal', async () => {
-  renderWithMock(<MediaPlayerBar entity="ha:room" />, player());
+test('Next waits until the new track plays, not only until it is announced, and never colours the whole button', async () => {
+  const { ha } = renderWithMock(<MediaPlayerBar entity="ha:room" />, player());
   const next = screen.getByRole('button', { name: 'Next' });
+  const state = (position: number) => ({
+    playback: 'playing' as const,
+    media: { title: 'Next one', artist: 'More More' },
+    position,
+  });
+
   expect(next.getAttribute('data-feedback')).toBeNull();
   fireEvent.click(next);
   expect(next.getAttribute('data-feedback')).toBe('pending');
-  await waitFor(() => expect(next.getAttribute('data-feedback')).toBe('done'));
-  // Only the pressed button reacts.
   expect(screen.getByRole('button', { name: 'Previous' }).getAttribute('data-feedback')).toBeNull();
+
+  // The next track is announced at 0:00 but has not started.
+  await act(async () => {
+    ha.update('room', state(0));
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 800));
+  expect(next.getAttribute('data-feedback')).toBe('pending');
+
+  // It started.
+  await act(async () => {
+    ha.update('room', state(0.5));
+  });
+
   await waitFor(() => expect(next.getAttribute('data-feedback')).toBeNull(), { timeout: 2000 });
+  expect(next.getAttribute('data-feedback')).not.toBe('done');
 });
 
 test('the volume slider has an explicit full width, so it cannot collapse to nothing in a row', () => {
@@ -486,4 +505,18 @@ test('a cancelled touch on the volume slider ends the drag with the last value i
     command: 'setVolume',
     args: { volume: expect.closeTo(0.7, 1) },
   });
+});
+
+test('a transport button shows a ring from the press, and cannot be pressed again meanwhile', async () => {
+  const { ha } = renderWithMock(<MediaPlayerBar entity="ha:room" />, player());
+  const next = screen.getByRole('button', { name: 'Next' }) as HTMLButtonElement;
+  fireEvent.click(next);
+  expect(await screen.findByRole('status')).toBeTruthy();
+  expect(next.disabled).toBe(true);
+  await act(async () => {
+    ha.update('room', { media: { title: 'Another' }, position: 1 });
+  });
+
+  await waitFor(() => expect(screen.queryByRole('status')).toBeNull(), { timeout: 2000 });
+  expect(next.disabled).toBe(false);
 });

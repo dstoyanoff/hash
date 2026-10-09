@@ -1,6 +1,7 @@
 import type { EntityRef, QueueResult } from '@hashsome/core';
 import { useCallback, useEffect, useState } from 'react';
 import { useEntity, useReconnects } from './hooks.ts';
+import { useMediaPending } from './entities/media-pending.ts';
 import { useClient } from './provider.tsx';
 
 export interface MediaQueueState {
@@ -32,6 +33,8 @@ export function useMediaQueue(ref: EntityRef | undefined): MediaQueueState {
   // What changes when the queue's window does: the track playing and the order it plays in.
   const track = player?.kind === 'mediaPlayer' ? player.media?.title : undefined;
   const shuffle = player?.kind === 'mediaPlayer' ? player.shuffle : undefined;
+  // Something added to or played from the library changes the queue without changing the track.
+  const asked = useMediaPending(ref).length;
   const has = player?.kind === 'mediaPlayer' && player.capabilities.queue;
 
   useEffect(() => {
@@ -52,9 +55,9 @@ export function useMediaQueue(ref: EntityRef | undefined): MediaQueueState {
       current = false;
       clearInterval(timer);
     };
-    // `track`, `shuffle`, `tick` and `reconnects` are not read inside: a change to any of them is the reason to read again.
+    // `track`, `shuffle`, `tick`, `reconnects` and `asked` are not read inside: a change to any of them is the reason to read again.
     // oxlint-disable-next-line react/exhaustive-effect-dependencies
-  }, [client, ref, has, track, shuffle, tick, reconnects]);
+  }, [client, ref, has, track, shuffle, tick, reconnects, asked]);
 
   const answered = state !== undefined && state.ref === ref;
   return {

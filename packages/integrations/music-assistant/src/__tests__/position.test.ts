@@ -159,3 +159,23 @@ describe('what Music Assistant really sent', () => {
     expect(afterPause.every((spot) => spot >= 10)).toBe(true);
   });
 });
+
+test('a track announced at the start and stopped before it was heard from has played no time', () => {
+  // Music Assistant announces the new track at 0 and the player flips to idle and back before it really starts.
+  let position = onQueue({}, { item: 'b', elapsed: 0 }, 'playing', 10);
+  position = onPlayback(position, 'playing', 'idle', 13.6);
+  expect(positionOf(position, 'idle')).toBe(0);
+  position = onPlayback(position, 'idle', 'playing', 13.8);
+  expect(positionOf(position, 'playing')).toBe(0);
+
+  // Its real start is what the time counts from.
+  position = onQueue(position, { item: 'b', elapsed: 0.5 }, 'playing', 14.3);
+  expect(positionOf(position, 'playing')).toBe(0.5);
+});
+
+test('a track that has been heard from keeps the time it played through a stop', () => {
+  let position = onQueue({}, { item: 'b', elapsed: 0 }, 'playing', 10);
+  position = onQueue(position, { item: 'b', elapsed: 0.5 }, 'playing', 10.5);
+  position = onPlayback(position, 'playing', 'idle', 13.5);
+  expect(positionOf(position, 'idle')).toBeCloseTo(3.5, 1);
+});

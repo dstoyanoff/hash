@@ -27,6 +27,10 @@ export interface Position {
   /** Where playback was when it stopped: the last position plus the time since it was seen. */
   held?: number;
 
+  /** The track was announced at its start but has not been heard from since, so it may not have started playing:
+   * a stop before it is not time it played. Cleared by the first position that is not the start. */
+  unconfirmed?: boolean;
+
   /** What the last track's resume spot was, which a new track starts out carrying for a while. */
   inherited?: number;
 }
@@ -36,6 +40,12 @@ const following = (playback: string | undefined) => playback !== 'idle';
 
 /** How far before where it was a resumed stream may start, which is not shown as going back. */
 const REWIND_SECONDS = 2;
+
+/** How long a player may take to start a track it was told to, whatever it reports meanwhile. */
+const START_DELAY_S = 8;
+
+/** A position past this many seconds means the track is playing, and not only announced. */
+const STARTED_AFTER_S = 0.05;
 
 /** A queue message: what it says about the track, the counter and the resume position. */
 export interface QueueMessage {
@@ -94,13 +104,19 @@ export function onQueue(
 
   // Playing: the queue's counter is the truth, apart from the stream starting a moment before the
   // spot it was stopped at, which is not shown as a step back.
-  const { held, ...rest } = next;
+  const { held, unconfirmed: _unconfirmed, ...rest } = next;
   const elapsed =
     held !== undefined && message.elapsed >= held - REWIND_SECONDS
       ? Math.max(message.elapsed, held)
       : message.elapsed;
 
-  return { ...rest, elapsed, elapsedAt: now };
+  // A track announced at 0 is not yet known to be playing: the player can take seconds to start it.
+  return {
+    ...rest,
+    elapsed,
+    elapsedAt: now,
+    ...(message.elapsed < STARTED_AFTER_S ? { unconfirmed: true } : {}),
+  };
 }
 
 /** The player's state changed: a stop remembers where it got to, and a start from a stop begins there. */
@@ -119,10 +135,14 @@ export function onPlayback(
       return position;
     }
 
-    const since =
+    const playedFor =
       from === 'playing' && position.elapsedAt !== undefined
         ? Math.max(0, now - position.elapsedAt)
         : 0;
+
+    // A stop soon after a track was announced, before it was heard from, is the player not having
+    // started it yet: none of that time was played.
+    const since = position.unconfirmed === true && playedFor < START_DELAY_S ? 0 : playedFor;
 
     // The resume spot is of the last stop, and the next one brings its own.
     const { resume: _resume, ...rest } = position;

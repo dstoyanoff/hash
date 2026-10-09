@@ -8,10 +8,11 @@ import { ValueBar } from '../layout/drawer-controls.tsx';
 import { PlainButton } from '../layout/plain-button.tsx';
 import { IconButton } from '../layout/tile.tsx';
 import { statusLabels } from '../status.ts';
-import { usePressFeedback, useVolumeControl } from './media-controls.ts';
-import { formatDuration, useMediaPosition } from './media-progress.ts';
+import { usePressFeedback, useTransportAvailability, useVolumeControl } from './media-controls.ts';
+import { formatDuration, useMediaPosition, useSteadyPlaying } from './media-progress.ts';
 import { useSeekHold } from './media-seek.ts';
 import { ArtworkRing } from './artwork-ring.tsx';
+import { LoadingLine, useLoadingLabel } from './media-loading-line.tsx';
 
 /** The upright "now playing" panel the media column and page share: the artwork on a record, what is playing, how
  * far along it is, the transport buttons and a volume bar that is always there. Not exported from
@@ -53,12 +54,14 @@ export function NowPlaying({
   const { iconCircle, space } = useTheme().density;
   const transportWidth = 5 * iconCircle + 4 * space;
   const { status } = handle;
+  const loading = useLoadingLabel(player?.ref);
   const ready = status === 'ready';
   const caps = player?.capabilities;
-  const playing = player?.playback === 'playing';
-  const { feedbackFor, press } = usePressFeedback();
+  const playing = useSteadyPlaying(player);
+  const { feedbackFor, press } = usePressFeedback(player?.ref);
   const volume = useVolumeControl(handle);
   const position = useMediaPosition(player);
+  const can = useTransportAvailability(player, position);
   const duration = ready ? player?.duration : undefined;
   // The ring and the time under the title share one position, so dragging the ring moves both.
   const seek = useSeekHold(
@@ -102,13 +105,18 @@ export function NowPlaying({
               active={player?.shuffle === true}
               pressed={player?.shuffle === true}
               disabled={!ready}
+              feedback={feedbackFor('setShuffle')}
               onClick={() =>
-                void handle.command('setShuffle', { shuffle: player?.shuffle !== true })
+                press('setShuffle', () =>
+                  handle.command('setShuffle', { shuffle: player?.shuffle !== true }),
+                )
               }
             />
           ) : null}
         </Flex>
-        {ready && player?.media?.artist ? (
+        {loading ? (
+          <LoadingLine label={loading} variant="body" />
+        ) : ready && player?.media?.artist ? (
           <Typography
             as="span"
             variant="body"
@@ -159,7 +167,12 @@ export function NowPlaying({
             active={player?.shuffle === true}
             pressed={player?.shuffle === true}
             disabled={!ready}
-            onClick={() => void handle.command('setShuffle', { shuffle: player?.shuffle !== true })}
+            feedback={feedbackFor('setShuffle')}
+            onClick={() =>
+              press('setShuffle', () =>
+                handle.command('setShuffle', { shuffle: player?.shuffle !== true }),
+              )
+            }
           />
         ) : shufflePlacement === 'title' ? (
           (leading ?? <span />)
@@ -170,7 +183,7 @@ export function NowPlaying({
           icon="lu:skip-back"
           label="Previous"
           glyph={18}
-          disabled={!ready || caps?.previous === false}
+          disabled={!ready || caps?.previous === false || !can.previous}
           feedback={feedbackFor('previous')}
           onClick={() => press('previous', () => handle.command('previous'))}
         />
@@ -178,15 +191,16 @@ export function NowPlaying({
           icon={playing ? 'lu:pause' : 'lu:play'}
           label={playing ? 'Pause' : 'Play'}
           glyph={18}
-          disabled={!ready}
+          disabled={!ready || !can.play}
           primary
-          onClick={() => void handle.command('togglePlay')}
+          feedback={feedbackFor('togglePlay')}
+          onClick={() => press('togglePlay', () => handle.command('togglePlay'))}
         />
         <IconButton
           icon="lu:skip-forward"
           label="Next"
           glyph={18}
-          disabled={!ready || caps?.next === false}
+          disabled={!ready || caps?.next === false || !can.next}
           feedback={feedbackFor('next')}
           onClick={() => press('next', () => handle.command('next'))}
         />
