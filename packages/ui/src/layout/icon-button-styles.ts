@@ -18,7 +18,9 @@ export const iconButtonStyles = ({ palette, radius }: Theme): CSSObject => ({
   transition: 'background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease',
   '&:disabled': { cursor: 'default', opacity: 0.5 },
   "&[data-active='true']": { color: palette.warm },
-  "&[data-feedback='pending']": { opacity: 0.6 },
+  // Waiting: the ring turning around the edge says so, so the button stays as clear as it was.
+  "&[data-feedback='pending']": { position: 'relative', cursor: 'progress' },
+  "&:disabled[data-feedback='pending']": { cursor: 'progress', opacity: 1 },
   "&[data-feedback='done']": { background: palette.accent, color: palette.accentText },
   "&[data-feedback='error']": { color: palette.danger },
   "&[data-primary='true']": { background: palette.accent, color: palette.accentText },

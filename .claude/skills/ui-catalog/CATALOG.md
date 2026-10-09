@@ -146,7 +146,7 @@ function IconButton({
   /** Icon glyph size in px, leaving the button's circle at its usual size (unlike `size`, which scales both). */ glyph?: number;
   /** Literal CSS color for the glyph (e.g. a light's current color). */ color?: string;
   /** For a toggle: whether it is on, announced to assistive tech (`aria-pressed`). Pair it with `active` to color it. */ pressed?: boolean;
-  /** Shows the outcome of an action the press started: `pending` dims it, `done` flashes it with the accent, `error` turns it red. Every press also gives a small squeeze. */ feedback?:
+  /** Shows the outcome of an action the press started: `pending` turns a ring around it and stops it taking another press, `done` flashes it with the accent, `error` turns it red. Every press also gives a small squeeze. */ feedback?:
     'pending' | 'done' | 'error' | undefined;
 });
 ```

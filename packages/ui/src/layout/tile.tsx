@@ -14,6 +14,7 @@ import {
 import type { IconName } from '../icon-data.ts';
 import { Icon } from '../icon.tsx';
 import { RoundButton } from './round-button.tsx';
+import { SpinnerRing } from './spinner.tsx';
 import { statusLabels, type EntityStatus } from '../status.ts';
 import { BADGE } from '../theme/grid.ts';
 import { useDrawer } from './use-drawer.tsx';
@@ -525,9 +526,10 @@ export function IconButton({
   /** For a toggle: whether it is on, announced to assistive tech (`aria-pressed`). Pair it with `active` to color it. */
   pressed?: boolean;
 
-  /** Shows the outcome of an action the press started: `pending` dims it, `done` flashes it with the accent, `error` turns it red. Every press also gives a small squeeze. */
+  /** Shows the outcome of an action the press started: `pending` turns a ring around it and stops it taking another press, `done` flashes it with the accent, `error` turns it red. Every press also gives a small squeeze. */
   feedback?: 'pending' | 'done' | 'error' | undefined;
 }) {
+  const ring = feedback === 'pending';
   return (
     <RoundButton
       as={motion.button}
@@ -536,12 +538,12 @@ export function IconButton({
       // A literal color (a light's own) has to outrank the state colors the shared styles give
       // `data-active`, hence the doubled selector for the extra specificity.
       {...(color ? { css: { '&&&': { color } } } : {})}
-      whileTap={disabled ? {} : { scale: 0.88 }}
+      whileTap={disabled || feedback === 'pending' ? {} : { scale: 0.88 }}
       transition={{ duration: 0.12 }}
       data-feedback={feedback}
       aria-label={label}
       title={label}
-      disabled={disabled}
+      disabled={disabled || feedback === 'pending'}
       data-active={active}
       aria-pressed={pressed}
       data-primary={primary}
@@ -563,6 +565,7 @@ export function IconButton({
           />
         </Box>
       </AnimatePresence>
+      {ring ? <SpinnerRing /> : null}
     </RoundButton>
   );
 }

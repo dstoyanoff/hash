@@ -12,6 +12,7 @@ import { parseUri, SHELVES, toBrowseItem, type MaItem } from './browse.ts';
 import { toMediaPlayer, type MaPlayer } from './mapper.ts';
 import { toQueueItems, type MaQueueItem } from './queue.ts';
 import { onPlayback, onQueue, positionOf, type Position } from './position.ts';
+import { onReport, REVERT_WINDOW_MS, type Shown } from './revert.ts';
 
 /**
  * Direct client for the Music Assistant WebSocket API (not via Home Assistant), reverse-engineered
@@ -241,6 +242,11 @@ export class MusicAssistantIntegration extends BaseIntegration {
   #socket: WebSocket | undefined;
   #nextMessageId = 1;
 
+  /** What each player was last shown as, and when each was last asked to go to the previous track. */
+  #shown = new Map<string, Shown<EntityInput & { kind: 'mediaPlayer' }>>();
+  #wentBack = new Map<string, number>();
+  #queueShown = new Map<string, Shown<{ media: { title: string }; playback: string }>>();
+
   /** The last raw player and what its queue says, so either can change without the other. A queue
    * has the player's id. */
   #players = new Map<string, MaPlayer>();
@@ -298,6 +304,10 @@ export class MusicAssistantIntegration extends BaseIntegration {
     if (name === 'clearQueue') {
       await this.#clearUpcoming(entityId);
       return;
+    }
+
+    if (name === 'previous') {
+      this.#wentBack.set(entityId, Date.now());
     }
 
     const { command, args: commandArgs, idKey = 'player_id' } = commandFor(name, args);
@@ -549,6 +559,44 @@ export class MusicAssistantIntegration extends BaseIntegration {
     );
   }
 
+  /** Shows a player as it is now, unless it is only flickering back to the track it just left (see `revert.ts`). */
+  #show(player: MaPlayer): void {
+    const input = this.#entityFor(player);
+    if (input.kind !== 'mediaPlayer') {
+      this.setEntity(player.player_id, input);
+      return;
+    }
+
+    // A skip the player has not followed yet: the old track stays on show, as it was last shown.
+    const last = this.#shown.get(player.player_id)?.last;
+    if (last && this.#queueShown.get(player.player_id)?.incoming !== undefined) {
+      const { media, position, duration, positionUpdatedAt, playback } = last;
+      this.setEntity(player.player_id, {
+        ...input,
+        media,
+        position,
+        duration,
+        positionUpdatedAt,
+        playback,
+      } as EntityInput);
+
+      return;
+    }
+
+    const asked = this.#wentBack.get(player.player_id);
+    const { state, show } = onReport(
+      this.#shown.get(player.player_id),
+      input,
+      Date.now(),
+      asked !== undefined && Date.now() - asked < REVERT_WINDOW_MS,
+      input.playback === 'playing' && (input.position ?? 0) >= 0.05,
+      false,
+    );
+
+    this.#shown.set(player.player_id, state);
+    this.setEntity(player.player_id, show);
+  }
+
   /** What a player looks like with its queue's shuffle setting and position copied onto it. The
    * position is the queue's, not the player's: when playback is resumed Music Assistant starts a
    * new stream at the saved spot, and the player's own counter then starts from 0 again, while
@@ -581,8 +629,30 @@ export class MusicAssistantIntegration extends BaseIntegration {
 
     const known = this.#queues.get(queue.queue_id) ?? { position: {} };
     const player = this.#players.get(queue.queue_id);
+    const item = itemOf(queue);
+    const elapsedNow = typeof queue.elapsed_time === 'number' ? queue.elapsed_time : 0;
+
+    // The queue is where a skip shows first: the new track is announced at its start while the player
+    // goes on with the old one, and flickers before the new one starts. Until it does, its reports are
+    // not believed (see `revert.ts`), and what is shown stays as it was.
+    if (item !== undefined) {
+      const asked = this.#wentBack.get(queue.queue_id);
+      const seen = onReport(
+        this.#queueShown.get(queue.queue_id),
+        { media: { title: item }, playback: String(queue.state) },
+        Date.now(),
+        asked !== undefined && Date.now() - asked < REVERT_WINDOW_MS,
+        queue.state === 'playing' && elapsedNow >= 0.05,
+      );
+
+      this.#queueShown.set(queue.queue_id, seen.state);
+      if (seen.held) {
+        return;
+      }
+    }
+
     const message = {
-      item: itemOf(queue),
+      item,
       elapsed: typeof queue.elapsed_time === 'number' ? queue.elapsed_time : undefined,
       resume: typeof queue.resume_pos === 'number' ? queue.resume_pos : undefined,
     };
@@ -610,7 +680,7 @@ export class MusicAssistantIntegration extends BaseIntegration {
     this.#queues.set(id, next);
     const player = this.#players.get(id);
     if (player) {
-      this.setEntity(player.player_id, this.#entityFor(player));
+      this.#show(player);
     }
   }
 
@@ -690,7 +760,7 @@ export class MusicAssistantIntegration extends BaseIntegration {
           );
 
           this.#players.set(data.player_id, data);
-          this.setEntity(data.player_id, this.#entityFor(data));
+          this.#show(data);
         }
 
         return;

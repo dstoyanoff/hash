@@ -13,13 +13,15 @@ import { HoldProgress } from '../layout/hold-progress.tsx';
 import { useHold } from '../layout/use-hold.ts';
 import { IconButton } from '../layout/tile.tsx';
 import { statusLabels } from '../status.ts';
-import { usePressFeedback, useVolumeControl } from './media-controls.ts';
+import { usePressFeedback, useTransportAvailability, useVolumeControl } from './media-controls.ts';
 import { Cover } from '../layout/cover.tsx';
+import { Spinner } from '../layout/spinner.tsx';
 import { PlainButton } from '../layout/plain-button.tsx';
 import { MediaBrowser } from './media-browser.tsx';
+import { LoadingLine, useLoadingLabel } from './media-loading-line.tsx';
 import { MediaPlayerFull } from './media-player-full.tsx';
 import { MediaQueue } from './media-queue.tsx';
-import { formatDuration, useMediaPosition } from './media-progress.ts';
+import { formatDuration, useMediaPosition, useSteadyPlaying } from './media-progress.ts';
 import { useSeekHold } from './media-seek.ts';
 import { SeekLine } from './seek-line.tsx';
 
@@ -276,11 +278,12 @@ export function MediaPlayerBar({
   const player = handle.entity;
   const status = handle.status;
   const [volumeOpen, setVolumeOpen] = useState(false);
+  const loading = useLoadingLabel(player?.ref);
   const ready = status === 'ready';
-  const playing = player?.playback === 'playing';
+  const playing = useSteadyPlaying(player);
   const muted = player?.muted === true;
   const caps = player?.capabilities;
-  const { feedbackFor, press } = usePressFeedback();
+  const { feedbackFor, press } = usePressFeedback(player?.ref);
   const volume = useVolumeControl(handle);
 
   const artwork = (
@@ -303,6 +306,7 @@ export function MediaPlayerBar({
   );
 
   const position = useMediaPosition(player);
+  const can = useTransportAvailability(player, position);
   const seek = useSeekHold(
     ready ? position : undefined,
     caps?.seek ? (next) => void handle.command('seek', { position: next }) : undefined,
@@ -415,17 +419,25 @@ export function MediaPlayerBar({
               aria-pressed={player?.shuffle === true}
               title="Shuffle"
               onClick={() =>
-                void handle.command('setShuffle', { shuffle: player?.shuffle !== true })
+                press('setShuffle', () =>
+                  handle.command('setShuffle', { shuffle: player?.shuffle !== true }),
+                )
               }
               center
               color={player?.shuffle === true ? 'accent' : 'textMuted'}
               css={{ flex: 'none' }}
             >
-              <Icon name="lu:shuffle" size={14} />
+              {feedbackFor('setShuffle') === 'pending' ? (
+                <Spinner size={14} />
+              ) : (
+                <Icon name="lu:shuffle" size={14} />
+              )}
             </PlainButton>
           ) : null}
         </Flex>
-        {ready && player?.media?.artist ? (
+        {loading ? (
+          <LoadingLine label={loading} variant="secondary" />
+        ) : ready && player?.media?.artist ? (
           <Typography
             as="span"
             variant="secondary"
@@ -492,7 +504,7 @@ export function MediaPlayerBar({
           icon="lu:skip-back"
           label="Previous"
           glyph={MEDIA_GLYPH}
-          disabled={!ready || caps?.previous === false}
+          disabled={!ready || caps?.previous === false || !can.previous}
           feedback={feedbackFor('previous')}
           onClick={() => press('previous', () => handle.command('previous'))}
         />
@@ -500,15 +512,16 @@ export function MediaPlayerBar({
           icon={playing ? 'lu:pause' : 'lu:play'}
           label={playing ? 'Pause' : 'Play'}
           glyph={MEDIA_GLYPH}
-          disabled={!ready}
+          disabled={!ready || !can.play}
           primary
-          onClick={() => void handle.command('togglePlay')}
+          feedback={feedbackFor('togglePlay')}
+          onClick={() => press('togglePlay', () => handle.command('togglePlay'))}
         />
         <IconButton
           icon="lu:skip-forward"
           label="Next"
           glyph={MEDIA_GLYPH}
-          disabled={!ready || caps?.next === false}
+          disabled={!ready || caps?.next === false || !can.next}
           feedback={feedbackFor('next')}
           onClick={() => press('next', () => handle.command('next'))}
         />

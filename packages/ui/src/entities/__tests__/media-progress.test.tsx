@@ -1,7 +1,7 @@
 import { mockMediaPlayer, type MediaPlayerEntity } from '@hashsome/core';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { formatDuration, useMediaPosition } from '../media-progress.ts';
+import { formatDuration, useMediaPosition, useSteadyPlaying } from '../media-progress.ts';
 
 beforeEach(() => vi.useFakeTimers({ now: new Date('2026-06-01T12:00:00Z') }));
 afterEach(() => {
@@ -62,4 +62,36 @@ test('a paused player stays where it was, a long-playing one stops at the end, a
 
   render(<Position entity={player({ playback: 'playing' })} />);
   expect(screen.getByRole('status', { hidden: true }).textContent).toBe('undefined');
+});
+
+function Playing({ entity }: { entity: MediaPlayerEntity }) {
+  return <output>{String(useSteadyPlaying(entity))}</output>;
+}
+
+const state = (playback: 'playing' | 'idle', title: string) =>
+  player({ playback, media: { title }, position: 0, positionUpdatedAt: '2026-06-01T12:00:00Z' });
+
+test('a dip out of playing just after a track change is not shown, but a lasting one is', () => {
+  const { rerender } = render(<Playing entity={state('playing', 'One')} />);
+  const shown = () => screen.getByRole('status', { hidden: true }).textContent;
+  rerender(<Playing entity={state('playing', 'Two')} />);
+  rerender(<Playing entity={state('idle', 'Two')} />);
+  expect(shown()).toBe('true');
+  rerender(<Playing entity={state('playing', 'Two')} />);
+  act(() => vi.advanceTimersByTime(2000));
+  expect(shown()).toBe('true');
+
+  // The same dip that lasts is believed.
+  rerender(<Playing entity={state('idle', 'Two')} />);
+  expect(shown()).toBe('true');
+  act(() => vi.advanceTimersByTime(1000));
+  expect(shown()).toBe('false');
+});
+
+test('a pause long after a track started shows at once', () => {
+  const { rerender } = render(<Playing entity={state('playing', 'One')} />);
+  rerender(<Playing entity={state('playing', 'Two')} />);
+  act(() => vi.advanceTimersByTime(10_000));
+  rerender(<Playing entity={state('idle', 'Two')} />);
+  expect(screen.getByRole('status', { hidden: true }).textContent).toBe('false');
 });

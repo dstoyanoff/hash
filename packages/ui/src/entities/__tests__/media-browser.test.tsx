@@ -1,6 +1,6 @@
 import { mockLibrary, mockMediaPlayer } from '@hashsome/core';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { renderWithMock } from '../../test-utils.tsx';
 import { MediaBrowser } from '../media-browser.tsx';
 
@@ -432,4 +432,54 @@ test('Escape closes the search too, and a library that cannot be searched has no
 
   await screen.findByRole('tab', { name: 'Albums' });
   expect(screen.queryByRole('button', { name: 'Search' })).toBeNull();
+});
+
+describe('a request the player has not answered yet', () => {
+  const slow = async () => {
+    const { ha } = render(queueRoom());
+    let answer = () => {};
+    const original = ha.command.bind(ha);
+    vi.spyOn(ha, 'command').mockImplementation((...args) => {
+      const done = original(...args);
+      return new Promise((resolve) => {
+        answer = () => resolve(done);
+      });
+    });
+
+    return { ha, release: () => answer() };
+  };
+
+  test('shows a spinner on the item and the button asked, and clears when it answers', async () => {
+    const { release } = await slow();
+    const add = await screen.findByRole('button', { name: 'Add Dreams to the queue' });
+    fireEvent.click(add);
+    await waitFor(() => expect((add as HTMLButtonElement).disabled).toBe(true));
+    // Only the same action is held; playing is still possible.
+    expect(
+      (screen.getByRole('button', { name: 'Play Dreams' }) as HTMLButtonElement).disabled,
+    ).toBe(false);
+
+    await act(async () => release());
+    await waitFor(() => expect((add as HTMLButtonElement).disabled).toBe(false));
+  });
+
+  test('starting an item puts a spinner over its artwork until it answers', async () => {
+    const { ha, release } = await slow();
+    fireEvent.click(await screen.findByRole('button', { name: 'Play Dreams' }));
+    expect(await screen.findAllByRole('status')).not.toHaveLength(0);
+    // Answered, but not started: still waiting. It is done when the track plays and has moved on from 0:00.
+    await act(async () => release());
+    await act(async () => {
+      ha.update('room', { playback: 'playing', media: { title: 'Dreams' }, position: 0 });
+    });
+
+    expect(screen.queryAllByRole('status')).not.toHaveLength(0);
+    await act(async () => {
+      ha.update('room', { playback: 'playing', media: { title: 'Dreams' }, position: 0.5 });
+    });
+
+    await waitFor(() => expect(screen.queryAllByRole('status')).toHaveLength(0), {
+      timeout: 2000,
+    });
+  });
 });

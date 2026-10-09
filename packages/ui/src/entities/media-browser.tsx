@@ -1,5 +1,5 @@
 /** @jsxImportSource @emotion/react */
-import type { BrowseItem, BrowseKind, EntityRef } from '@hashsome/core';
+import type { BrowseItem, BrowseKind, EntityRef, MediaPlayerCommands } from '@hashsome/core';
 import { Box, Flex, Typography } from 'e-prim';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState, type ReactNode } from 'react';
@@ -12,10 +12,12 @@ import { CHIP_HEIGHT, ChipRow } from '../layout/drawer-controls.tsx';
 import { FadeScroll } from '../layout/fade-scroll.tsx';
 import { MarqueeText } from '../layout/marquee-text.tsx';
 import { PlainButton } from '../layout/plain-button.tsx';
+import { Spinner } from '../layout/spinner.tsx';
 import { Reveal } from '../layout/reveal.tsx';
 import { Skeleton } from '../layout/skeleton.tsx';
 import { IconButton } from '../layout/tile.tsx';
 import { useMediaBrowser } from '../use-media-browser.ts';
+import { trackMedia, useMediaPending, type MediaPending } from './media-pending.ts';
 
 export interface MediaBrowserProps {
   /** The media player whose own library to browse, as a ref like `ma:living_room`. The backend that owns the player is the media source, so a Music Assistant player lists Music Assistant's library and a Home Assistant player Home Assistant's. */
@@ -64,6 +66,23 @@ export function MediaBrowser({
   // A player with a queue can be told to add to it, play next and shuffle; one without can only play.
   const queueable = player?.capabilities.queue === true;
 
+  /** Asking the player to play something can take it many seconds; until it answers, the item and the
+   * player say so. */
+  const waiting = useMediaPending(entity);
+  const ask = (
+    kind: MediaPending['kind'],
+    item: BrowseItem,
+    args: MediaPlayerCommands['playMedia'],
+  ) =>
+    trackMedia(
+      entity,
+      { kind, item: item.id, label: item.title },
+      handle.command('playMedia', args),
+    );
+
+  const askedOf = (item: BrowseItem) =>
+    waiting.filter((entry) => entry.item === item.id).map((entry) => entry.kind);
+
   /** What the actions do. Playing replaces the queue, as in Spotify: a track in an album or playlist
    * queues all of it and starts there, so Next goes to the next track of the album. */
   const play = (item: BrowseItem) => {
@@ -73,7 +92,7 @@ export function MediaBrowser({
         ? container
         : undefined;
 
-    void handle.command('playMedia', {
+    ask('playItem', item, {
       item: item.id,
       mode: 'replace',
       ...(within ? { context: within.id } : {}),
@@ -82,14 +101,12 @@ export function MediaBrowser({
     onPlay?.(item);
   };
 
-  const playNext = (item: BrowseItem) =>
-    void handle.command('playMedia', { item: item.id, mode: 'next' });
+  const playNext = (item: BrowseItem) => ask('queueNext', item, { item: item.id, mode: 'next' });
 
-  const addToQueue = (item: BrowseItem) =>
-    void handle.command('playMedia', { item: item.id, mode: 'add' });
+  const addToQueue = (item: BrowseItem) => ask('queueAdd', item, { item: item.id, mode: 'add' });
 
   const shuffleAll = (item: BrowseItem) => {
-    void handle.command('playMedia', { item: item.id, mode: 'replace', shuffle: true });
+    ask('playItem', item, { item: item.id, mode: 'replace', shuffle: true });
     onPlay?.(item);
   };
 
@@ -323,6 +340,7 @@ export function MediaBrowser({
               <Reveal index={browser.searching ? 0 : index}>
                 <BrowseCard
                   item={item}
+                  asked={askedOf(item)}
                   queueable={queueable}
                   onOpen={() => browser.open(item)}
                   onPlay={() => play(item)}
@@ -349,6 +367,7 @@ export function MediaBrowser({
               <Reveal index={browser.searching ? 0 : index}>
                 <BrowseRow
                   item={item}
+                  asked={askedOf(item)}
                   queueable={queueable}
                   onOpen={() => browser.open(item)}
                   onPlay={() => play(item)}
@@ -479,6 +498,7 @@ function PillButton({
 
 function BrowseRow({
   item,
+  asked,
   queueable,
   onOpen,
   onPlay,
@@ -486,6 +506,9 @@ function BrowseRow({
   onAdd,
 }: {
   item: BrowseItem;
+
+  /** What has been asked of the player for this item and not answered yet. */
+  asked: string[];
   queueable: boolean;
   onOpen: () => void;
   onPlay: () => void;
@@ -520,6 +543,7 @@ function BrowseRow({
           width={44}
           height={44}
           overflow="hidden"
+          position="relative"
           css={{ flex: 'none' }}
         >
           {item.artworkUrl ? (
@@ -527,8 +551,9 @@ function BrowseRow({
           ) : (
             <Icon name={KIND_ICONS[item.kind]} size={20} />
           )}
+          {asked.includes('playItem') ? <Waiting size={20} /> : null}
         </Flex>
-        <Flex direction="column" minWidth={0}>
+        <Flex direction="column" minWidth={0} grow={1}>
           <Typography as="span" variant="bodyStrong">
             <MarqueeText>{item.title}</MarqueeText>
           </Typography>
@@ -538,6 +563,7 @@ function BrowseRow({
             </Typography>
           ) : null}
         </Flex>
+        {item.expandable ? <Opens /> : null}
       </PlainButton>
       {queueable && item.playable ? (
         <>
@@ -545,18 +571,29 @@ function BrowseRow({
             icon="lu:list-start"
             label={`Play ${item.title} next`}
             glyph={16}
+            disabled={asked.includes('queueNext')}
+            feedback={asked.includes('queueNext') ? 'pending' : undefined}
             onClick={onNext}
           />
           <IconButton
             icon="lu:list-plus"
             label={`Add ${item.title} to the queue`}
             glyph={16}
+            disabled={asked.includes('queueAdd')}
+            feedback={asked.includes('queueAdd') ? 'pending' : undefined}
             onClick={onAdd}
           />
         </>
       ) : null}
       {item.expandable && item.playable ? (
-        <IconButton icon="lu:play" label={`Play ${item.title}`} glyph={16} onClick={onPlay} />
+        <IconButton
+          icon="lu:play"
+          label={`Play ${item.title}`}
+          glyph={16}
+          disabled={asked.includes('playItem')}
+          feedback={asked.includes('playItem') ? 'pending' : undefined}
+          onClick={onPlay}
+        />
       ) : null}
     </Flex>
   );
@@ -588,12 +625,16 @@ const CARD_SIZE = `min(${CARD}px, max(${MIN_CARD}px, calc(100cqh - ${LABEL}px)))
  * button over the artwork's corner. */
 function BrowseCard({
   item,
+  asked,
   queueable,
   onOpen,
   onPlay,
   onAdd,
 }: {
   item: BrowseItem;
+
+  /** What has been asked of the player for this item and not answered yet. */
+  asked: string[];
   queueable: boolean;
   onOpen: () => void;
   onPlay: () => void;
@@ -618,6 +659,7 @@ function BrowseCard({
           color="textMuted"
           radius={item.kind === 'artist' ? 'full' : 'card'}
           overflow="hidden"
+          position="relative"
           css={{ width: CARD_SIZE, height: CARD_SIZE }}
         >
           {item.artworkUrl ? (
@@ -625,11 +667,15 @@ function BrowseCard({
           ) : (
             <Icon name={KIND_ICONS[item.kind]} size={56} />
           )}
+          {asked.includes('playItem') ? <Waiting size={32} /> : null}
         </Flex>
         <Flex direction="column" minWidth={0} px={1}>
-          <Typography as="span" variant="bodyStrong">
-            <MarqueeText>{item.title}</MarqueeText>
-          </Typography>
+          <Flex align="center" gap={1} minWidth={0}>
+            <Typography as="span" variant="bodyStrong" css={{ minWidth: 0 }}>
+              <MarqueeText>{item.title}</MarqueeText>
+            </Typography>
+            {item.expandable ? <Opens /> : null}
+          </Flex>
           {item.subtitle ? (
             <Typography as="span" variant="secondary" color="textMuted">
               <MarqueeText>{item.subtitle}</MarqueeText>
@@ -650,14 +696,46 @@ function BrowseCard({
               icon="lu:list-plus"
               label={`Add ${item.title} to the queue`}
               glyph={16}
+              disabled={asked.includes('queueAdd')}
+              feedback={asked.includes('queueAdd') ? 'pending' : undefined}
               onClick={onAdd}
             />
           ) : null}
           {item.expandable ? (
-            <IconButton icon="lu:play" label={`Play ${item.title}`} glyph={16} onClick={onPlay} />
+            <IconButton
+              icon="lu:play"
+              label={`Play ${item.title}`}
+              glyph={16}
+              disabled={asked.includes('playItem')}
+              feedback={asked.includes('playItem') ? 'pending' : undefined}
+              onClick={onPlay}
+            />
           ) : null}
         </Flex>
       ) : null}
+    </Box>
+  );
+}
+
+/** Over an item's artwork while the player has not answered a request to play it. */
+function Waiting({ size }: { size: number }) {
+  return (
+    <Flex
+      align="center"
+      justify="center"
+      position="absolute"
+      css={{ inset: 0, background: 'rgba(0, 0, 0, 0.5)', color: 'white' }}
+    >
+      <Spinner size={size} />
+    </Flex>
+  );
+}
+
+/** Marks something that opens (an album, a playlist, an artist, a folder) and is not played by a tap, as against a track. */
+function Opens() {
+  return (
+    <Box color="textMuted" css={{ flex: 'none', display: 'grid' }} aria-hidden="true">
+      <Icon name="lu:chevron-right" size={16} />
     </Box>
   );
 }
