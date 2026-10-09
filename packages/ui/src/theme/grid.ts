@@ -62,3 +62,7 @@ export function centeringOffsets(
 
   return { top, bottom: leftover - top };
 }
+
+/** The width of the page navigation rail (`NavRail`), whose icons are centered in it. Things that sit at the
+ * left edge of the screen over a dashboard (the debug button) are centered on the same line. */
+export const NAV_RAIL = 76;

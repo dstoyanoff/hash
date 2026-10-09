@@ -7,6 +7,13 @@ import { Icon } from '../icon.tsx';
 import type { ThemeMode } from '../provider.tsx';
 import { ChipRow } from './drawer-controls.tsx';
 import { PlainButton } from './plain-button.tsx';
+import { NAV_RAIL } from '../theme/grid.ts';
+
+/** The button's size, in px. */
+const BUTTON = 40;
+
+/** How far it is from the left and the bottom edge: on the line the navigation rail's icons are centered on, so it sits under them, and the same from the bottom. */
+const INSET = (NAV_RAIL - BUTTON) / 2;
 
 const THEME_LABELS: Record<ThemeChoice, string> = {
   light: 'Light',
@@ -121,11 +128,11 @@ export function DebugMenu({
       // which this is, and the button would sit at the top of it.
       css={{
         position: 'fixed',
-        left: 12,
-        bottom: 12,
+        left: INSET,
+        bottom: INSET,
         zIndex: 30,
-        width: 40,
-        height: 40,
+        width: BUTTON,
+        height: BUTTON,
         minHeight: 0,
       }}
     >
@@ -184,8 +191,8 @@ export function DebugMenu({
         background="surface"
         color="textMuted"
         shadow="dock"
-        width={40}
-        height={40}
+        width={BUTTON}
+        height={BUTTON}
         css={{ flex: 'none' }}
       >
         <Icon name="lu:bug" size={18} />
