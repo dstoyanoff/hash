@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.0 (2026-10-09)
+
+### Features
+
+- **ui:** a wall display left alone on a sub-page goes back to the dashboard's main page (#90) ([2a3ff62](https://github.com/dstoyanoff/hashsome/commit/2a3ff6204517d899d4e742fd80d96206d158a5ba))
+
 ## 0.9.0 (2026-10-09)
 
 ### Features
