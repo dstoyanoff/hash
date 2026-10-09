@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import { keyframes } from '@emotion/react';
+import { Box, type PaletteKey } from 'e-prim';
 import { Icon } from '../icon.tsx';
 
 const turn = keyframes({ to: { transform: 'rotate(360deg)' } });
@@ -28,19 +29,24 @@ export function Spinner({ size = 16, label = 'Loading' }: { size?: number; label
 /** A ring that turns around the edge of a round button (give the button `position: relative`): the
  * button is waiting for an answer and will not take another press. Kept turning under reduced motion
  * for the same reason `Spinner` is. */
-export function SpinnerRing({ label = 'Loading' }: { label?: string }) {
+export function SpinnerRing({
+  label = 'Loading',
+  color = 'accent',
+}: {
+  label?: string;
+
+  /** A palette color: the theme's accent by default. Pass `accentText` for a button that is itself accent-colored (or filled with a color of the app's own). */
+  color?: PaletteKey;
+}) {
   return (
-    <span
+    <Box
+      as="span"
       role="status"
       aria-label={label}
       data-keep-motion
-      css={({ palette }) => ({
-        position: 'absolute',
-        inset: 0,
-        pointerEvents: 'none',
-        color: palette.accent,
-        animation: `${turn} 0.9s linear infinite`,
-      })}
+      position="absolute"
+      color={color}
+      css={{ inset: 0, pointerEvents: 'none', animation: `${turn} 0.9s linear infinite` }}
     >
       <svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden="true">
         <circle
@@ -54,6 +60,6 @@ export function SpinnerRing({ label = 'Loading' }: { label?: string }) {
           strokeDasharray="75 221"
         />
       </svg>
-    </span>
+    </Box>
   );
 }

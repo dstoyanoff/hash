@@ -23,6 +23,9 @@ declare module 'e-prim' {
     onAccent: string;
     warm: string;
     danger: string;
+
+    /** Something fine or connected (a status dot, a healthy link). */
+    success: string;
     line: string;
 
     /** The left nav rail / bottom nav dock's background — a third near-black, distinct from

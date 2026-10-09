@@ -724,9 +724,22 @@ function Waiting({ size }: { size: number }) {
       align="center"
       justify="center"
       position="absolute"
-      css={{ inset: 0, background: 'rgba(0, 0, 0, 0.5)', color: 'white' }}
+      css={({ palette }) => ({
+        inset: 0,
+        color: palette.text,
+        // The artwork is dimmed by a layer of the page's own color, under the spinner.
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          inset: 0,
+          background: palette.bg,
+          opacity: 0.6,
+        },
+      })}
     >
-      <Spinner size={size} />
+      <Box position="relative" css={{ display: 'grid' }}>
+        <Spinner size={size} />
+      </Box>
     </Flex>
   );
 }
