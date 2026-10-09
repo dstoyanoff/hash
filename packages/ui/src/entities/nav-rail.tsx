@@ -7,6 +7,7 @@ import { usePageInset } from '../layout/page.tsx';
 import { useThemeToggle } from '../provider.tsx';
 import { NAV_RAIL } from '../theme/grid.ts';
 import { AttentionDot } from './attention-dot.tsx';
+import { useIdleReturn, useIdleReturnDefault } from '../layout/use-idle-return.ts';
 
 export interface NavItem {
   /** Route path relative to `base`, e.g. `''` (the dashboard's home) or `'lights'`. */
@@ -18,6 +19,12 @@ export interface NavItem {
   attention?: 'notice' | 'urgent';
 }
 
+/** The path of a dashboard's main page: the item with no path of its own, else its first item. */
+export function mainPath(items: NavItem[], base: string): string {
+  const main = items.find((item) => item.to === '') ?? items[0];
+  return main?.to ? `${base}/${main.to}` : base;
+}
+
 export interface NavRailProps {
   /** The pages to link to; `to` is relative to `base`. */
   items: NavItem[];
@@ -27,12 +34,17 @@ export interface NavRailProps {
 
   /** Adds a light/dark toggle at the bottom of the rail. Off by default — meant for development or a project that deliberately exposes it, not every kiosk install. */
   showThemeToggle?: boolean;
+
+  /** How long, in ms, the display may be left alone on a page other than the main one (the item whose `to` is `''`) before it goes back to that page; `false` for never. Any touch, click, key or scroll starts the time again. Defaults to `HashsomeProvider`'s `idleReturn`, which is off unless the app turns it on. */
+  idleReturn?: number | false;
 }
 
 /** Fixed left sidebar for switching between a dashboard's pages. Must be rendered inside a
  * router. It is `position: fixed` and reserves its width in the surrounding `Page`, which pads
  * for it so content never sits under it. */
-export function NavRail({ items, base, showThemeToggle }: NavRailProps) {
+export function NavRail({ items, base, showThemeToggle, idleReturn }: NavRailProps) {
+  const appDefault = useIdleReturnDefault();
+  useIdleReturn({ to: mainPath(items, base), after: idleReturn ?? appDefault });
   usePageInset('left', NAV_RAIL);
 
   return (

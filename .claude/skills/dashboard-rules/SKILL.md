@@ -67,6 +67,9 @@ A dashboard owns its whole layout. There is no runtime-rendered chrome: a page b
   `route('<id>', 'layout.tsx', [index(…), route('lights', …)])`, and `layout.tsx` renders a
   `NavRail` (absolute `base`, e.g. `/home`, items relative to it), the top bar and an
   `<Outlet />` (see `dashboards/home`).
+- A **wall display** that is left alone on a sub-page (a music page, say) can go back to the dashboard's main page by
+  itself: `HashsomeProvider`'s `idleReturn` (a time in ms, off by default) turns it on for every `NavRail`/`NavDock`,
+  and one can set its own `idleReturn` (a time, or `false`) over it. The main page is the nav item with `to: ''`.
 - To make several dashboards match, share the configuration in the project: `example/shared/`
   holds `HomeTopBar` (weather, presence, clock, the switcher) and `dashboards.ts` (which dashboards
   the switcher lists). That is a **convention of the example project** — `@hash` knows nothing about
