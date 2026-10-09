@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.0 (2026-10-09)
+
+### Features
+
+- **ui:** a recurring task as a tile, a confirm dialog, and a dot on a nav item (#88) ([6c8ac23](https://github.com/dstoyanoff/hashsome/commit/6c8ac23d0851b47de5b72d725d307eae836b4d31))
+- **ui:** a scene's dot in the top bar answers a press, and the top bar uses theme colors (#87) ([2c3ac6c](https://github.com/dstoyanoff/hashsome/commit/2c3ac6c7a10dc1fba41bc2acecc06e5e2222c574))
+
+### Fixes
+
+- **ui:** the debug button sits centered under the navigation rail's icons (#89) ([73afe30](https://github.com/dstoyanoff/hashsome/commit/73afe30ee04692ba7db2d9c5178a68bbb1f8c395))
+
 ## 0.8.0 (2026-10-09)
 
 ### Features
