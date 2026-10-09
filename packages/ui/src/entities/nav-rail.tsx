@@ -5,6 +5,7 @@ import type { IconName } from '../icon-data.ts';
 import { Icon } from '../icon.tsx';
 import { usePageInset } from '../layout/page.tsx';
 import { useThemeToggle } from '../provider.tsx';
+import { NAV_RAIL } from '../theme/grid.ts';
 import { AttentionDot } from './attention-dot.tsx';
 
 export interface NavItem {
@@ -32,7 +33,7 @@ export interface NavRailProps {
  * router. It is `position: fixed` and reserves its width in the surrounding `Page`, which pads
  * for it so content never sits under it. */
 export function NavRail({ items, base, showThemeToggle }: NavRailProps) {
-  usePageInset('left', 76);
+  usePageInset('left', NAV_RAIL);
 
   return (
     <Flex
@@ -42,7 +43,7 @@ export function NavRail({ items, base, showThemeToggle }: NavRailProps) {
       align="center"
       gap={2.5}
       background="rail"
-      width={76}
+      width={NAV_RAIL}
       py={6}
       position="fixed"
       zIndex="nav"
