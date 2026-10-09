@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0 (2026-10-09)
+
+### Features
+
+- **ui:** the player shows when it is waiting, and keeps the old track on show until a skip has taken effect (#86) ([bb20e9f](https://github.com/dstoyanoff/hashsome/commit/bb20e9f32759615031ac1ba2ddbf93429f0ac60b))
+
 ## 0.7.0 (2026-10-08)
 
 ### Features
