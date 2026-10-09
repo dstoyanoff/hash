@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import type { ConnectionStatus, EntityRef, LinkStatus } from '@hashsome/core';
 import { Box, Flex, Typography } from 'e-prim';
+import { motion } from 'motion/react';
 import { PlainButton } from '../layout/plain-button.tsx';
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useLocation, useNavigate } from 'react-router';
@@ -15,7 +16,9 @@ import {
 import { Icon } from '../icon.tsx';
 import { statusLabels } from '../status.ts';
 import { TOP_ROW } from '../theme/grid.ts';
+import { CheckMark } from '../layout/check-mark.tsx';
 import { DrawerTrigger } from '../layout/use-drawer.tsx';
+import { useTimed } from '../layout/use-timed.ts';
 import { useWeatherForecast } from '../use-weather-forecast.ts';
 import { SensorReadout } from './sensor-readout.tsx';
 import { WeatherForecast } from './weather-forecast.tsx';
@@ -34,7 +37,7 @@ export interface TopBarScene {
   entity: EntityRef;
   icon?: IconName;
 
-  /** A literal CSS color for this scene's dot (e.g. `#8B5CF6`) — scenes are meant to read as distinct at a glance, which the palette doesn't have enough colors for, so each app picks its own. Defaults to the theme's accent. */
+  /** A literal CSS color for this scene's dot (the one place a color is not from the theme: scenes are meant to be told apart by their own) (e.g. `#8B5CF6`) — scenes are meant to read as distinct at a glance, which the palette doesn't have enough colors for, so each app picks its own. Defaults to the theme's accent. */
   color?: string;
 }
 
@@ -299,11 +302,8 @@ function DashboardSwitcher({
 
 type Health = 'ok' | 'pending' | 'down';
 
-const HEALTH_COLORS: Record<Health, string> = {
-  ok: '#34D399',
-  pending: '#FBBF24',
-  down: '#F2554A',
-};
+/** The palette color each health reads as. */
+const HEALTH_COLORS = { ok: 'success', pending: 'warm', down: 'danger' } as const;
 
 function linkHealth(link: LinkStatus): Health {
   return link === 'open' ? 'ok' : link === 'connecting' ? 'pending' : 'down';
@@ -389,10 +389,10 @@ export function SystemStatus({
           width={12}
           height={12}
           radius="full"
-          css={{
-            background: HEALTH_COLORS[overall],
-            boxShadow: `0 0 0 4px ${HEALTH_COLORS[overall]}33`,
-          }}
+          css={({ palette }) => ({
+            background: palette[HEALTH_COLORS[overall]],
+            boxShadow: `0 0 0 4px color-mix(in srgb, ${palette[HEALTH_COLORS[overall]]} 20%, transparent)`,
+          })}
         />
       </PlainButton>
       {open ? (
@@ -416,7 +416,7 @@ export function SystemStatus({
               width={8}
               height={8}
               radius="full"
-              css={{ background: HEALTH_COLORS[overall] }}
+              css={({ palette }) => ({ background: palette[HEALTH_COLORS[overall]] })}
             />
             <Typography as="span" variant="bodyStrong">
               {summary}
@@ -427,7 +427,11 @@ export function SystemStatus({
               <Typography as="span" variant="body">
                 {row.name}
               </Typography>
-              <Typography as="span" variant="label" css={{ color: HEALTH_COLORS[row.health] }}>
+              <Typography
+                as="span"
+                variant="label"
+                css={({ palette }) => ({ color: palette[HEALTH_COLORS[row.health]] })}
+              >
                 {row.label}
               </Typography>
             </Flex>
@@ -547,7 +551,7 @@ function SensorWeather({ entity }: { entity: EntityRef }) {
 
   return (
     <StatusChip>
-      <Flex as="span" css={{ color: '#FBBF24' }}>
+      <Flex as="span" css={({ palette }) => ({ color: palette.warm })}>
         <Icon name="lu:sun" size={14} />
       </Flex>
       <Typography as="span" variant="label">
@@ -559,26 +563,56 @@ function SensorWeather({ entity }: { entity: EntityRef }) {
   );
 }
 
+/** How long a scene's dot shows it has been pressed, from the press. */
+const SCENE_DONE_MS = 1500;
+
 function SceneDot({ entity, icon, color }: { entity: EntityRef; icon?: IconName; color?: string }) {
   const handle = useEntityHandle('action', entity);
   const label = handle.entity?.name ?? '';
+  // A press is answered at once, for a fixed time and whatever the scene does: the dot pops, turns green and
+  // draws a check in place of its icon. It cannot be pressed again until that is over.
+  const { active: done, start } = useTimed(SCENE_DONE_MS);
 
   return (
     <Flex
-      as="button"
+      as={motion.button}
       type="button"
       aria-label={label}
       title={label}
-      onClick={() => void handle.command('trigger')}
+      disabled={done}
+      onClick={() => {
+        if (start()) {
+          void handle.command('trigger');
+        }
+      }}
       align="center"
       justify="center"
       width={40}
       height={40}
       radius="full"
-      cursor="pointer"
-      css={({ palette }) => ({ background: color ?? palette.accent, color: '#fff' })}
+      position="relative"
+      cursor={done ? 'default' : 'pointer'}
+      animate={{ scale: done ? [1, 1.18, 1] : 1 }}
+      transition={{ duration: 0.4 }}
+      css={({ palette }) => ({
+        background: done ? palette.success : (color ?? palette.accent),
+        color: palette.accentText,
+        transition: 'background-color 0.25s ease',
+      })}
     >
-      <Icon name={icon ?? 'lu:palette'} size={18} />
+      <Box
+        as={motion.span}
+        css={{ display: 'grid' }}
+        animate={{ opacity: done ? 0 : 1, scale: done ? 0.5 : 1 }}
+        transition={{ duration: 0.18 }}
+      >
+        <Icon name={icon ?? 'lu:palette'} size={18} />
+      </Box>
+      {done ? (
+        <Flex align="center" justify="center" position="absolute" css={{ inset: 0 }}>
+          <CheckMark />
+        </Flex>
+      ) : null}
     </Flex>
   );
 }

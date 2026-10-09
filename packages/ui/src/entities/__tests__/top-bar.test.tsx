@@ -6,9 +6,9 @@ import {
   mockWeather,
   MockIntegration,
 } from '@hashsome/core';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { HashsomeProvider } from '../../provider.tsx';
 import { renderWithMock } from '../../test-utils.tsx';
 import { Clock, DateChip, TopBar, WeatherChip } from '../top-bar.tsx';
@@ -36,6 +36,29 @@ test('renders title, fires a scene, and shows weather and presence', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Movie Night' }));
   expect(ha.calls).toHaveLength(1);
   expect(ha.calls[0]).toMatchObject({ entityId: 'movie_night', command: 'trigger' });
+});
+
+test('a press is answered at once for a fixed time, whether or not the scene has answered, and cannot be repeated meanwhile', async () => {
+  const { ha } = renderWithMock(
+    <TopBar title="Downstairs" scenes={['ha:movie_night']} />,
+    entities,
+  );
+
+  // A scene that never answers.
+  const spy = vi.spyOn(ha, 'command').mockImplementation(() => new Promise(() => {}));
+  const scene = screen.getByRole('button', { name: 'Movie Night' }) as HTMLButtonElement;
+  expect(screen.queryByRole('status')).toBeNull();
+  fireEvent.click(scene);
+  expect(spy).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole('status', { name: 'Done' })).toBeTruthy();
+  expect(scene.disabled).toBe(true);
+  fireEvent.click(scene);
+  expect(spy).toHaveBeenCalledTimes(1);
+  // It plays for its own time and is gone, with the scene still not answered.
+  await waitFor(() => expect(screen.queryByRole('status')).toBeNull(), { timeout: 3000 });
+  expect(scene.disabled).toBe(false);
+  fireEvent.click(scene);
+  expect(spy).toHaveBeenCalledTimes(2);
 });
 
 test('a scene can override its default icon', () => {
