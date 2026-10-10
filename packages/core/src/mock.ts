@@ -569,6 +569,7 @@ export class MockIntegration extends BaseIntegration {
         .filter((item) => {
           const hit =
             needle !== '' &&
+            (query.kind === undefined || item.kind === query.kind) &&
             `${item.title} ${item.subtitle ?? ''}`.toLowerCase().includes(needle) &&
             !seen.has(item.id);
 

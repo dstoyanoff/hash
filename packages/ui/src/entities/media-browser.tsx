@@ -36,6 +36,20 @@ export interface MediaBrowserProps {
 /** The height of the search field, and of the row of tabs it replaces. */
 const SEARCH_HEIGHT = 36;
 
+/** The name of each kind of thing a search finds, on the chip that narrows the results to it. */
+const KIND_LABELS: Record<BrowseKind, string> = {
+  album: 'Albums',
+  artist: 'Artists',
+  track: 'Tracks',
+  playlist: 'Playlists',
+  radio: 'Radio',
+  folder: 'Folders',
+  other: 'Other',
+};
+
+/** The chip for every kind at once. */
+const ALL_KINDS = 'all';
+
 const KIND_ICONS: Record<BrowseKind, IconName> = {
   folder: 'lu:folder',
   artist: 'lu:mic-vocal',
@@ -223,7 +237,17 @@ export function MediaBrowser({
               },
             }
           : {})}
-        css={{ background: 'none', outline: 'none' }}
+        css={{
+          background: 'none',
+          outline: 'none',
+          // A search field gets a clear button of the browser's own in some browsers, and this one has its own
+          // (and a button to close it), so the browser's is not drawn.
+          '&::-webkit-search-cancel-button, &::-webkit-search-decoration': {
+            WebkitAppearance: 'none',
+            appearance: 'none',
+            display: 'none',
+          },
+        }}
       />
       {onDemand ? (
         <PlainButton
@@ -249,30 +273,47 @@ export function MediaBrowser({
     </Flex>
   ) : null;
 
-  /** The categories (and, with `search='icon'`, the search icon at the end). */
+  /** The categories (and, with `search='icon'`, the search icon at the end). While a search found more than one kind of thing, the
+   * same row is the kinds to narrow it to: the shelves mean nothing to a search's results, which belong to none. */
   const tabsRow = browser.tabs ? (
     // With the search icon in it, as tall as the field that replaces it, so the list below stays put.
     <Flex align="center" gap={3} {...(onDemand ? { minHeight: SEARCH_HEIGHT } : {})}>
       <Flex direction="column" grow={1} minWidth={0}>
-        <ChipRow
-          tabs
-          options={browser.tabs.map((item) =>
-            // Inside a shelf the selected tab becomes the way back, so nothing is added to the
-            // layout and nothing below it moves.
-            item.id === browser.activeTab && inside
-              ? {
-                  value: item.id,
-                  label: browser.title ?? item.title,
-                  icon: 'lu:arrow-left' as const,
-                  ariaLabel: 'Back',
-                }
-              : { value: item.id, label: item.title },
-          )}
-          value={browser.activeTab}
-          onChange={(id) =>
-            id === browser.activeTab && inside ? browser.back() : browser.selectTab(id)
-          }
-        />
+        {browser.searching && browser.kindsPending ? (
+          // The kinds are not known yet: not the shelves, which the results belong to none of, and which would
+          // be swapped for the kinds a moment later.
+          <KindsSkeleton />
+        ) : browser.searching && browser.kinds ? (
+          <ChipRow
+            tabs
+            options={[
+              { value: ALL_KINDS, label: 'All' },
+              ...browser.kinds.map((kind) => ({ value: kind, label: KIND_LABELS[kind] })),
+            ]}
+            value={browser.kind ?? ALL_KINDS}
+            onChange={(id) => browser.filterBy(id === ALL_KINDS ? undefined : (id as BrowseKind))}
+          />
+        ) : (
+          <ChipRow
+            tabs
+            options={browser.tabs.map((item) =>
+              // Inside a shelf the selected tab becomes the way back, so nothing is added to the
+              // layout and nothing below it moves.
+              item.id === browser.activeTab && inside
+                ? {
+                    value: item.id,
+                    label: browser.title ?? item.title,
+                    icon: 'lu:arrow-left' as const,
+                    ariaLabel: 'Back',
+                  }
+                : { value: item.id, label: item.title },
+            )}
+            value={browser.activeTab}
+            onChange={(id) =>
+              id === browser.activeTab && inside ? browser.back() : browser.selectTab(id)
+            }
+          />
+        )}
       </Flex>
       {actionsHere}
       {searchTrigger}
@@ -385,6 +426,17 @@ export function MediaBrowser({
 
 /** What shows where the list will be while it loads: placeholders shaped like what is coming (cards in
  * the theater layout, rows in the list), in the room the real thing takes, so nothing moves. */
+/** Where the kinds to narrow a search to will be, in the chips' own height, so the list below does not move. */
+function KindsSkeleton() {
+  return (
+    <Flex gap={2} aria-busy="true" css={{ height: CHIP_HEIGHT }}>
+      {[40, 78, 74, 70, 62].map((width) => (
+        <Skeleton key={width} width={width} height={CHIP_HEIGHT} radius="full" />
+      ))}
+    </Flex>
+  );
+}
+
 function BrowseSkeleton({ theater }: { theater: boolean }) {
   return theater ? (
     <Flex

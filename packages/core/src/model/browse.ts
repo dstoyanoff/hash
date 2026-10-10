@@ -25,6 +25,9 @@ export interface BrowseQuery {
 
   /** Finds items by name. Only for integrations whose player has `capabilities.search`. */
   search?: string;
+
+  /** With `search`: only items of this kind, and as many of them as the backend gives, where an unfiltered search gives a few of each kind. For narrowing results to, say, the playlists. Ignored without `search`. */
+  kind?: BrowseKind;
 }
 
 export interface BrowseResult {

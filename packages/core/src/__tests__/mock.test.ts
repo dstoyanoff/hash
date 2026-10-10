@@ -146,6 +146,18 @@ describe('the mock library', () => {
     );
   });
 
+  test('a search can be narrowed to one kind', async () => {
+    const ha = player();
+    const all = (await ha.browse('room', { search: 'fleetwood' })).items.map((item) => item.kind);
+    expect(new Set(all).size).toBeGreaterThan(1);
+    const artists = await ha.browse('room', { search: 'fleetwood', kind: 'artist' });
+    expect(artists.items.length).toBeGreaterThan(0);
+    expect(artists.items.every((item) => item.kind === 'artist')).toBe(true);
+    // A kind with no match is an empty list, and a kind is ignored without a search.
+    expect((await ha.browse('room', { search: 'fleetwood', kind: 'radio' })).items).toEqual([]);
+    expect((await ha.browse('room', { kind: 'artist' })).items.length).toBeGreaterThan(1);
+  });
+
   test('seek moves the position and stamps when', async () => {
     const ha = player();
     await ha.command('room', 'seek', { position: 42 });
