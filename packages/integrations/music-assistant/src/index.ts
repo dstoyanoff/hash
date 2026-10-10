@@ -2,6 +2,7 @@ import {
   BaseIntegration,
   UnknownEntityError,
   type BrowseItem,
+  type BrowseKind,
   type BrowseQuery,
   type BrowseResult,
   type EntityInput,
@@ -206,6 +207,13 @@ interface QueueState {
   position: Position;
 }
 
+/** The kinds of item a search finds, which are also Music Assistant's own names for them. */
+const SEARCHABLE_KINDS: BrowseKind[] = ['album', 'artist', 'track', 'playlist', 'radio'];
+
+/** How many of each kind an unfiltered search brings, and how many a search for one kind does. */
+const SEARCH_LIMIT = 8;
+const SEARCH_LIMIT_ONE_KIND = 50;
+
 const samePosition = (a: Position, b: Position) =>
   a.item === b.item &&
   a.elapsed === b.elapsed &&
@@ -396,7 +404,7 @@ export class MusicAssistantIntegration extends BaseIntegration {
     }
 
     if (query.search !== undefined) {
-      return this.#search(query.search);
+      return this.#search(query.search, query.kind);
     }
 
     if (query.path === undefined) {
@@ -439,11 +447,16 @@ export class MusicAssistantIntegration extends BaseIntegration {
     );
   }
 
-  async #search(text: string): Promise<BrowseResult> {
+  async #search(text: string, kind?: BrowseKind): Promise<BrowseResult> {
+    // One kind asks for more of it: that is what narrowing to it is for. A kind that is not a media type is nothing.
+    if (kind !== undefined && !SEARCHABLE_KINDS.includes(kind)) {
+      return { title: `Results for “${text}”`, items: [] };
+    }
+
     const results = await this.#send('music/search', {
       search_query: text,
-      media_types: ['album', 'artist', 'track', 'playlist', 'radio'],
-      limit: 8,
+      media_types: kind ? [kind] : SEARCHABLE_KINDS,
+      limit: kind ? SEARCH_LIMIT_ONE_KIND : SEARCH_LIMIT,
     });
 
     const groups = isRecord(results)

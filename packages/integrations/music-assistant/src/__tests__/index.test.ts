@@ -410,6 +410,38 @@ test('search asks Music Assistant once and lists albums, artists, tracks, playli
   expect((await found).items.map((item) => item.kind)).toEqual(['album', 'artist', 'track']);
 });
 
+test('a search narrowed to one kind asks Music Assistant for only that kind, and for far more of it', async () => {
+  const { ma, socket } = make();
+  await connect(ma, socket);
+  const all = ma.browse('kitchen_speaker', { search: 'swift' });
+  await answer(socket, { albums: [], artists: [], tracks: [], playlists: [], radio: [] });
+  await all;
+  expect(socket().sent.at(-1)).toMatchObject({
+    command: 'music/search',
+    args: { media_types: ['album', 'artist', 'track', 'playlist', 'radio'], limit: 8 },
+  });
+
+  const some = ma.browse('kitchen_speaker', { search: 'swift', kind: 'playlist' });
+  await answer(socket, {
+    playlists: [{ uri: 'library://playlist/5', name: 'Swift mix', media_type: 'playlist' }],
+  });
+
+  expect(socket().sent.at(-1)).toMatchObject({
+    command: 'music/search',
+    args: { search_query: 'swift', media_types: ['playlist'], limit: 50 },
+  });
+
+  expect((await some).items.map((item) => item.kind)).toEqual(['playlist']);
+
+  // A kind that is not something Music Assistant has is nothing, without asking it.
+  const sent = socket().sent.length;
+  expect((await ma.browse('kitchen_speaker', { search: 'swift', kind: 'folder' })).items).toEqual(
+    [],
+  );
+
+  expect(socket().sent).toHaveLength(sent);
+});
+
 test('the position is the queue’s, since a resumed stream starts the player’s own counter from 0', async () => {
   const { ma, socket } = make();
   await connect(ma, socket, [
