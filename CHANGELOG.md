@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.0 (2026-10-10)
+
+### Features
+
+- **ui:** search results can be narrowed by type, and a result opens (#91) ([395b9a6](https://github.com/dstoyanoff/hashsome/commit/395b9a6f485a3de42334c791499fceb629476325))
+
+### Fixes
+
+- **ui:** the debug button is under a drawer and its scrim, not over them (#92) ([2792b00](https://github.com/dstoyanoff/hashsome/commit/2792b00e41b3b8f3f548a8f12b9f31cd6a93923a))
+
 ## 0.10.0 (2026-10-09)
 
 ### Features
