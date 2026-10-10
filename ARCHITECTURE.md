@@ -123,7 +123,7 @@ interface MediaPlayerEntity extends EntityBase<'mediaPlayer'> {
     shuffle: boolean;
     /** Playback can be moved to another player. */
     transfer: boolean;
-    /** Can be grouped with other players (`setGroupMembers`, `leaveGroup`); `groupable` says with which. */
+    /** Can be grouped with other players (`setGroupMembers`, `leaveGroup`, `takeOverGroup`); `groupable` says with which. */
     group: boolean;
   };
 }
@@ -145,6 +145,8 @@ interface MediaPlayerCommands {
   setGroupMembers: { add?: EntityRef[]; remove?: EntityRef[] };
   /** Takes this player out of its group; a leader leaving ends the group. */
   leaveGroup: void;
+  /** A follower takes the stream over: the player that led it leaves (and stops), and the others follow this one. */
+  takeOverGroup: void;
 }
 ```
 

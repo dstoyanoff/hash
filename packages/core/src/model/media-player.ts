@@ -120,4 +120,9 @@ export interface MediaPlayerCommands {
   /** Takes this player out of the group it plays in, which goes on without it. When it leads, the group is
    * over: everyone else stops following it. Nothing, for a player that plays alone. */
   leaveGroup: void;
+
+  /** For a player that follows another: takes the stream over. The player that led it leaves the group (and stops),
+   * and the others go on playing, now with this player as their leader, from where the stream was. Nothing, for a
+   * player that does not follow one. */
+  takeOverGroup: void;
 }

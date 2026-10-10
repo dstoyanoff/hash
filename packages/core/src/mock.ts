@@ -746,6 +746,23 @@ export class MockIntegration extends BaseIntegration {
     this.#detach(entityId);
   }
 
+  /** A follower becomes the leader of its group: the player that led stops and leaves it, and the rest follow this one. */
+  #takeOverGroup(entityId: string): void {
+    const player = this.#player(entityId);
+    const own = this.#refOf(entityId);
+    if (!player.group || player.group.leader === own) {
+      return;
+    }
+
+    const formerLeader = this.#localOf(player.group.leader);
+    const rest = player.group.members
+      .map((ref) => this.#localOf(ref))
+      .filter((id) => id !== entityId);
+
+    this.#alone(formerLeader, true);
+    this.#form(entityId, rest);
+  }
+
   #playMedia(entityId: string, item: unknown): Promise<void> {
     const found = Object.values(this.#library)
       .flatMap((folder) => folder.items)
@@ -796,6 +813,10 @@ export class MockIntegration extends BaseIntegration {
 
     if (entity.kind === 'mediaPlayer' && name === 'leaveGroup') {
       return this.#settle(() => this.#leaveGroup(entityId));
+    }
+
+    if (entity.kind === 'mediaPlayer' && name === 'takeOverGroup') {
+      return this.#settle(() => this.#takeOverGroup(entityId));
     }
 
     try {

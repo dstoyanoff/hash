@@ -253,6 +253,25 @@ describe('grouping players', () => {
     await ha.command('office', 'leaveGroup');
   });
 
+  test('taking over: a follower becomes the leader, the old leader stops, and the rest follow the new one', async () => {
+    const ha = makeRooms();
+    await ha.command('porch', 'setGroupMembers', { add: ['ha:kitchen', 'ha:bathroom'] });
+    await ha.command('kitchen', 'takeOverGroup');
+    expect(group(ha, 'kitchen')).toEqual({ leader: 'ha:kitchen', members: ['ha:bathroom'] });
+    expect(group(ha, 'bathroom')).toEqual({ leader: 'ha:kitchen', members: ['ha:bathroom'] });
+    expect(group(ha, 'porch')).toBeUndefined();
+    expect(ha.getEntity('porch')).toMatchObject({ playback: 'idle' });
+    expect(ha.getEntity('kitchen')).toMatchObject({ playback: 'playing' });
+
+    // With nobody else, the player goes on alone; and for a player that does not follow, it is nothing.
+    await ha.command('bathroom', 'takeOverGroup');
+    expect(group(ha, 'bathroom')).toBeUndefined();
+    expect(group(ha, 'kitchen')).toBeUndefined();
+    expect(ha.getEntity('kitchen')).toMatchObject({ playback: 'idle' });
+    expect(ha.getEntity('bathroom')).toMatchObject({ playback: 'playing' });
+    await ha.command('office', 'takeOverGroup');
+  });
+
   test('joining someone else’s stream leaves the one it was in, and adding a leader dissolves its group', async () => {
     const ha = makeRooms();
     await ha.command('porch', 'setGroupMembers', { add: ['ha:kitchen'] });
