@@ -11,6 +11,7 @@ import { useHold } from '../layout/use-hold.ts';
 import { MediaBrowser } from './media-browser.tsx';
 import { MediaPlayerFull } from './media-player-full.tsx';
 import { MediaQueue } from './media-queue.tsx';
+import { MediaSpeakers } from './media-speakers.tsx';
 import { NowPlaying } from './now-playing.tsx';
 
 export interface MediaPlayerColumnProps {
@@ -25,6 +26,12 @@ export interface MediaPlayerColumnProps {
 
   /** The library and the queue each open as a full-size overlay of their own, from a library button and a queue button beside the transport, instead of one half-size drawer with the whole player in it: for a small display, where the drawer's half state is no use. The library overlay is a `MediaBrowser` as a list (or your `browse` content), the queue overlay a `MediaQueue`; each button is left out when the player has none, or for `browse={false}`. Holding the card and pressing the artwork then do nothing. Shuffle moves up beside the title. Default `false`. */
   overlays?: boolean;
+
+  /** Whether the player can add speakers to what it plays, put it back to just itself and join a stream playing elsewhere (`MediaSpeakers`): a Speakers tab in the drawer's player, and with `overlays` a speakers button beside the title that opens it. Only for a player that can be grouped. `false` leaves it out. Default `true`. */
+  grouping?: boolean;
+
+  /** An allowlist of the speakers that can be added: only those that are in it and that the player can be grouped with are offered. Absent, every speaker it can be grouped with is offered. */
+  speakers?: EntityRef[];
 }
 
 /** The player as an upright card for a narrow column beside a dashboard (a quarter to a third of
@@ -38,6 +45,8 @@ export function MediaPlayerColumn({
   name,
   browse,
   overlays = false,
+  grouping = true,
+  speakers,
 }: MediaPlayerColumnProps) {
   const handle = useEntityHandle('mediaPlayer', entity);
   const player = handle.entity;
@@ -51,6 +60,15 @@ export function MediaPlayerColumn({
         ) : undefined));
 
   const fallback = fallbackName(entity);
+  // Who plays together with it, for a player that can be grouped.
+  const speakersBody =
+    grouping && ref && player?.capabilities.group === true ? (
+      <MediaSpeakers
+        entity={ref}
+        {...(name !== undefined ? { name } : {})}
+        {...(speakers ? { speakers } : {})}
+      />
+    ) : undefined;
 
   if (overlays) {
     // What the overlays hold: the library as a list, the queue; each only when the player has one.
@@ -71,38 +89,59 @@ export function MediaPlayerColumn({
         {(_open, _expanded, openLibrary) => (
           <DrawerTrigger icon="lu:list-music" label="Queue" kind={title} body={queueBody ?? null}>
             {(_openToo, _expandedToo, openQueue) => (
-              <Card>
-                <NowPlaying
-                  handle={handle}
-                  fallback={fallback}
-                  shuffle="title"
-                  {...(name !== undefined ? { name } : {})}
-                  {...(libraryBody
-                    ? {
-                        leading: (
-                          <IconButton
-                            icon="lu:library"
-                            label="Browse media"
-                            glyph={18}
-                            onClick={openLibrary}
-                          />
-                        ),
-                      }
-                    : {})}
-                  {...(queueBody
-                    ? {
-                        extra: (
-                          <IconButton
-                            icon="lu:list-music"
-                            label="Queue"
-                            glyph={18}
-                            onClick={openQueue}
-                          />
-                        ),
-                      }
-                    : {})}
-                />
-              </Card>
+              <DrawerTrigger
+                icon="lu:speaker"
+                label="Speakers"
+                kind={title}
+                body={speakersBody ?? null}
+              >
+                {(_openThree, _expandedThree, openSpeakers) => (
+                  <Card>
+                    <NowPlaying
+                      handle={handle}
+                      fallback={fallback}
+                      shuffle="title"
+                      {...(name !== undefined ? { name } : {})}
+                      {...(libraryBody
+                        ? {
+                            leading: (
+                              <IconButton
+                                icon="lu:library"
+                                label="Browse media"
+                                glyph={18}
+                                onClick={openLibrary}
+                              />
+                            ),
+                          }
+                        : {})}
+                      {...(queueBody
+                        ? {
+                            extra: (
+                              <IconButton
+                                icon="lu:list-music"
+                                label="Queue"
+                                glyph={18}
+                                onClick={openQueue}
+                              />
+                            ),
+                          }
+                        : {})}
+                      {...(speakersBody
+                        ? {
+                            titleExtra: (
+                              <IconButton
+                                icon="lu:speaker"
+                                label="Speakers"
+                                size={14}
+                                onClick={openSpeakers}
+                              />
+                            ),
+                          }
+                        : {})}
+                    />
+                  </Card>
+                )}
+              </DrawerTrigger>
             )}
           </DrawerTrigger>
         )}
@@ -124,6 +163,7 @@ export function MediaPlayerColumn({
           entity={entity}
           browser={browser}
           {...(typeof entity === 'string' ? { queue: <MediaQueue entity={entity} /> } : {})}
+          {...(speakersBody ? { speakers: speakersBody } : {})}
           {...(name !== undefined ? { name } : {})}
         />
       }

@@ -7,7 +7,9 @@ import { useEntity } from '../hooks.ts';
  * changes until it does: so the button, the item and the player say it is waiting. */
 export interface MediaPending {
   /** What was asked. A transport command is its own name (`togglePlay`, `next`, `previous`, `setShuffle`);
-   * from the library: `playItem` (replaces what is playing, so the player says it is loading it), `queueNext`, `queueAdd`. */
+   * from the library: `playItem` (replaces what is playing, so the player says it is loading it), `queueNext`, `queueAdd`;
+   * and a change of who plays together starts with `group:` (`group:add:<speaker>`, `group:reset`...), which is done
+   * when the player's group changes. */
   kind: string;
 
   /** For the library kinds: the item it was asked for. */
@@ -29,6 +31,9 @@ interface Waiting {
   /** The track the player had when this was asked: a skip is done when there is another one and it plays. */
   baseTitle?: string | undefined;
 
+  /** The group the player was in when this was asked: a change of the group is done when it is another. */
+  baseGroup?: string | undefined;
+
   /** The player changed before it acknowledged (a player that changes first and answers after). */
   changed?: boolean;
 }
@@ -47,6 +52,9 @@ export const PENDING_LIMIT_MS = 60_000;
 interface Seen {
   title: string | undefined;
 
+  /** The group it plays in, as text, empty while it plays alone. */
+  group: string;
+
   /** Playing, and past the start of the track: not only announced. */
   started: boolean;
 }
@@ -61,7 +69,18 @@ const changesTrack = (kind: string) =>
  * visibly does (a skip back on a track already at its start). A skip or a start from the library
  * takes the player several seconds. */
 const settleFor = (kind: string) =>
-  kind === 'playItem' ? 15_000 : kind === 'next' ? 10_000 : kind === 'previous' ? 4_000 : 2_000;
+  kind === 'playItem'
+    ? 15_000
+    : kind === 'next'
+      ? 10_000
+      : kind === 'previous'
+        ? 4_000
+        : changesGroup(kind)
+          ? 8_000
+          : 2_000;
+
+/** Asks that change who plays together are done when the group is another. */
+const changesGroup = (kind: string) => kind.startsWith('group:');
 
 /** A position past this many seconds means the track plays, and is not only announced. */
 const STARTED_AFTER_S = 0.05;
@@ -88,7 +107,13 @@ const publish = (ref: string) => {
 /** Shows `entry` as pending for `ref` from now until the player has taken it up, whichever way: until it
  * refuses it, or changes after acknowledging it, or a while after (`useMediaPending` reports the change). */
 export function trackMedia(ref: string, entry: MediaPending, request: Promise<unknown>): void {
-  const waiting: Waiting = { entry, answered: false, baseTitle: lastSeen.get(ref)?.title };
+  const waiting: Waiting = {
+    entry,
+    answered: false,
+    baseTitle: lastSeen.get(ref)?.title,
+    baseGroup: lastSeen.get(ref)?.group,
+  };
+
   const started = Date.now();
   pending.set(ref, [...(pending.get(ref) ?? []), waiting]);
   publish(ref);
@@ -133,8 +158,9 @@ export function trackMedia(ref: string, entry: MediaPending, request: Promise<un
 function observe(ref: EntityRef, seen: Seen): void {
   lastSeen.set(ref, seen);
   for (const waiting of pending.get(ref) ?? []) {
-    const done =
-      !changesTrack(waiting.entry.kind) || (seen.title !== waiting.baseTitle && seen.started);
+    const done = changesGroup(waiting.entry.kind)
+      ? seen.group !== waiting.baseGroup
+      : !changesTrack(waiting.entry.kind) || (seen.title !== waiting.baseTitle && seen.started);
 
     if (!done) {
       continue;
@@ -176,14 +202,16 @@ export function useMediaPending(ref: EntityRef | undefined): MediaPending[] {
   const playback = media?.playback;
   const album = media?.media?.album;
   const shuffle = media?.shuffle;
+  // Who plays together, as one text: it changes when someone joins or leaves, whoever leads.
+  const group = media?.group ? `${media.group.leader}>${media.group.members.join(',')}` : '';
 
   useEffect(() => {
     if (ref && present) {
-      observe(ref, { title, started });
+      observe(ref, { title, started, group });
     }
     // `playback`, `album` and `shuffle` are not read inside: a change to any of them is the reason to look again.
     // oxlint-disable-next-line react/exhaustive-effect-dependencies
-  }, [ref, present, title, started, playback, album, shuffle]);
+  }, [ref, present, title, started, group, playback, album, shuffle]);
 
   return useSyncExternalStore(
     subscribe,

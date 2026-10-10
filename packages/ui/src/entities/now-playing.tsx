@@ -23,6 +23,7 @@ export function NowPlaying({
   name,
   extra,
   leading,
+  titleExtra,
   onOpenArtwork,
   size,
   shuffle: shufflePlacement = 'transport',
@@ -40,6 +41,9 @@ export function NowPlaying({
 
   /** One more button, to the left of the transport, in the slot shuffle has when it sits by the title. Not shown while shuffle is in the row. */
   leading?: ReactNode;
+
+  /** One more small button beside the song title, after shuffle (the speakers button). */
+  titleExtra?: ReactNode;
 
   /** Makes the artwork a button that calls this (opens the library). */
   onOpenArtwork?: () => void;
@@ -113,6 +117,7 @@ export function NowPlaying({
               }
             />
           ) : null}
+          {titleExtra}
         </Flex>
         {loading ? (
           <LoadingLine label={loading} variant="body" />

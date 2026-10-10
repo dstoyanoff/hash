@@ -21,6 +21,7 @@ import { MediaBrowser } from './media-browser.tsx';
 import { LoadingLine, useLoadingLabel } from './media-loading-line.tsx';
 import { MediaPlayerFull } from './media-player-full.tsx';
 import { MediaQueue } from './media-queue.tsx';
+import { MediaSpeakers } from './media-speakers.tsx';
 import { formatDuration, useMediaPosition, useSteadyPlaying } from './media-progress.ts';
 import { useSeekHold } from './media-seek.ts';
 import { SeekLine } from './seek-line.tsx';
@@ -43,6 +44,12 @@ export interface MediaPlayerBarProps {
 
   /** The library and the queue each open as a full-size overlay of their own, from the browse button and a new queue button, instead of one drawer with the whole player in it: for a small display, where the card itself is the player. The library overlay is a `MediaBrowser` as a list (or your `browse` content), the queue overlay a `MediaQueue`; each button is left out when the player has none, or for `browse={false}`. Holding the card and pressing the artwork then do nothing, unless `onOpen` is given. Default `false`. */
   overlays?: boolean;
+
+  /** Whether the player can add speakers to what it plays, put it back to just itself and join a stream playing elsewhere (`MediaSpeakers`), from a speakers button with `overlays` and a Speakers tab in the drawer. Only for a player that can be grouped. `false` leaves it out. Default `true`. */
+  grouping?: boolean;
+
+  /** An allowlist of the speakers that can be added: only those that are in it and that the player can be grouped with are offered. Absent, every speaker it can be grouped with is offered. */
+  speakers?: EntityRef[];
 
   /** `1` puts the controls beside the track, in one pill; `2` puts them on a second row under it, for a narrow space (a small wall display). Default `'auto'`: one row, and two once the bar is narrower than 560 px wide. */
   rows?: 1 | 2 | 'auto';
@@ -272,6 +279,8 @@ export function MediaPlayerBar({
   drawer = true,
   onOpen,
   overlays = false,
+  grouping = true,
+  speakers,
   rows = 'auto',
 }: MediaPlayerBarProps) {
   const handle = useEntityHandle('mediaPlayer', entity);
@@ -334,6 +343,15 @@ export function MediaPlayerBar({
       : (browse ?? (ref && caps?.browse ? <MediaBrowser entity={ref} layout="list" /> : undefined));
 
   const queueBody = ref && caps?.queue === true ? <MediaQueue entity={ref} /> : undefined;
+  // And who plays together with it, for a player that can be grouped.
+  const speakersBody =
+    grouping && ref && caps?.group === true ? (
+      <MediaSpeakers
+        entity={ref}
+        {...(name !== undefined ? { name } : {})}
+        {...(speakers ? { speakers } : {})}
+      />
+    ) : undefined;
 
   const volumeSlider = (
     <Flex
@@ -452,7 +470,12 @@ export function MediaPlayerBar({
     </>
   );
 
-  const bar = (open?: () => void, openExpanded?: () => void, openQueue?: () => void) => (
+  const bar = (
+    open?: () => void,
+    openExpanded?: () => void,
+    openQueue?: () => void,
+    openSpeakers?: () => void,
+  ) => (
     <HoldCard open={open} status={status} rows={rows} volumeOpen={volumeOpen && ready}>
       {/* A ring (the old artwork size) around the artwork, which is as tall as the title + artist
           lines beside it. */}
@@ -497,6 +520,14 @@ export function MediaPlayerBar({
         ) : null}
         {openQueue ? (
           <IconButton icon="lu:list-music" label="Queue" glyph={MEDIA_GLYPH} onClick={openQueue} />
+        ) : null}
+        {openSpeakers ? (
+          <IconButton
+            icon="lu:speaker"
+            label="Speakers"
+            glyph={MEDIA_GLYPH}
+            onClick={openSpeakers}
+          />
         ) : null}
       </Flex>
       <Flex data-part="transport" align="center" gap={3} css={{ flex: 'none' }}>
@@ -545,9 +576,23 @@ export function MediaPlayerBar({
       <DrawerTrigger icon="lu:library" label="Library" kind={title} body={libraryBody ?? null}>
         {(_open, _expanded, openLibrary) => (
           <DrawerTrigger icon="lu:list-music" label="Queue" kind={title} body={queueBody ?? null}>
-            {(_openToo, _expandedToo, openQueue) =>
-              bar(onOpen, libraryBody ? openLibrary : undefined, queueBody ? openQueue : undefined)
-            }
+            {(_openToo, _expandedToo, openQueue) => (
+              <DrawerTrigger
+                icon="lu:speaker"
+                label="Speakers"
+                kind={title}
+                body={speakersBody ?? null}
+              >
+                {(_openThree, _expandedThree, openSpeakers) =>
+                  bar(
+                    onOpen,
+                    libraryBody ? openLibrary : undefined,
+                    queueBody ? openQueue : undefined,
+                    speakersBody ? openSpeakers : undefined,
+                  )
+                }
+              </DrawerTrigger>
+            )}
           </DrawerTrigger>
         )}
       </DrawerTrigger>
@@ -574,6 +619,7 @@ export function MediaPlayerBar({
           {...(name !== undefined ? { name } : {})}
           {...(browser !== undefined ? { browser } : {})}
           {...(typeof entity === 'string' ? { queue: <MediaQueue entity={entity} /> } : {})}
+          {...(speakersBody ? { speakers: speakersBody } : {})}
         />
       }
     >

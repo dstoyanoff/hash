@@ -12,6 +12,7 @@ import { AnimatedOutlet } from '../layout/animated-outlet.tsx';
 import { MediaPlayerColumn } from '../entities/media-player-column.tsx';
 import { MediaPlayerFull } from '../entities/media-player-full.tsx';
 import { MediaQueue } from '../entities/media-queue.tsx';
+import { MediaSpeakers } from '../entities/media-speakers.tsx';
 import { WeatherForecast } from '../entities/weather-forecast.tsx';
 import { NavDock } from '../entities/nav-dock.tsx';
 import { NavRail } from '../entities/nav-rail.tsx';
@@ -1094,6 +1095,28 @@ export function Gallery({ density = 'comfortable' }: { density?: 'comfortable' |
                 <WeatherForecast entity="ha:weather.home" expanded={false} />
               </Flex>
               <WeatherForecast entity="ha:weather.home" expanded />
+            </Flex>
+          </ComponentDoc>
+
+          <ComponentDoc
+            title="Media Speakers"
+            components={['MediaSpeakers']}
+            description="Who plays together with a player: its stream's speakers, each with its own volume and a cross to take it out, the speakers it can add (the plus), a way to join a stream that is playing in another room (the arrow), and a button that puts the stream back to just this player. Playing something else on a speaker, or on this player, to do it asks first. Everything is asked of the player and shown when it answers. `speakers` is an allowlist of the ones that can be added: only those that are in it and that the player can be grouped with are offered, and a speaker that is but is off shows dimmed. The player components show it from a Speakers button (`overlays`) and a Speakers tab, unless `grouping={false}`. The first demo is a stream led by the porch with the bedroom in it; the second is a player on its own with an allowlist. They are live: try them."
+          >
+            <Flex direction="column" gap={6}>
+              <Flex direction="column" width={560}>
+                <MediaSpeakers entity="ha:media_player.porch" />
+              </Flex>
+              <Flex direction="column" width={560}>
+                <MediaSpeakers
+                  entity="ha:media_player.office"
+                  speakers={[
+                    'ha:media_player.porch',
+                    'ha:media_player.patio',
+                    'ha:media_player.garage',
+                  ]}
+                />
+              </Flex>
             </Flex>
           </ComponentDoc>
 

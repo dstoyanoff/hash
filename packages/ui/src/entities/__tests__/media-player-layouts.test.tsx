@@ -836,7 +836,7 @@ const tab = (name: string) => screen.getByRole('tab', { name });
 test('the full player has Library and Queue tabs below it, the library first, and a tab swaps the list', async () => {
   renderWithMock(fullPlayer(), playing({ queue: true }), library);
 
-  expect(screen.getByRole('tablist', { name: 'Library or queue' })).toBeTruthy();
+  expect(screen.getByRole('tablist', { name: 'Library, queue or speakers' })).toBeTruthy();
   expect(tab('Library').getAttribute('aria-selected')).toBe('true');
   expect(tab('Queue').getAttribute('aria-selected')).toBe('false');
   expect(await screen.findByText('Playlists')).toBeTruthy();
@@ -871,7 +871,7 @@ test('tabs={false} leaves the library alone, defaultTab opens the queue first', 
 });
 
 test('a tab that is kept by the caller is the open one, and a change is asked for', async () => {
-  const onTabChange = vi.fn<(next: 'library' | 'queue') => void>();
+  const onTabChange = vi.fn<(next: 'library' | 'queue' | 'speakers') => void>();
   renderWithMock(fullPlayer({ tab: 'queue', onTabChange }), playing({ queue: true }), library);
 
   expect(tab('Queue').getAttribute('aria-selected')).toBe('true');

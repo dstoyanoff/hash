@@ -22,6 +22,9 @@ export interface MediaPlayerFullProps {
   /** What goes beside the player in a wide space, usually the player's queue: `<MediaQueue entity="ma:living_room" />`. Only used when `wide` and the player has a queue; the narrow layout has no room for it. */
   queue?: ReactNode;
 
+  /** What goes in a Speakers tab beside Library and Queue, usually `<MediaSpeakers entity="ma:living_room" />`: who plays together with the player. Only used for a player that can be grouped, and with the tabs on. Left out, there is no Speakers tab. */
+  speakers?: ReactNode;
+
   /** Calls the player this instead of the name it reports. */
   name?: string;
 
@@ -42,24 +45,36 @@ export interface MediaPlayerFullProps {
 }
 
 /** What the tabs below the player choose between. */
-export type ListTab = 'library' | 'queue';
+export type ListTab = 'library' | 'queue' | 'speakers';
 
 const TAB_HEIGHT = 40;
 
 /** Library and Queue, as text with an underline (not the pills the library's own categories are, so the
  * two rows read as different things). */
-function ListTabs({ value, onChange }: { value: ListTab; onChange: (tab: ListTab) => void }) {
+function ListTabs({
+  value,
+  lists,
+  onChange,
+}: {
+  value: ListTab;
+  lists: ListTab[];
+  onChange: (tab: ListTab) => void;
+}) {
   // One line that slides between the tabs; its own id, so two players on a page do not share it.
   const line = useId();
-  const tabs: { id: ListTab; label: string; icon: 'lu:library' | 'lu:list-music' }[] = [
-    { id: 'library', label: 'Library', icon: 'lu:library' },
-    { id: 'queue', label: 'Queue', icon: 'lu:list-music' },
-  ];
+  const all: { id: ListTab; label: string; icon: 'lu:library' | 'lu:list-music' | 'lu:speaker' }[] =
+    [
+      { id: 'library', label: 'Library', icon: 'lu:library' },
+      { id: 'queue', label: 'Queue', icon: 'lu:list-music' },
+      { id: 'speakers', label: 'Speakers', icon: 'lu:speaker' },
+    ];
+
+  const tabs = all.filter((tab) => lists.includes(tab.id));
 
   return (
     <Flex
       role="tablist"
-      aria-label="Library or queue"
+      aria-label="Library, queue or speakers"
       gap={5}
       css={({ palette }) => ({ flexShrink: 0, borderBottom: `1px solid ${palette.border}` })}
     >
@@ -119,6 +134,7 @@ export function MediaPlayerFull({
   entity,
   browser,
   queue,
+  speakers,
   wide,
   name,
   tabs = true,
@@ -136,6 +152,9 @@ export function MediaPlayerFull({
   const lists: ListTab[] = [
     ...(browser !== undefined ? (['library'] as const) : []),
     ...(!full && tabs && hasQueue ? (['queue'] as const) : []),
+    ...(tabs && speakers !== undefined && handle.entity?.capabilities.group === true
+      ? (['speakers'] as const)
+      : []),
   ];
 
   const wanted = tab ?? kept;
@@ -186,7 +205,7 @@ export function MediaPlayerFull({
         <>
           {/* The tabs are the line between the player and the list when there are two; one list has a plain line. */}
           {lists.length > 1 ? (
-            <ListTabs value={open} onChange={choose} />
+            <ListTabs value={open} lists={lists} onChange={choose} />
           ) : (
             <Box height={1} background="border" css={{ flexShrink: 0 }} />
           )}
@@ -205,7 +224,7 @@ export function MediaPlayerFull({
             minHeight={0}
             {...(full ? {} : { maxWidth: 960, mx: 'auto' })}
           >
-            {open === 'queue' ? queue : browser}
+            {open === 'queue' ? queue : open === 'speakers' ? speakers : browser}
           </Flex>
         </>
       ) : null}
