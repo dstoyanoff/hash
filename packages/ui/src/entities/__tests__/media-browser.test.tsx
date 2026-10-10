@@ -154,11 +154,10 @@ test('the search box shows only for a library that can be searched, and lists ma
   });
 
   expect(await screen.findByRole('button', { name: 'Play Dreams' })).toBeTruthy();
-  // The tabs stay, with none selected: results belong to no shelf.
-  expect(screen.getAllByRole('tab')).toHaveLength(5);
-  expect(
-    screen.getAllByRole('tab').some((tab) => tab.getAttribute('aria-selected') === 'true'),
-  ).toBe(false);
+  // The shelves give way to the kinds found, since results belong to no shelf.
+  expect(await screen.findByRole('tab', { name: 'All' })).toBeTruthy();
+  expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['All', 'Tracks']);
+  expect(screen.getByRole('tab', { name: 'All' }).getAttribute('aria-selected')).toBe('true');
 
   act(() => {
     fireEvent.change(box, { target: { value: 'zzzz' } });
@@ -187,17 +186,19 @@ test('the browser’s own clear button is not drawn in the search field, which h
   expect(styles).toMatch(/::-webkit-search-cancel-button[^{]*\{[^}]*display:\s*none/);
 });
 
-test('picking a tab while searching ends the search', async () => {
-  render();
+test('a search that found one kind can be narrowed to it too, which asks the library for more of it', async () => {
+  const { ha } = render();
   await screen.findByRole('tab', { name: 'Albums' });
+  const browse = vi.spyOn(ha, 'browse');
   act(() => {
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'dream' } });
   });
 
-  await screen.findByRole('button', { name: 'Play Dreams' });
-  fireEvent.click(screen.getByRole('tab', { name: 'Artists' }));
-  expect(await screen.findByRole('button', { name: 'Open Fleetwood Mac' })).toBeTruthy();
-  expect((screen.getByRole('searchbox') as HTMLInputElement).value).toBe('');
+  fireEvent.click(await screen.findByRole('tab', { name: 'Tracks' }));
+  expect(await screen.findByRole('button', { name: 'Play Dreams' })).toBeTruthy();
+  await waitFor(() =>
+    expect(browse).toHaveBeenCalledWith(expect.anything(), { search: 'dream', kind: 'track' }),
+  );
 });
 
 test('opening an album from search results opens it, and going back returns to the results', async () => {
@@ -265,9 +266,9 @@ describe('narrowing a search to one kind of result', () => {
     expect(ha.calls).toEqual([]);
   });
 
-  test('a search that found one kind keeps the shelves, and clearing the search brings them back', async () => {
-    await search('dream');
-    await screen.findByRole('button', { name: 'Play Dreams' });
+  test('the shelves are only for a search with no results, and clearing the search brings them back', async () => {
+    await search('zzzz');
+    expect(await screen.findByText('Nothing found.')).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Albums' })).toBeTruthy();
     expect(screen.queryByRole('tab', { name: 'All' })).toBeNull();
 

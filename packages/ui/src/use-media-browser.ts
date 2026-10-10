@@ -58,7 +58,7 @@ export interface MediaBrowserState {
   /** Lists what matches `text`; an empty string goes back to where the browser was. */
   search(text: string): void;
 
-  /** The kinds of thing the search found (albums, playlists…), when it found more than one kind and so there is something to narrow it to; in a fixed order. Absent when not searching. While another search is on its way these are the last one's, so what is shown does not flicker as someone types. */
+  /** The kinds of thing the search found (albums, playlists…), when it found any, so there is something to narrow it to (to a lone kind too, which brings far more of it than the mixed list); in a fixed order. Absent when not searching. While another search is on its way these are the last one's, so what is shown does not flicker as someone types. */
   kinds: BrowseKind[] | undefined;
 
   /** Searching, with no kinds to show yet (the first answer has not come) and nothing from an earlier search to show instead: a placeholder for them. */
@@ -278,8 +278,8 @@ export function useMediaBrowser(ref: EntityRef): MediaBrowserState {
     back,
     query: text,
     search: setText,
-    kinds: kinds && kinds.length >= 2 ? kinds : undefined,
-    kindsPending: searching && foundKinds === undefined && !(lastKinds && lastKinds.length >= 2),
+    kinds: kinds && kinds.length >= 1 ? kinds : undefined,
+    kindsPending: searching && foundKinds === undefined && !(lastKinds && lastKinds.length >= 1),
     kind,
     filterBy: setKindChoice,
   };

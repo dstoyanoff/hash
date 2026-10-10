@@ -273,7 +273,7 @@ export function MediaBrowser({
     </Flex>
   ) : null;
 
-  /** The categories (and, with `search='icon'`, the search icon at the end). While a search found more than one kind of thing, the
+  /** The categories (and, with `search='icon'`, the search icon at the end). While a search has results, the
    * same row is the kinds to narrow it to: the shelves mean nothing to a search's results, which belong to none. */
   const tabsRow = browser.tabs ? (
     // With the search icon in it, as tall as the field that replaces it, so the list below stays put.
