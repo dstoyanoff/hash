@@ -70,6 +70,8 @@ export const COMMAND_NAMES: Record<EntityKind, readonly string[]> = {
     'seek',
     'setShuffle',
     'playMedia',
+    'setGroupMembers',
+    'leaveGroup',
   ],
   light: ['turnOn', 'turnOff', 'toggle', 'setBrightness', 'setColorTemperature', 'setColor'],
   climate: ['setMode', 'setTargetTemperature', 'setPreset'],

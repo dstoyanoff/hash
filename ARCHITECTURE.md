@@ -103,6 +103,11 @@ interface MediaPlayerEntity extends EntityBase<'mediaPlayer'> {
   /** 0..1. Absent when the player has no volume control. */
   volume?: number;
   muted: boolean;
+  /** The group it plays in with others, the same on every one (`leader` is the player the stream belongs to,
+   * itself on the leader). Absent while it plays alone. A follower shows what its leader plays. */
+  group?: { leader: EntityRef; members: EntityRef[] };
+  /** The players it can be grouped with: what to offer to add to its stream. */
+  groupable?: EntityRef[];
   capabilities: {
     volume: boolean;
     mute: boolean;
@@ -118,7 +123,7 @@ interface MediaPlayerEntity extends EntityBase<'mediaPlayer'> {
     shuffle: boolean;
     /** Playback can be moved to another player. */
     transfer: boolean;
-    /** Can be grouped with other players. */
+    /** Can be grouped with other players (`setGroupMembers`, `leaveGroup`); `groupable` says with which. */
     group: boolean;
   };
 }
@@ -135,6 +140,11 @@ interface MediaPlayerCommands {
   setShuffle: { shuffle: boolean };
   /** Plays a `BrowseItem` of this player's own library; `mode` queues it instead (`next`, `add`). */
   playMedia: { item: string; mode?: 'play' | 'replace' | 'next' | 'add' };
+  /** Adds players to this player's stream and takes players out of it, this player being its leader.
+   * Joining someone else's stream is sent to that leader (`add: [me]`); a follower cannot lead. */
+  setGroupMembers: { add?: EntityRef[]; remove?: EntityRef[] };
+  /** Takes this player out of its group; a leader leaving ends the group. */
+  leaveGroup: void;
 }
 ```
 
@@ -634,7 +644,9 @@ Every card kind is on the generic model. HA-shaped `EntityState` and `callServic
 | Light, climate, sensor, switch, action / scene, person                                   | done                   |
 | `history` (energy totals, sensor history) and `logbook` (activity, from Home Assistant)  | done                   |
 | `browse` / `search` / `playMedia` / `seek` (Music Assistant, Home Assistant, UI browser) | done                   |
-| Queue ("up next", Music Assistant only), image proxy, speaker transfer and grouping      | not started            |
+| Queue ("up next", Music Assistant only), image proxy                                     | done                   |
+| Speaker grouping: model, commands and mock (Music Assistant and the UI follow)           | in progress            |
+| Speaker transfer                                                                         | not started            |
 | Integration mocks and the mock conformance suite                                         | done                   |
 | Typed refs per kind                                                                      | not started (optional) |
 

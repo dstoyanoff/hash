@@ -1,5 +1,5 @@
 import { BaseIntegration } from './base-integration.ts';
-import { UnknownEntityError } from './entity.ts';
+import { parseEntityRef, UnknownEntityError } from './entity.ts';
 import { mockForecast } from './mock-forecast.ts';
 import { mockHistory } from './mock-history.ts';
 import { mockLogbook } from './mock-logbook.ts';
@@ -586,6 +586,166 @@ export class MockIntegration extends BaseIntegration {
       : Promise.reject(new Error(`Nothing at "${query.path}"`));
   }
 
+  /** Runs something that may throw as a command does: a promise that rejects with the error. */
+  #settle(action: () => void): Promise<void> {
+    try {
+      action();
+      return Promise.resolve();
+    } catch (error) {
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+
+  /** The media player with this local id. */
+  #player(entityId: string): MediaPlayerEntity {
+    const input = this.#inputs.get(entityId);
+    if (input?.kind !== 'mediaPlayer') {
+      throw new UnknownEntityError(this.id, entityId);
+    }
+
+    return input as unknown as MediaPlayerEntity;
+  }
+
+  /** The local id of a ref to one of this integration's players. */
+  #localOf(ref: string): string {
+    const { integration, id } = parseEntityRef(ref);
+    if (integration !== this.id) {
+      throw new Error(`"${ref}" is not a player of "${this.id}"`);
+    }
+
+    return id;
+  }
+
+  #refOf = (entityId: string): string => `${this.id}:${entityId}`;
+
+  /** Some players, as the `add` or `remove` of a command: a list of refs, or nothing. */
+  #refsArg(value: unknown, key: string): string[] {
+    if (value === undefined) {
+      return [];
+    }
+
+    if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
+      throw new Error(`"${key}" needs a list of players`);
+    }
+
+    return value as string[];
+  }
+
+  /** Takes a player out of any group it is in: it plays alone, and stops if it was following. A leader's group is
+   * over, so everyone it led stops following too. */
+  #detach(entityId: string): void {
+    const player = this.#player(entityId);
+    if (!player.group) {
+      return;
+    }
+
+    const led = player.group.leader === this.#refOf(entityId);
+    if (led) {
+      for (const member of player.group.members) {
+        this.#alone(this.#localOf(member), true);
+      }
+
+      this.#alone(entityId, false);
+      return;
+    }
+
+    const leaderId = this.#localOf(player.group.leader);
+    const rest = player.group.members
+      .map((ref) => this.#localOf(ref))
+      .filter((id) => id !== entityId);
+
+    this.#alone(entityId, true);
+    this.#form(leaderId, rest);
+  }
+
+  /** A player outside any group; one that was following stops (a leader goes on playing). */
+  #alone(entityId: string, stop: boolean): void {
+    const { group: _group, ...rest } = this.#player(entityId) as MediaPlayerEntity &
+      Record<string, unknown>;
+
+    const now = new Date().toISOString();
+    this.set(entityId, {
+      ...rest,
+      ...(stop ? { playback: 'idle' } : {}),
+      lastUpdated: now,
+      lastChanged: now,
+    } as unknown as EntityInput);
+  }
+
+  /** A leader and the players that follow it, the same group on every one, each following showing what the
+   * leader plays. No members is no group. */
+  #form(leaderId: string, memberIds: string[]): void {
+    if (memberIds.length === 0) {
+      this.#alone(leaderId, false);
+      return;
+    }
+
+    const leader = this.#player(leaderId);
+    const group = { leader: this.#refOf(leaderId), members: memberIds.map(this.#refOf) };
+    this.update(leaderId, { group } as Partial<EntityInput>);
+    for (const id of memberIds) {
+      this.update(id, {
+        group,
+        playback: leader.playback,
+        ...(leader.media ? { media: leader.media } : {}),
+        ...(leader.position !== undefined ? { position: leader.position } : {}),
+        ...(leader.duration !== undefined ? { duration: leader.duration } : {}),
+        ...(leader.positionUpdatedAt ? { positionUpdatedAt: leader.positionUpdatedAt } : {}),
+      } as Partial<EntityInput>);
+    }
+  }
+
+  #setGroupMembers(entityId: string, args: Record<string, unknown> | undefined): void {
+    const add = this.#refsArg(args?.add, 'add');
+    const remove = this.#refsArg(args?.remove, 'remove');
+    const leader = this.#player(entityId);
+    if (add.length === 0 && remove.length === 0) {
+      return;
+    }
+
+    if (!leader.capabilities.group) {
+      throw new Error(`"${entityId}" cannot be grouped`);
+    }
+
+    const own = this.#refOf(entityId);
+    if (leader.group && leader.group.leader !== own) {
+      throw new Error(`"${entityId}" follows ${leader.group.leader}: ask the leader`);
+    }
+
+    let members = (leader.group?.members ?? []).map((ref) => this.#localOf(ref));
+    for (const ref of remove) {
+      const id = this.#localOf(ref);
+      if (members.includes(id)) {
+        members = members.filter((other) => other !== id);
+        this.#alone(id, true);
+      }
+    }
+
+    for (const ref of add) {
+      const id = this.#localOf(ref);
+      if (id === entityId || members.includes(id)) {
+        continue;
+      }
+
+      const other = this.#player(id);
+      if (
+        !other.capabilities.group ||
+        (leader.groupable && !leader.groupable.includes(ref as never))
+      ) {
+        throw new Error(`"${id}" cannot be grouped with "${entityId}"`);
+      }
+
+      this.#detach(id);
+      members.push(id);
+    }
+
+    this.#form(entityId, members);
+  }
+
+  #leaveGroup(entityId: string): void {
+    this.#detach(entityId);
+  }
+
   #playMedia(entityId: string, item: unknown): Promise<void> {
     const found = Object.values(this.#library)
       .flatMap((folder) => folder.items)
@@ -628,6 +788,14 @@ export class MockIntegration extends BaseIntegration {
 
     if (entity.kind === 'mediaPlayer' && name === 'playMedia') {
       return this.#playMedia(entityId, args?.item);
+    }
+
+    if (entity.kind === 'mediaPlayer' && name === 'setGroupMembers') {
+      return this.#settle(() => this.#setGroupMembers(entityId, args));
+    }
+
+    if (entity.kind === 'mediaPlayer' && name === 'leaveGroup') {
+      return this.#settle(() => this.#leaveGroup(entityId));
     }
 
     try {
