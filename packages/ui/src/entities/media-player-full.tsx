@@ -7,6 +7,8 @@ import { fallbackName, type EntityHandle } from '../entity-handle.ts';
 import { useEntityHandle } from '../hooks.ts';
 import { useDetail } from '../layout/detail-provider.tsx';
 import { Icon } from '../icon.tsx';
+import { MediaSpeakers } from './media-speakers.tsx';
+import { SpeakersOverlay, SpeakersPill } from './media-speakers-pill.tsx';
 import { NowPlaying } from './now-playing.tsx';
 
 /** The artwork ring's diameter in a full-size player, against the usual 168px. */
@@ -21,6 +23,15 @@ export interface MediaPlayerFullProps {
 
   /** What goes beside the player in a wide space, usually the player's queue: `<MediaQueue entity="ma:living_room" />`. Only used when `wide` and the player has a queue; the narrow layout has no room for it. */
   queue?: ReactNode;
+
+  /** Whether the player can add speakers to what it plays, put it back to just itself and join a stream playing elsewhere (`MediaSpeakers`): a pill under the track info says how its speakers stand and opens them. Only for a player given as a ref that can be grouped. `false` leaves it out. Default `true`. */
+  grouping?: boolean;
+
+  /** An allowlist of the speakers that can be added: only those that are in it and that the player can be grouped with are offered. Absent, every speaker it can be grouped with is offered. */
+  speakers?: EntityRef[];
+
+  /** How the pill opens the speakers: `overlay` over the player, in the side panel the media overlays use, or `inline`, in the place of the list below the player, for a player that is already in a panel. Default `overlay`. */
+  speakersView?: 'overlay' | 'inline';
 
   /** Calls the player this instead of the name it reports. */
   name?: string;
@@ -48,13 +59,23 @@ const TAB_HEIGHT = 40;
 
 /** Library and Queue, as text with an underline (not the pills the library's own categories are, so the
  * two rows read as different things). */
-function ListTabs({ value, onChange }: { value: ListTab; onChange: (tab: ListTab) => void }) {
+function ListTabs({
+  value,
+  lists,
+  onChange,
+}: {
+  value: ListTab;
+  lists: ListTab[];
+  onChange: (tab: ListTab) => void;
+}) {
   // One line that slides between the tabs; its own id, so two players on a page do not share it.
   const line = useId();
-  const tabs: { id: ListTab; label: string; icon: 'lu:library' | 'lu:list-music' }[] = [
+  const all: { id: ListTab; label: string; icon: 'lu:library' | 'lu:list-music' }[] = [
     { id: 'library', label: 'Library', icon: 'lu:library' },
     { id: 'queue', label: 'Queue', icon: 'lu:list-music' },
   ];
+
+  const tabs = all.filter((tab) => lists.includes(tab.id));
 
   return (
     <Flex
@@ -119,6 +140,9 @@ export function MediaPlayerFull({
   entity,
   browser,
   queue,
+  grouping = true,
+  speakers,
+  speakersView = 'overlay',
   wide,
   name,
   tabs = true,
@@ -138,6 +162,40 @@ export function MediaPlayerFull({
     ...(!full && tabs && hasQueue ? (['queue'] as const) : []),
   ];
 
+  // The speakers, behind a pill under the track info.
+  const ref = typeof entity === 'string' ? entity : undefined;
+  const player = handle.entity;
+  const [speakersOpen, setSpeakersOpen] = useState(false);
+  const speakersBody =
+    grouping && ref && player?.capabilities.group === true ? (
+      <MediaSpeakers
+        entity={ref}
+        {...(name !== undefined ? { name } : {})}
+        {...(speakers ? { speakers } : {})}
+      />
+    ) : undefined;
+
+  const pill =
+    speakersBody && ref ? (
+      speakersView === 'inline' ? (
+        <SpeakersPill
+          player={player}
+          speakers={speakers}
+          pressed={speakersOpen}
+          onClick={() => setSpeakersOpen((now) => !now)}
+        />
+      ) : (
+        <SpeakersOverlay
+          player={player}
+          entity={ref}
+          name={name}
+          title={name ?? player?.name ?? fallbackName(entity)}
+          allowed={speakers}
+        />
+      )
+    ) : undefined;
+
+  const showSpeakers = speakersView === 'inline' && speakersOpen && speakersBody !== undefined;
   const wanted = tab ?? kept;
   const open: ListTab | undefined = lists.includes(wanted) ? wanted : lists[0];
   const choose = (next: ListTab) => {
@@ -163,6 +221,7 @@ export function MediaPlayerFull({
               fallback={fallbackName(entity)}
               {...(name !== undefined ? { name } : {})}
               shuffle="title"
+              {...(pill ? { speakers: pill } : {})}
               {...(full ? { size: FULL_SIZE } : {})}
             />
           </Box>
@@ -182,11 +241,23 @@ export function MediaPlayerFull({
           </Flex>
         ) : null}
       </Flex>
-      {open !== undefined ? (
+      {showSpeakers ? (
+        <>
+          <Box height={1} background="border" css={{ flexShrink: 0 }} />
+          <Flex
+            direction="column"
+            width="100%"
+            minHeight={0}
+            {...(full ? {} : { maxWidth: 960, mx: 'auto' })}
+          >
+            {speakersBody}
+          </Flex>
+        </>
+      ) : open !== undefined ? (
         <>
           {/* The tabs are the line between the player and the list when there are two; one list has a plain line. */}
           {lists.length > 1 ? (
-            <ListTabs value={open} onChange={choose} />
+            <ListTabs value={open} lists={lists} onChange={choose} />
           ) : (
             <Box height={1} background="border" css={{ flexShrink: 0 }} />
           )}

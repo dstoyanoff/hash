@@ -21,6 +21,7 @@ import { MediaBrowser } from './media-browser.tsx';
 import { LoadingLine, useLoadingLabel } from './media-loading-line.tsx';
 import { MediaPlayerFull } from './media-player-full.tsx';
 import { MediaQueue } from './media-queue.tsx';
+import { SpeakersOverlay } from './media-speakers-pill.tsx';
 import { formatDuration, useMediaPosition, useSteadyPlaying } from './media-progress.ts';
 import { useSeekHold } from './media-seek.ts';
 import { SeekLine } from './seek-line.tsx';
@@ -43,6 +44,12 @@ export interface MediaPlayerBarProps {
 
   /** The library and the queue each open as a full-size overlay of their own, from the browse button and a new queue button, instead of one drawer with the whole player in it: for a small display, where the card itself is the player. The library overlay is a `MediaBrowser` as a list (or your `browse` content), the queue overlay a `MediaQueue`; each button is left out when the player has none, or for `browse={false}`. Holding the card and pressing the artwork then do nothing, unless `onOpen` is given. Default `false`. */
   overlays?: boolean;
+
+  /** Whether the player can add speakers to what it plays, put it back to just itself and join a stream playing elsewhere (`MediaSpeakers`), from a speakers button with `overlays` and a Speakers tab in the drawer. Only for a player that can be grouped. `false` leaves it out. Default `true`. */
+  grouping?: boolean;
+
+  /** An allowlist of the speakers that can be added: only those that are in it and that the player can be grouped with are offered. Absent, every speaker it can be grouped with is offered. */
+  speakers?: EntityRef[];
 
   /** `1` puts the controls beside the track, in one pill; `2` puts them on a second row under it, for a narrow space (a small wall display). Default `'auto'`: one row, and two once the bar is narrower than 560 px wide. */
   rows?: 1 | 2 | 'auto';
@@ -272,6 +279,8 @@ export function MediaPlayerBar({
   drawer = true,
   onOpen,
   overlays = false,
+  grouping = true,
+  speakers,
   rows = 'auto',
 }: MediaPlayerBarProps) {
   const handle = useEntityHandle('mediaPlayer', entity);
@@ -334,6 +343,8 @@ export function MediaPlayerBar({
       : (browse ?? (ref && caps?.browse ? <MediaBrowser entity={ref} layout="list" /> : undefined));
 
   const queueBody = ref && caps?.queue === true ? <MediaQueue entity={ref} /> : undefined;
+  // And whether it can be grouped, for the pill that opens who plays together with it.
+  const grouped = grouping && ref !== undefined && caps?.group === true;
 
   const volumeSlider = (
     <Flex
@@ -498,6 +509,16 @@ export function MediaPlayerBar({
         {openQueue ? (
           <IconButton icon="lu:list-music" label="Queue" glyph={MEDIA_GLYPH} onClick={openQueue} />
         ) : null}
+        {grouped && ref && ready ? (
+          <SpeakersOverlay
+            player={player}
+            entity={ref}
+            name={name}
+            title={name ?? player?.name ?? fallbackName(entity)}
+            allowed={speakers}
+            compact
+          />
+        ) : null}
       </Flex>
       <Flex data-part="transport" align="center" gap={3} css={{ flex: 'none' }}>
         <IconButton
@@ -574,6 +595,9 @@ export function MediaPlayerBar({
           {...(name !== undefined ? { name } : {})}
           {...(browser !== undefined ? { browser } : {})}
           {...(typeof entity === 'string' ? { queue: <MediaQueue entity={entity} /> } : {})}
+          grouping={grouping}
+          speakersView="inline"
+          {...(speakers ? { speakers } : {})}
         />
       }
     >

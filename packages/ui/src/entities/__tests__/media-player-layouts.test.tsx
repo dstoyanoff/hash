@@ -871,7 +871,7 @@ test('tabs={false} leaves the library alone, defaultTab opens the queue first', 
 });
 
 test('a tab that is kept by the caller is the open one, and a change is asked for', async () => {
-  const onTabChange = vi.fn<(next: 'library' | 'queue') => void>();
+  const onTabChange = vi.fn<(next: 'library' | 'queue' | 'speakers') => void>();
   renderWithMock(fullPlayer({ tab: 'queue', onTabChange }), playing({ queue: true }), library);
 
   expect(tab('Queue').getAttribute('aria-selected')).toBe('true');

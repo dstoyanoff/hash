@@ -401,7 +401,7 @@ export function MediaBrowser({
           m={0}
           p={0}
           minHeight={0}
-          css={{ listStyle: 'none', overflowY: 'auto' }}
+          css={{ listStyle: 'none', overflowY: 'auto', overflowX: 'hidden' }}
         >
           {browser.items.map((item, index) => (
             <li key={`${browser.listKey}:${item.id}`} css={{ flex: 'none' }}>

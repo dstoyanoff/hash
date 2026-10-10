@@ -676,6 +676,18 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'boolean',
       },
       {
+        doc: 'Whether the player can add speakers to what it plays, put it back to just itself and join a stream playing elsewhere (`MediaSpeakers`), from a speakers button with `overlays` and a Speakers tab in the drawer. Only for a player that can be grouped. `false` leaves it out. Default `true`.',
+        name: 'grouping',
+        optional: true,
+        type: 'boolean',
+      },
+      {
+        doc: 'An allowlist of the speakers that can be added: only those that are in it and that the player can be grouped with are offered. Absent, every speaker it can be grouped with is offered.',
+        name: 'speakers',
+        optional: true,
+        type: 'EntityRef[]',
+      },
+      {
         doc: "`1` puts the controls beside the track, in one pill; `2` puts them on a second row under it, for a narrow space (a small wall display). Default `'auto'`: one row, and two once the bar is narrower than 560 px wide.",
         name: 'rows',
         optional: true,
@@ -710,6 +722,18 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         optional: true,
         type: 'boolean',
       },
+      {
+        doc: "Whether the player can add speakers to what it plays, put it back to just itself and join a stream playing elsewhere (`MediaSpeakers`): a Speakers tab in the drawer's player, and with `overlays` a speakers button beside the title that opens it. Only for a player that can be grouped. `false` leaves it out. Default `true`.",
+        name: 'grouping',
+        optional: true,
+        type: 'boolean',
+      },
+      {
+        doc: 'An allowlist of the speakers that can be added: only those that are in it and that the player can be grouped with are offered. Absent, every speaker it can be grouped with is offered.',
+        name: 'speakers',
+        optional: true,
+        type: 'EntityRef[]',
+      },
     ],
   },
   MediaPlayerFull: {
@@ -732,6 +756,24 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         name: 'queue',
         optional: true,
         type: 'ReactNode',
+      },
+      {
+        doc: 'Whether the player can add speakers to what it plays, put it back to just itself and join a stream playing elsewhere (`MediaSpeakers`): a pill under the track info says how its speakers stand and opens them. Only for a player given as a ref that can be grouped. `false` leaves it out. Default `true`.',
+        name: 'grouping',
+        optional: true,
+        type: 'boolean',
+      },
+      {
+        doc: 'An allowlist of the speakers that can be added: only those that are in it and that the player can be grouped with are offered. Absent, every speaker it can be grouped with is offered.',
+        name: 'speakers',
+        optional: true,
+        type: 'EntityRef[]',
+      },
+      {
+        doc: 'How the pill opens the speakers: `overlay` over the player, in the side panel the media overlays use, or `inline`, in the place of the list below the player, for a player that is already in a panel. Default `overlay`.',
+        name: 'speakersView',
+        optional: true,
+        type: "'overlay' | 'inline'",
       },
       {
         doc: 'Calls the player this instead of the name it reports.',
@@ -808,6 +850,29 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         name: 'entity',
         optional: false,
         type: 'EntityRef',
+      },
+    ],
+  },
+  MediaSpeakers: {
+    doc: "The speakers of a player's stream: who plays together with it, a volume for each, a way to take one out, to add another, to join a stream that is playing in another room, and to put the stream back to just this player. Everything is asked of the backend and shown when it answers. Playing something else on a speaker, or on this player, to do it asks first.",
+    props: [
+      {
+        doc: 'The player whose stream this is, as a ref like `ma:porch` or a handle (a custom source).',
+        name: 'entity',
+        optional: false,
+        type: "EntityRef | EntityHandle<'mediaPlayer'>",
+      },
+      {
+        doc: "What to call the player. Defaults to the player's own name.",
+        name: 'name',
+        optional: true,
+        type: 'string',
+      },
+      {
+        doc: 'An allowlist of the speakers that can be added to this stream (or joined). Only those that are in it and that the player can be grouped with are offered; a speaker the player cannot be grouped with is left out, and one that is but is unavailable shows dimmed. Absent, every speaker it can be grouped with is offered. Speakers already in the stream are always shown, so they can be taken out.',
+        name: 'speakers',
+        optional: true,
+        type: 'EntityRef[]',
       },
     ],
   },

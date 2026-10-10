@@ -33,6 +33,7 @@ export * from './entities/media-player-full.tsx';
 export * from './entities/weather-forecast.tsx';
 export * from './entities/media-browser.tsx';
 export * from './entities/media-queue.tsx';
+export { MediaSpeakers, type MediaSpeakersProps } from './entities/media-speakers.tsx';
 export { formatDuration } from './entities/media-progress.ts';
 export * from './entities/nav-rail.tsx';
 export * from './entities/nav-dock.tsx';

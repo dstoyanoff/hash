@@ -144,6 +144,56 @@ export function createGalleryIntegration() {
         name: 'Slow library',
         capabilities: { browse: true, search: true },
       }),
+      // Players that can be grouped, for the speakers picker: a stream led by the porch with the bedroom in it, one
+      // playing something else, one on its own, and one that is off.
+      'media_player.porch': mockMediaPlayer({
+        name: 'Porch',
+        playback: 'playing',
+        media: { title: 'Dreams', artist: 'Fleetwood Mac', artworkUrl: DEMO_ARTWORK },
+        volume: 0.35,
+        group: { leader: 'ha:media_player.porch', members: ['ha:media_player.bedroom'] },
+        groupable: [
+          'ha:media_player.bedroom',
+          'ha:media_player.patio',
+          'ha:media_player.office',
+          'ha:media_player.garage',
+        ],
+        capabilities: { group: true },
+      }),
+      'media_player.bedroom': mockMediaPlayer({
+        name: 'Bedroom',
+        playback: 'playing',
+        media: { title: 'Dreams', artist: 'Fleetwood Mac', artworkUrl: DEMO_ARTWORK },
+        volume: 0.2,
+        group: { leader: 'ha:media_player.porch', members: ['ha:media_player.bedroom'] },
+        groupable: ['ha:media_player.porch', 'ha:media_player.patio', 'ha:media_player.office'],
+        capabilities: { group: true },
+      }),
+      'media_player.patio': mockMediaPlayer({
+        name: 'Patio',
+        playback: 'playing',
+        media: { title: 'Blue Monday', artist: 'New Order' },
+        volume: 0.5,
+        groupable: ['ha:media_player.porch', 'ha:media_player.bedroom', 'ha:media_player.office'],
+        capabilities: { group: true },
+      }),
+      'media_player.office': mockMediaPlayer({
+        name: 'Office',
+        volume: 0.15,
+        groupable: [
+          'ha:media_player.porch',
+          'ha:media_player.bedroom',
+          'ha:media_player.patio',
+          'ha:media_player.garage',
+        ],
+        capabilities: { group: true },
+      }),
+      'media_player.garage': mockMediaPlayer({
+        name: 'Garage',
+        availability: 'unavailable',
+        playback: 'off',
+        capabilities: { group: true },
+      }),
       'media_player.off': mockMediaPlayer({
         name: 'Kitchen Speaker',
         availability: 'unavailable',

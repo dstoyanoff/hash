@@ -19,6 +19,43 @@ export function useEntity(ref: EntityRef | undefined): Entity | null | undefined
   return useSyncExternalStore(subscribe, getSnapshot, () => undefined);
 }
 
+/** Several live entities at once, in the order of `refs`: for a component that has to know about a list of
+ * them without a row of its own for each. Each is `undefined` while loading and `null` if it does not exist. */
+export function useEntities(refs: readonly EntityRef[]): (Entity | null | undefined)[] {
+  const client = useClient();
+  const key = refs.join('\n');
+  const kept = useRef<{ key: string; list: (Entity | null | undefined)[] }>({ key: '', list: [] });
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      const offs =
+        key === ''
+          ? []
+          : key.split('\n').map((ref) => client.subscribe(ref as EntityRef, onChange));
+
+      return () => offs.forEach((off) => off());
+    },
+    [client, key],
+  );
+
+  // The same array while nothing in it changed, so React does not see a new snapshot on every read.
+  const getSnapshot = useCallback(() => {
+    const list = key === '' ? [] : key.split('\n').map((ref) => client.getEntity(ref as EntityRef));
+    const last = kept.current;
+    if (
+      last.key === key &&
+      last.list.length === list.length &&
+      list.every((entity, i) => entity === last.list[i])
+    ) {
+      return last.list;
+    }
+
+    kept.current = { key, list };
+    return list;
+  }, [client, key]);
+
+  return useSyncExternalStore(subscribe, getSnapshot, () => kept.current.list);
+}
+
 /** Returns a function that runs a named command on `ref`: `command('setVolume', { volume: 0.4 })`. */
 export function useCommand(ref: EntityRef | undefined): CommandSender {
   const client = useClient();
