@@ -758,10 +758,22 @@ export const COMPONENT_PROPS: Record<string, { doc: string; props: DocumentedPro
         type: 'ReactNode',
       },
       {
-        doc: 'What goes in a Speakers tab beside Library and Queue, usually `<MediaSpeakers entity="ma:living_room" />`: who plays together with the player. Only used for a player that can be grouped, and with the tabs on. Left out, there is no Speakers tab.',
+        doc: 'Whether the player can add speakers to what it plays, put it back to just itself and join a stream playing elsewhere (`MediaSpeakers`): a pill under the track info says how its speakers stand and opens them. Only for a player given as a ref that can be grouped. `false` leaves it out. Default `true`.',
+        name: 'grouping',
+        optional: true,
+        type: 'boolean',
+      },
+      {
+        doc: 'An allowlist of the speakers that can be added: only those that are in it and that the player can be grouped with are offered. Absent, every speaker it can be grouped with is offered.',
         name: 'speakers',
         optional: true,
-        type: 'ReactNode',
+        type: 'EntityRef[]',
+      },
+      {
+        doc: 'How the pill opens the speakers: `overlay` over the player, in the side panel the media overlays use, or `inline`, in the place of the list below the player, for a player that is already in a panel. Default `overlay`.',
+        name: 'speakersView',
+        optional: true,
+        type: "'overlay' | 'inline'",
       },
       {
         doc: 'Calls the player this instead of the name it reports.',

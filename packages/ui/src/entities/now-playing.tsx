@@ -23,7 +23,7 @@ export function NowPlaying({
   name,
   extra,
   leading,
-  titleExtra,
+  speakers,
   onOpenArtwork,
   size,
   shuffle: shufflePlacement = 'transport',
@@ -42,8 +42,8 @@ export function NowPlaying({
   /** One more button, to the left of the transport, in the slot shuffle has when it sits by the title. Not shown while shuffle is in the row. */
   leading?: ReactNode;
 
-  /** One more small button beside the song title, after shuffle (the speakers button). */
-  titleExtra?: ReactNode;
+  /** What goes under the time, above the buttons: the speakers pill. */
+  speakers?: ReactNode;
 
   /** Makes the artwork a button that calls this (opens the library). */
   onOpenArtwork?: () => void;
@@ -117,7 +117,6 @@ export function NowPlaying({
               }
             />
           ) : null}
-          {titleExtra}
         </Flex>
         {loading ? (
           <LoadingLine label={loading} variant="body" />
@@ -155,6 +154,11 @@ export function NowPlaying({
         >
           {formatDuration(seek.shown)} / {formatDuration(duration)}
         </Typography>
+      ) : null}
+      {speakers ? (
+        <Flex justify="center" css={{ marginTop: -4 }}>
+          {speakers}
+        </Flex>
       ) : null}
       {/* Five equal slots, so play/pause stays in the middle whichever side buttons there are. */}
       <Grid

@@ -1,0 +1,195 @@
+/** @jsxImportSource @emotion/react */
+import type { EntityRef, MediaPlayerEntity } from '@hashsome/core';
+import { Box, Flex, Typography } from 'e-prim';
+import { memo } from 'react';
+import { useEntities } from '../hooks.ts';
+import { Icon } from '../icon.tsx';
+import { DrawerTrigger } from '../layout/use-drawer.tsx';
+import { MediaSpeakers, offeredSpeakers } from './media-speakers.tsx';
+
+/** What the pill says: how many speakers play together, or which stream is playing in another room, or nothing. */
+export interface SpeakersSummary {
+  /** The speakers playing together with this player, itself included; 0 while it plays alone. */
+  together: number;
+
+  /** The streams playing on the speakers it could join, named by the player that leads each. Empty while it is in a group. */
+  elsewhere: string[];
+}
+
+/** The speakers a player could be grouped with, narrowed to an allowlist when there is one, and what they play. */
+export function useSpeakersSummary(
+  player: MediaPlayerEntity | undefined,
+  allowed: readonly EntityRef[] | undefined,
+): SpeakersSummary {
+  const offered = offeredSpeakers(player?.groupable, allowed).filter((ref) => ref !== player?.ref);
+  const states = useEntities(offered);
+  const group = player?.group;
+  if (group) {
+    return { together: group.members.length + 1, elsewhere: [] };
+  }
+
+  // One stream per leader: two speakers playing together are one stream, named by who leads it.
+  const byRef = new Map<string, string>();
+  states.forEach((state, index) => {
+    const ref = offered[index];
+    if (ref !== undefined && state?.kind === 'mediaPlayer') {
+      byRef.set(ref, state.name);
+    }
+  });
+
+  const streams = new Map<string, string>();
+  states.forEach((state) => {
+    if (state?.kind !== 'mediaPlayer' || state.availability !== 'ready') {
+      return;
+    }
+
+    if (state.playback !== 'playing') {
+      return;
+    }
+
+    const leader = state.group?.leader ?? state.ref;
+    if (!streams.has(leader)) {
+      streams.set(leader, byRef.get(leader) ?? state.name);
+    }
+  });
+
+  return { together: 0, elsewhere: [...streams.values()] };
+}
+
+/** The words for a summary: "Speakers" with nothing going on, "3 speakers" in a group, "Patio playing" or "2 streams playing" when there is a stream to join. */
+export function summaryLabel(summary: SpeakersSummary): string {
+  if (summary.together > 1) {
+    return `${summary.together} speakers`;
+  }
+
+  const [only] = summary.elsewhere;
+  if (summary.elsewhere.length === 1 && only !== undefined) {
+    return `${only} playing`;
+  }
+
+  if (summary.elsewhere.length > 1) {
+    return `${summary.elsewhere.length} streams playing`;
+  }
+
+  return 'Speakers';
+}
+
+/**
+ * A small pill that says how a player's speakers stand and opens them: "Speakers" while it plays alone, "3 speakers"
+ * once others play with it, "Patio playing" when there is a stream in another room to join. A dot marks a stream to
+ * join, and the speaker icon takes the accent colour while the player is in a group.
+ */
+export function SpeakersPill({
+  player,
+  speakers,
+  onClick,
+  pressed,
+  compact = false,
+}: {
+  /** The player whose speakers they are. */
+  player: MediaPlayerEntity | undefined;
+
+  /** An allowlist of the speakers to count, as `MediaSpeakers` takes it. */
+  speakers?: readonly EntityRef[] | undefined;
+  onClick: () => void;
+
+  /** Whether what it opens is open, for a pill that toggles an inline view. */
+  pressed?: boolean | undefined;
+
+  /** Without words, for a bar with no room: the icon, and the count in a group. */
+  compact?: boolean;
+}) {
+  const summary = useSpeakersSummary(player, speakers);
+  const label = summaryLabel(summary);
+  const grouped = summary.together > 1;
+  const offering = !grouped && summary.elsewhere.length > 0;
+  const words = compact ? (grouped ? String(summary.together) : undefined) : label;
+
+  return (
+    <Flex
+      as="button"
+      type="button"
+      aria-label={`Speakers: ${label}`}
+      aria-haspopup="dialog"
+      aria-expanded={pressed}
+      title={label}
+      onClick={onClick}
+      align="center"
+      justify="center"
+      gap={2}
+      radius="full"
+      height={30}
+      px={words === undefined ? 0 : 3}
+      background="surfaceRaised"
+      color={grouped ? 'text' : 'textMuted'}
+      cursor="pointer"
+      css={{ flex: 'none', minWidth: 30, maxWidth: '100%', border: 0 }}
+    >
+      <Box color={grouped ? 'accent' : 'textMuted'} css={{ display: 'grid' }}>
+        <Icon name="lu:speaker" size={14} />
+      </Box>
+      {offering ? (
+        <Box
+          background="accent"
+          radius="full"
+          width={7}
+          height={7}
+          aria-hidden="true"
+          css={{ flex: 'none' }}
+        />
+      ) : null}
+      {words !== undefined ? (
+        <Typography as="span" variant="label" noWrap textOverflow="ellipsis" overflow="hidden">
+          {words}
+        </Typography>
+      ) : null}
+    </Flex>
+  );
+}
+
+/** The pill, opening the speakers in the side panel every media overlay uses, which can be made full size. It builds
+ * the speakers itself and is memoized: the panel keeps its content live by pushing it again whenever it is a new
+ * element, and a parent that re-renders when the panel opens (as the full player does) would otherwise build a new one
+ * each time, and push it again, without end. */
+export const SpeakersOverlay = memo(function SpeakersOverlay({
+  player,
+  entity,
+  name,
+  title,
+  allowed,
+  compact,
+}: {
+  player: MediaPlayerEntity | undefined;
+
+  /** The player, as a ref. */
+  entity: EntityRef;
+
+  /** What to call it, when it is not the name it reports. */
+  name?: string | undefined;
+
+  /** The player's name, under the panel's heading. */
+  title: string;
+  allowed?: readonly EntityRef[] | undefined;
+  compact?: boolean;
+}) {
+  const body = (
+    <MediaSpeakers
+      entity={entity}
+      {...(name !== undefined ? { name } : {})}
+      {...(allowed ? { speakers: [...allowed] } : {})}
+    />
+  );
+
+  return (
+    <DrawerTrigger icon="lu:speaker" label="Speakers" kind={title} body={body}>
+      {(open) => (
+        <SpeakersPill
+          player={player}
+          speakers={allowed}
+          onClick={open}
+          {...(compact ? { compact } : {})}
+        />
+      )}
+    </DrawerTrigger>
+  );
+});

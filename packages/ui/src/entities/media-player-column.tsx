@@ -11,7 +11,7 @@ import { useHold } from '../layout/use-hold.ts';
 import { MediaBrowser } from './media-browser.tsx';
 import { MediaPlayerFull } from './media-player-full.tsx';
 import { MediaQueue } from './media-queue.tsx';
-import { MediaSpeakers } from './media-speakers.tsx';
+import { SpeakersOverlay } from './media-speakers-pill.tsx';
 import { NowPlaying } from './now-playing.tsx';
 
 export interface MediaPlayerColumnProps {
@@ -60,15 +60,24 @@ export function MediaPlayerColumn({
         ) : undefined));
 
   const fallback = fallbackName(entity);
-  // Who plays together with it, for a player that can be grouped.
-  const speakersBody =
-    grouping && ref && player?.capabilities.group === true ? (
-      <MediaSpeakers
-        entity={ref}
-        {...(name !== undefined ? { name } : {})}
-        {...(speakers ? { speakers } : {})}
-      />
-    ) : undefined;
+  // Whether it can be grouped, for the pill under the track info that opens who plays together with it.
+  const grouped = grouping && ref !== undefined && player?.capabilities.group === true;
+
+  // The pill under the track info, which opens the speakers over the player.
+  const pill =
+    grouped && ref
+      ? {
+          speakers: (
+            <SpeakersOverlay
+              player={player}
+              entity={ref}
+              name={name}
+              title={name ?? player?.name ?? fallback}
+              allowed={speakers}
+            />
+          ),
+        }
+      : {};
 
   if (overlays) {
     // What the overlays hold: the library as a list, the queue; each only when the player has one.
@@ -89,66 +98,51 @@ export function MediaPlayerColumn({
         {(_open, _expanded, openLibrary) => (
           <DrawerTrigger icon="lu:list-music" label="Queue" kind={title} body={queueBody ?? null}>
             {(_openToo, _expandedToo, openQueue) => (
-              <DrawerTrigger
-                icon="lu:speaker"
-                label="Speakers"
-                kind={title}
-                body={speakersBody ?? null}
-              >
-                {(_openThree, _expandedThree, openSpeakers) => (
-                  <Card>
-                    <NowPlaying
-                      handle={handle}
-                      fallback={fallback}
-                      shuffle="title"
-                      {...(name !== undefined ? { name } : {})}
-                      {...(libraryBody
-                        ? {
-                            leading: (
-                              <IconButton
-                                icon="lu:library"
-                                label="Browse media"
-                                glyph={18}
-                                onClick={openLibrary}
-                              />
-                            ),
-                          }
-                        : {})}
-                      {...(queueBody
-                        ? {
-                            extra: (
-                              <IconButton
-                                icon="lu:list-music"
-                                label="Queue"
-                                glyph={18}
-                                onClick={openQueue}
-                              />
-                            ),
-                          }
-                        : {})}
-                      {...(speakersBody
-                        ? {
-                            titleExtra: (
-                              <IconButton
-                                icon="lu:speaker"
-                                label="Speakers"
-                                size={14}
-                                onClick={openSpeakers}
-                              />
-                            ),
-                          }
-                        : {})}
-                    />
-                  </Card>
-                )}
-              </DrawerTrigger>
+              <Card>
+                <NowPlaying
+                  handle={handle}
+                  fallback={fallback}
+                  shuffle="title"
+                  {...(name !== undefined ? { name } : {})}
+                  {...(libraryBody
+                    ? {
+                        leading: (
+                          <IconButton
+                            icon="lu:library"
+                            label="Browse media"
+                            glyph={18}
+                            onClick={openLibrary}
+                          />
+                        ),
+                      }
+                    : {})}
+                  {...(queueBody
+                    ? {
+                        extra: (
+                          <IconButton
+                            icon="lu:list-music"
+                            label="Queue"
+                            glyph={18}
+                            onClick={openQueue}
+                          />
+                        ),
+                      }
+                    : {})}
+                  {...pill}
+                />
+              </Card>
             )}
           </DrawerTrigger>
         )}
       </DrawerTrigger>
     ) : (
       <Card>
-        <NowPlaying handle={handle} fallback={fallback} {...(name !== undefined ? { name } : {})} />
+        <NowPlaying
+          handle={handle}
+          fallback={fallback}
+          {...(name !== undefined ? { name } : {})}
+          {...pill}
+        />
       </Card>
     );
   }
@@ -163,7 +157,9 @@ export function MediaPlayerColumn({
           entity={entity}
           browser={browser}
           {...(typeof entity === 'string' ? { queue: <MediaQueue entity={entity} /> } : {})}
-          {...(speakersBody ? { speakers: speakersBody } : {})}
+          {...(speakers ? { speakers } : {})}
+          grouping={grouping}
+          speakersView="inline"
           {...(name !== undefined ? { name } : {})}
         />
       }
@@ -175,6 +171,7 @@ export function MediaPlayerColumn({
             fallback={fallback}
             {...(name !== undefined ? { name } : {})}
             onOpenArtwork={open}
+            {...pill}
             extra={
               <IconButton
                 icon="lu:library"
@@ -189,7 +186,12 @@ export function MediaPlayerColumn({
     </DrawerTrigger>
   ) : (
     <Card>
-      <NowPlaying handle={handle} fallback={fallback} {...(name !== undefined ? { name } : {})} />
+      <NowPlaying
+        handle={handle}
+        fallback={fallback}
+        {...(name !== undefined ? { name } : {})}
+        {...pill}
+      />
     </Card>
   );
 }

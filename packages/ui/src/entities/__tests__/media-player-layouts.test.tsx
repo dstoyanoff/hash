@@ -836,7 +836,7 @@ const tab = (name: string) => screen.getByRole('tab', { name });
 test('the full player has Library and Queue tabs below it, the library first, and a tab swaps the list', async () => {
   renderWithMock(fullPlayer(), playing({ queue: true }), library);
 
-  expect(screen.getByRole('tablist', { name: 'Library, queue or speakers' })).toBeTruthy();
+  expect(screen.getByRole('tablist', { name: 'Library or queue' })).toBeTruthy();
   expect(tab('Library').getAttribute('aria-selected')).toBe('true');
   expect(tab('Queue').getAttribute('aria-selected')).toBe('false');
   expect(await screen.findByText('Playlists')).toBeTruthy();

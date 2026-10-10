@@ -3,14 +3,14 @@ import type { EntityRef } from '@hashsome/core';
 import { Flex, Typography } from 'e-prim';
 import { useState, type ReactNode } from 'react';
 import { fallbackName, type EntityHandle } from '../entity-handle.ts';
-import { useEntityHandle } from '../hooks.ts';
+import { useEntities, useEntityHandle } from '../hooks.ts';
 import { Icon } from '../icon.tsx';
+import type { IconName } from '../icon-data.ts';
 import { ConfirmDialog } from '../layout/confirm-dialog.tsx';
 import { Cover } from '../layout/cover.tsx';
 import { ValueBar } from '../layout/drawer-controls.tsx';
 import { Skeleton } from '../layout/skeleton.tsx';
 import { Spinner } from '../layout/spinner.tsx';
-import { IconButton } from '../layout/tile.tsx';
 import { useClient } from '../provider.tsx';
 import { statusLabels } from '../status.ts';
 import { usePressFeedback, useVolumeControl } from './media-controls.ts';
@@ -63,6 +63,9 @@ export function MediaSpeakers({ entity, name, speakers }: MediaSpeakersProps) {
   const [ask, setAsk] = useState<{ title: string; text: string; go: () => void } | null>(null);
   const fallback = fallbackName(entity);
   const own = name ?? player?.name ?? fallback;
+  // What the speakers on offer play, to tell the ones with a stream of their own from the quiet ones.
+  const offered = offeredSpeakers(player?.groupable, speakers).filter((ref) => ref !== me);
+  const offeredStates = useEntities(offered);
 
   if (handle.status !== 'ready' || !player || !me) {
     return (
@@ -92,9 +95,18 @@ export function MediaSpeakers({ entity, name, speakers }: MediaSpeakersProps) {
   const head = group?.leader ?? me;
   const inStream = group ? (follows ? [group.leader, ...group.members] : group.members) : [];
   const others = inStream.filter((ref) => ref !== me);
-  const candidates = offeredSpeakers(player.groupable, speakers).filter(
-    (ref) => ref !== me && !others.includes(ref),
-  );
+  const candidates = offered.filter((ref) => !others.includes(ref));
+  const playsOwn = (ref: EntityRef) => {
+    const state = offeredStates[offered.indexOf(ref)];
+    return (
+      state?.kind === 'mediaPlayer' &&
+      state.availability === 'ready' &&
+      (state.playback === 'playing' || state.group !== undefined)
+    );
+  };
+
+  const elsewhere = candidates.filter(playsOwn);
+  const quiet = candidates.filter((ref) => !playsOwn(ref));
 
   const send = (target: EntityRef, command: string, args?: Record<string, unknown>) =>
     client.command(target, command, args);
@@ -143,23 +155,38 @@ export function MediaSpeakers({ entity, name, speakers }: MediaSpeakersProps) {
   };
 
   return (
-    <Flex direction="column" gap={4}>
-      <Flex align="center" justify="space-between" gap={3}>
-        <Typography as="h3" variant="bodyStrong">
-          Speakers
-        </Typography>
-        {group ? (
-          <ResetButton
-            label={`Back to just ${own}`}
+    <Flex
+      direction="column"
+      gap={4}
+      grow={1}
+      minHeight={0}
+      css={{ overflowY: 'auto', overflowX: 'hidden' }}
+    >
+      {!follows && others.length > 1 ? (
+        <Flex justify="flex-end">
+          <PillButton
+            label="Remove all"
+            icon="lu:x"
+            description={`Take everyone else out of this stream, back to just ${own}`}
             state={feedbackFor('group:reset')}
             onClick={reset}
           />
-        ) : null}
-      </Flex>
+        </Flex>
+      ) : null}
 
       <Section title="This stream">
         <SpeakerRow speaker={me} label={own} volume handle={handle}>
-          {() => null}
+          {() =>
+            follows ? (
+              <PillButton
+                label="Leave"
+                icon="lu:log-out"
+                description={`Take ${own} out of this stream`}
+                state={feedbackFor('group:reset')}
+                onClick={reset}
+              />
+            ) : null
+          }
         </SpeakerRow>
         {others.map((ref) => (
           <SpeakerRow
@@ -169,12 +196,20 @@ export function MediaSpeakers({ entity, name, speakers }: MediaSpeakersProps) {
             note={ref === group?.leader ? 'Leading' : undefined}
           >
             {(speaker) =>
-              ref === group?.leader ? null : (
-                <IconButton
+              ref === group?.leader ? (
+                <PillButton
+                  label="Remove"
                   icon="lu:x"
-                  label={`Take ${speaker.name} out of this stream`}
-                  glyph={16}
-                  feedback={feedbackFor(`group:remove:${ref}`)}
+                  description={`Take ${speaker.name} out of this stream and carry on here`}
+                  state={feedbackFor('group:takeover')}
+                  onClick={() => press('group:takeover', () => send(me, 'takeOverGroup'))}
+                />
+              ) : (
+                <PillButton
+                  label="Remove"
+                  icon="lu:x"
+                  description={`Take ${speaker.name} out of this stream`}
+                  state={feedbackFor(`group:remove:${ref}`)}
                   onClick={() =>
                     press(`group:remove:${ref}`, () =>
                       send(head, 'setGroupMembers', { remove: [ref] }),
@@ -187,35 +222,52 @@ export function MediaSpeakers({ entity, name, speakers }: MediaSpeakersProps) {
         ))}
       </Section>
 
-      <Section title="Other speakers">
-        {candidates.length === 0 ? (
+      {elsewhere.length > 0 ? (
+        <Section title="Playing elsewhere">
+          {elsewhere.map((ref) => (
+            <SpeakerRow key={ref} speaker={ref}>
+              {(speaker) => (
+                <>
+                  <PillButton
+                    label="Join"
+                    icon="lu:log-in"
+                    description={`Join ${speaker.name}'s stream`}
+                    disabled={!speaker.available}
+                    state={feedbackFor(`group:join:${ref}`)}
+                    onClick={() => join(speaker)}
+                  />
+                  <PillButton
+                    label="Add"
+                    icon="lu:plus"
+                    description={`Add ${speaker.name} to this stream`}
+                    disabled={!speaker.available}
+                    state={feedbackFor(`group:add:${ref}`)}
+                    onClick={() => addHere(speaker)}
+                  />
+                </>
+              )}
+            </SpeakerRow>
+          ))}
+        </Section>
+      ) : null}
+
+      <Section title="Add to this stream">
+        {quiet.length === 0 ? (
           <Typography as="p" variant="body" color="textMuted">
             No other speakers to add.
           </Typography>
         ) : (
-          candidates.map((ref) => (
+          quiet.map((ref) => (
             <SpeakerRow key={ref} speaker={ref}>
               {(speaker) => (
-                <>
-                  {speaker.playing !== undefined || speaker.leader !== undefined ? (
-                    <IconButton
-                      icon="lu:log-in"
-                      label={`Join ${speaker.name}'s stream`}
-                      glyph={16}
-                      disabled={!speaker.available}
-                      feedback={feedbackFor(`group:join:${ref}`)}
-                      onClick={() => join(speaker)}
-                    />
-                  ) : null}
-                  <IconButton
-                    icon="lu:plus"
-                    label={`Add ${speaker.name} to this stream`}
-                    glyph={16}
-                    disabled={!speaker.available}
-                    feedback={feedbackFor(`group:add:${ref}`)}
-                    onClick={() => addHere(speaker)}
-                  />
-                </>
+                <PillButton
+                  label="Add"
+                  icon="lu:plus"
+                  description={`Add ${speaker.name} to this stream`}
+                  disabled={!speaker.available}
+                  state={feedbackFor(`group:add:${ref}`)}
+                  onClick={() => addHere(speaker)}
+                />
               )}
             </SpeakerRow>
           ))
@@ -248,7 +300,9 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-/** One speaker: its picture, name and what it is doing, optionally a volume bar, and whatever its actions are. */
+/** One speaker: its picture, name and what it is doing, and whatever its actions are. With `volume` (a speaker already
+ * in the stream) it is just its name, a note like "Leading", its actions, and a volume bar under them: what it plays
+ * is the stream's, so neither the picture nor the title is shown again. */
 function SpeakerRow({
   speaker,
   label,
@@ -265,7 +319,7 @@ function SpeakerRow({
   /** Shows a volume bar for it. */
   volume?: boolean;
 
-  /** A line instead of what it is doing. */
+  /** Said after what it is doing. */
   note?: string | undefined;
 
   /** Its handle, when the caller has one. */
@@ -287,12 +341,68 @@ function SpeakerRow({
 
   const status = !available
     ? statusLabels[own.status as Exclude<typeof own.status, 'ready'>]
-    : (note ??
-      (info.playing !== undefined
-        ? `Playing ${info.playing}`
-        : player?.playback === 'paused'
-          ? 'Paused'
-          : 'Idle'));
+    : [
+        info.playing !== undefined
+          ? `Playing ${info.playing}`
+          : player?.playback === 'paused'
+            ? 'Paused'
+            : 'Idle',
+        note,
+      ]
+        .filter(Boolean)
+        .join(' · ');
+
+  if (volume) {
+    return (
+      <Flex direction="column" gap={2} py={2} css={{ opacity: available ? 1 : 0.55 }}>
+        <Flex align="center" gap={3}>
+          <Flex align="baseline" gap={2} grow={1} minWidth={0}>
+            <Typography
+              as="span"
+              variant="bodyStrong"
+              noWrap
+              textOverflow="ellipsis"
+              overflow="hidden"
+            >
+              {info.name}
+            </Typography>
+            {!available || note ? (
+              <Typography as="span" variant="secondary" color="textMuted" css={{ flex: 'none' }}>
+                {available ? note : status}
+              </Typography>
+            ) : null}
+          </Flex>
+          <Flex align="center" gap={2} css={{ flex: 'none' }}>
+            {children(info)}
+          </Flex>
+        </Flex>
+        {available && player?.capabilities.volume ? (
+          <Flex align="center" gap={2}>
+            <ValueBar
+              label={`${info.name} volume`}
+              value={level.shown}
+              min={0}
+              max={100}
+              keyStep={5}
+              height={10}
+              onDrag={level.drag}
+              onCommit={level.commit}
+            />
+            <Typography
+              as="span"
+              variant="secondary"
+              color="textMuted"
+              minWidth={32}
+              align="right"
+              css={{ flex: 'none', fontVariantNumeric: 'tabular-nums' }}
+            >
+              {level.shown}%
+            </Typography>
+          </Flex>
+        ) : null}
+      </Flex>
+    );
+  }
 
   return (
     <Flex align="center" gap={3} py={1.5} css={{ opacity: available ? 1 : 0.55 }}>
@@ -328,20 +438,6 @@ function SpeakerRow({
           {status}
         </Typography>
       </Flex>
-      {volume && available && player?.capabilities.volume ? (
-        <Flex width={140} css={{ flex: 'none' }}>
-          <ValueBar
-            label={`${info.name} volume`}
-            value={level.shown}
-            min={0}
-            max={100}
-            keyStep={5}
-            height={10}
-            onDrag={level.drag}
-            onCommit={level.commit}
-          />
-        </Flex>
-      ) : null}
       <Flex align="center" gap={2} css={{ flex: 'none' }}>
         {children(info)}
       </Flex>
@@ -349,32 +445,46 @@ function SpeakerRow({
   );
 }
 
-/** The text button that puts the stream back to just this player. */
-function ResetButton({
+/** A small text button for what a speaker does in the stream: "Leave", "Join" or "Add", with a small icon and the
+ * pending ring or the error colour the press asks for. Its full sentence is the accessible name. */
+function PillButton({
   label,
+  icon,
+  description,
   state,
+  disabled = false,
   onClick,
 }: {
   label: string;
+  icon: IconName;
+
+  /** What it does in full, for a screen reader and the tooltip: "Join Patio's stream". */
+  description?: string;
   state: 'pending' | 'error' | undefined;
+  disabled?: boolean;
   onClick: () => void;
 }) {
+  const busy = state === 'pending';
   return (
     <Flex
       as="button"
       type="button"
+      aria-label={description ?? label}
+      title={description ?? label}
       onClick={onClick}
-      disabled={state === 'pending'}
+      disabled={disabled || busy}
       align="center"
-      gap={2}
+      justify="center"
+      gap={1.5}
       radius="full"
       height={32}
       px={3.5}
       background="surfaceRaised"
       color={state === 'error' ? 'danger' : 'text'}
-      cursor={state === 'pending' ? 'progress' : 'pointer'}
+      cursor={disabled ? 'default' : busy ? 'progress' : 'pointer'}
+      css={{ flex: 'none', border: 0, opacity: disabled ? 0.5 : 1 }}
     >
-      {state === 'pending' ? <Spinner size={14} /> : <Icon name="lu:undo-2" size={14} />}
+      {busy ? <Spinner size={14} /> : <Icon name={icon} size={14} />}
       <Typography as="span" variant="label">
         {label}
       </Typography>

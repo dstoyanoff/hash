@@ -18,9 +18,9 @@ const rooms = (porch: Record<string, unknown> = {}) => ({
   kitchen: mockMediaPlayer({ name: 'Kitchen', capabilities: { group: true } }),
 });
 
-test('a player that can be grouped has a speakers button beside the title in the column, which opens the picker', async () => {
+test('a player that can be grouped has a speakers pill in the column, which opens the picker', async () => {
   renderWithMock(<MediaPlayerColumn entity="ha:porch" overlays />, rooms());
-  fireEvent.click(screen.getByRole('button', { name: 'Speakers' }));
+  fireEvent.click(screen.getByRole('button', { name: /^Speakers/ }));
   expect(await screen.findByRole('button', { name: 'Add Kitchen to this stream' })).toBeTruthy();
 });
 
@@ -30,14 +30,14 @@ test('grouping can be left out of the column, and a player that cannot be groupe
     rooms(),
   );
 
-  expect(screen.queryByRole('button', { name: 'Speakers' })).toBeNull();
+  expect(screen.queryByRole('button', { name: /^Speakers/ })).toBeNull();
   unmount();
   renderWithMock(
     <MediaPlayerColumn entity="ha:porch" overlays />,
     rooms({ capabilities: { group: false } }),
   );
 
-  expect(screen.queryByRole('button', { name: 'Speakers' })).toBeNull();
+  expect(screen.queryByRole('button', { name: /^Speakers/ })).toBeNull();
 });
 
 test('the column’s allowlist reaches the picker', async () => {
@@ -46,13 +46,13 @@ test('the column’s allowlist reaches the picker', async () => {
     rooms(),
   );
 
-  fireEvent.click(screen.getByRole('button', { name: 'Speakers' }));
+  fireEvent.click(screen.getByRole('button', { name: /^Speakers/ }));
   expect(await screen.findByText('No other speakers to add.')).toBeTruthy();
 });
 
-test('the bar with overlays has a speakers button, unless grouping is off or the player cannot be grouped', async () => {
+test('the bar with overlays has a speakers pill, unless grouping is off or the player cannot be grouped', async () => {
   const { unmount } = renderWithMock(<MediaPlayerBar entity="ha:porch" overlays />, rooms());
-  fireEvent.click(screen.getByRole('button', { name: 'Speakers' }));
+  fireEvent.click(screen.getByRole('button', { name: /^Speakers/ }));
   expect(await screen.findByRole('button', { name: 'Add Kitchen to this stream' })).toBeTruthy();
   unmount();
 
@@ -61,48 +61,60 @@ test('the bar with overlays has a speakers button, unless grouping is off or the
     rooms(),
   );
 
-  expect(screen.queryByRole('button', { name: 'Speakers' })).toBeNull();
+  expect(screen.queryByRole('button', { name: /^Speakers/ })).toBeNull();
   off.unmount();
   renderWithMock(
     <MediaPlayerBar entity="ha:porch" overlays />,
     rooms({ capabilities: { group: false } }),
   );
 
-  expect(screen.queryByRole('button', { name: 'Speakers' })).toBeNull();
+  expect(screen.queryByRole('button', { name: /^Speakers/ })).toBeNull();
 });
 
-test('the full player has a Speakers tab when it is given the picker and the player can be grouped', () => {
-  const picker = <p>who plays</p>;
+test('the full player has a speakers pill that opens the picker over it, for a player that can be grouped', async () => {
   const { unmount } = renderWithMock(
-    <MediaPlayerFull entity="ha:porch" browser={<p>library</p>} speakers={picker} />,
-    rooms(),
-  );
-
-  expect(screen.getByRole('tablist', { name: 'Library, queue or speakers' })).toBeTruthy();
-  fireEvent.click(screen.getByRole('tab', { name: 'Speakers' }));
-  expect(screen.getByText('who plays')).toBeTruthy();
-  unmount();
-
-  // Without it, or for a player that cannot be grouped, there is no tab.
-  const none = renderWithMock(
     <MediaPlayerFull entity="ha:porch" browser={<p>library</p>} />,
     rooms(),
   );
 
-  expect(screen.queryByRole('tab', { name: 'Speakers' })).toBeNull();
-  none.unmount();
+  fireEvent.click(screen.getByRole('button', { name: /^Speakers/ }));
+  expect(await screen.findByRole('button', { name: 'Add Kitchen to this stream' })).toBeTruthy();
+  unmount();
+
+  const off = renderWithMock(
+    <MediaPlayerFull entity="ha:porch" browser={<p>library</p>} grouping={false} />,
+    rooms(),
+  );
+
+  expect(screen.queryByRole('button', { name: /^Speakers/ })).toBeNull();
+  off.unmount();
   renderWithMock(
-    <MediaPlayerFull entity="ha:porch" browser={<p>library</p>} speakers={picker} />,
+    <MediaPlayerFull entity="ha:porch" browser={<p>library</p>} />,
     rooms({ capabilities: { group: false, browse: true } }),
   );
 
-  expect(screen.queryByRole('tab', { name: 'Speakers' })).toBeNull();
+  expect(screen.queryByRole('button', { name: /^Speakers/ })).toBeNull();
 });
 
-test('the column’s drawer player has the Speakers tab', async () => {
+test('inline, the pill swaps the speakers in for the list below the player, and back', async () => {
+  renderWithMock(
+    <MediaPlayerFull entity="ha:porch" browser={<p>library</p>} speakersView="inline" />,
+    rooms(),
+  );
+
+  expect(screen.getByText('library')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: /^Speakers/ }));
+  expect(await screen.findByRole('button', { name: 'Add Kitchen to this stream' })).toBeTruthy();
+  expect(screen.queryByText('library')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: /^Speakers/ }));
+  expect(await screen.findByText('library')).toBeTruthy();
+});
+
+test('the column’s drawer player has the pill too, which swaps the speakers in', async () => {
   renderWithMock(<MediaPlayerColumn entity="ha:porch" />, rooms());
-  // Pressing the artwork opens the drawer with the whole player, and its tabs.
+  // Pressing the browse button opens the drawer with the whole player.
   fireEvent.click(screen.getByRole('button', { name: 'Browse media' }));
-  fireEvent.click(await screen.findByRole('tab', { name: 'Speakers' }));
+  const pills = await screen.findAllByRole('button', { name: /^Speakers/ });
+  fireEvent.click(pills[pills.length - 1]!);
   expect(await screen.findByRole('button', { name: 'Add Kitchen to this stream' })).toBeTruthy();
 });

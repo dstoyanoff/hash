@@ -169,6 +169,7 @@ export function MediaQueue({ entity }: MediaQueueProps) {
             minHeight: 0,
             listStyle: 'none',
             overflowY: 'auto',
+            overflowX: 'hidden',
           })}
         >
           {/* A track that arrives grows in, one that leaves closes up, and the rest slide to fill the

@@ -21,7 +21,7 @@ import { MediaBrowser } from './media-browser.tsx';
 import { LoadingLine, useLoadingLabel } from './media-loading-line.tsx';
 import { MediaPlayerFull } from './media-player-full.tsx';
 import { MediaQueue } from './media-queue.tsx';
-import { MediaSpeakers } from './media-speakers.tsx';
+import { SpeakersOverlay } from './media-speakers-pill.tsx';
 import { formatDuration, useMediaPosition, useSteadyPlaying } from './media-progress.ts';
 import { useSeekHold } from './media-seek.ts';
 import { SeekLine } from './seek-line.tsx';
@@ -343,15 +343,8 @@ export function MediaPlayerBar({
       : (browse ?? (ref && caps?.browse ? <MediaBrowser entity={ref} layout="list" /> : undefined));
 
   const queueBody = ref && caps?.queue === true ? <MediaQueue entity={ref} /> : undefined;
-  // And who plays together with it, for a player that can be grouped.
-  const speakersBody =
-    grouping && ref && caps?.group === true ? (
-      <MediaSpeakers
-        entity={ref}
-        {...(name !== undefined ? { name } : {})}
-        {...(speakers ? { speakers } : {})}
-      />
-    ) : undefined;
+  // And whether it can be grouped, for the pill that opens who plays together with it.
+  const grouped = grouping && ref !== undefined && caps?.group === true;
 
   const volumeSlider = (
     <Flex
@@ -470,12 +463,7 @@ export function MediaPlayerBar({
     </>
   );
 
-  const bar = (
-    open?: () => void,
-    openExpanded?: () => void,
-    openQueue?: () => void,
-    openSpeakers?: () => void,
-  ) => (
+  const bar = (open?: () => void, openExpanded?: () => void, openQueue?: () => void) => (
     <HoldCard open={open} status={status} rows={rows} volumeOpen={volumeOpen && ready}>
       {/* A ring (the old artwork size) around the artwork, which is as tall as the title + artist
           lines beside it. */}
@@ -521,12 +509,14 @@ export function MediaPlayerBar({
         {openQueue ? (
           <IconButton icon="lu:list-music" label="Queue" glyph={MEDIA_GLYPH} onClick={openQueue} />
         ) : null}
-        {openSpeakers ? (
-          <IconButton
-            icon="lu:speaker"
-            label="Speakers"
-            glyph={MEDIA_GLYPH}
-            onClick={openSpeakers}
+        {grouped && ref && ready ? (
+          <SpeakersOverlay
+            player={player}
+            entity={ref}
+            name={name}
+            title={name ?? player?.name ?? fallbackName(entity)}
+            allowed={speakers}
+            compact
           />
         ) : null}
       </Flex>
@@ -576,23 +566,9 @@ export function MediaPlayerBar({
       <DrawerTrigger icon="lu:library" label="Library" kind={title} body={libraryBody ?? null}>
         {(_open, _expanded, openLibrary) => (
           <DrawerTrigger icon="lu:list-music" label="Queue" kind={title} body={queueBody ?? null}>
-            {(_openToo, _expandedToo, openQueue) => (
-              <DrawerTrigger
-                icon="lu:speaker"
-                label="Speakers"
-                kind={title}
-                body={speakersBody ?? null}
-              >
-                {(_openThree, _expandedThree, openSpeakers) =>
-                  bar(
-                    onOpen,
-                    libraryBody ? openLibrary : undefined,
-                    queueBody ? openQueue : undefined,
-                    speakersBody ? openSpeakers : undefined,
-                  )
-                }
-              </DrawerTrigger>
-            )}
+            {(_openToo, _expandedToo, openQueue) =>
+              bar(onOpen, libraryBody ? openLibrary : undefined, queueBody ? openQueue : undefined)
+            }
           </DrawerTrigger>
         )}
       </DrawerTrigger>
@@ -619,7 +595,9 @@ export function MediaPlayerBar({
           {...(name !== undefined ? { name } : {})}
           {...(browser !== undefined ? { browser } : {})}
           {...(typeof entity === 'string' ? { queue: <MediaQueue entity={entity} /> } : {})}
-          {...(speakersBody ? { speakers: speakersBody } : {})}
+          grouping={grouping}
+          speakersView="inline"
+          {...(speakers ? { speakers } : {})}
         />
       }
     >
