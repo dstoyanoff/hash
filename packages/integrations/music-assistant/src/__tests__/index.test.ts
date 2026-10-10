@@ -810,6 +810,23 @@ describe('grouping players', () => {
     });
   });
 
+  test('a follower, which Music Assistant lists nobody for, can still be grouped with what its leader can', async () => {
+    const { ma, socket } = make();
+    await connect(ma, socket, [two[0]!, { ...two[1]!, can_group_with: [] }]);
+
+    expect(ma.getEntity('kitchen')).toMatchObject({ groupable: ['ma:porch'] });
+  });
+
+  test('a player its leader lists follows it even before it says so itself', async () => {
+    const { ma, socket } = make();
+    await connect(ma, socket, [two[0]!, { ...two[1]!, synced_to: null }]);
+    expect(ma.getEntity('kitchen')).toMatchObject({
+      group: { leader: 'ma:porch', members: ['ma:kitchen'] },
+      playback: 'playing',
+      media: { title: 'Blank Space' },
+    });
+  });
+
   test('when the leader changes, its followers do too', async () => {
     const { ma, socket } = make();
     await connect(ma, socket, two);
@@ -893,6 +910,48 @@ describe('grouping players', () => {
       command: 'players/cmd/set_members',
       args: { target_player: 'porch', player_ids_to_remove: ['kitchen'] },
     });
+  });
+
+  test('taking over moves the stream to a follower, puts the others behind it and stops the old leader', async () => {
+    const { ma, socket } = make();
+    const office = player({
+      player_id: 'office',
+      display_name: 'Office',
+      ...grouped(),
+      synced_to: 'porch',
+    });
+
+    await connect(ma, socket, [
+      { ...two[0]!, group_childs: ['porch', 'kitchen', 'office'] },
+      two[1]!,
+      office,
+    ]);
+
+    const done = ma.command('kitchen', 'takeOverGroup');
+    // Each step waits for the one before it to be answered.
+    for (let step = 0; step < 4; step++) {
+      await answer(socket, null);
+    }
+
+    await done;
+    expect(
+      socket()
+        .sent.slice(-4)
+        .map(({ command, args }) => [command, args]),
+    ).toEqual([
+      ['players/cmd/ungroup', { player_id: 'kitchen' }],
+      [
+        'player_queues/transfer',
+        { source_queue_id: 'porch', target_queue_id: 'kitchen', auto_play: true },
+      ],
+      ['players/cmd/set_members', { target_player: 'kitchen', player_ids_to_add: ['office'] }],
+      ['players/cmd/stop', { player_id: 'porch' }],
+    ]);
+
+    // A leader, or a player in no group, has nothing to take over.
+    const sent = socket().sent.length;
+    await ma.command('porch', 'takeOverGroup');
+    expect(socket().sent).toHaveLength(sent);
   });
 
   test('players of another integration, unknown players and a malformed list are refused', async () => {
