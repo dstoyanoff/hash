@@ -123,6 +123,9 @@ export function DebugMenu({
     <Flex
       ref={root}
       data-debug-menu
+      // Over the page and its navigation but under a drawer and its scrim, so opening a drawer covers it
+      // instead of leaving it floating over the drawer.
+      zIndex="dropdown"
       // As big as the button, whatever the page's own rules say: the document shell makes every `div`
       // that is a child of `body` at least as tall as the window (`body > div { min-height: 100% }`),
       // which this is, and the button would sit at the top of it.
@@ -130,7 +133,6 @@ export function DebugMenu({
         position: 'fixed',
         left: INSET,
         bottom: INSET,
-        zIndex: 30,
         width: BUTTON,
         height: BUTTON,
         minHeight: 0,

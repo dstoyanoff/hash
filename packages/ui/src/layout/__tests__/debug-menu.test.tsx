@@ -116,6 +116,13 @@ test('the menu is as big as its button, whatever the page says about divs', () =
   expect(style.bottom).toBe('18px');
 });
 
+test('the button is over the page and its navigation but under a drawer and its scrim', () => {
+  mount({ debug: true });
+  const menu = document.querySelector('[data-debug-menu]') as HTMLElement;
+  // The theme's `dropdown` (10): above the navigation rail (5), below the drawer's scrim (20) and the drawer (21).
+  expect(getComputedStyle(menu).zIndex).toBe('10');
+});
+
 test('Show grid draws the grid over the page, and is kept on the device', async () => {
   mount({ debug: true });
   expect(document.querySelector('[data-grid-overlay]')).toBeNull();
