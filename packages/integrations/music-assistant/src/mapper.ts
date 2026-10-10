@@ -1,4 +1,5 @@
-import type { EntityInput } from '@hashsome/core';
+import type { EntityInput, EntityRef } from '@hashsome/core';
+import type { MaGroup } from './group.ts';
 
 export interface MaPlayerMedia {
   title?: string | null;
@@ -25,6 +26,29 @@ export interface MaPlayer {
   /** Seconds into the current item, as of `elapsed_time_last_updated` (a UTC epoch in seconds). */
   elapsed_time?: number | null;
   elapsed_time_last_updated?: number | null;
+
+  /** The players this one leads, which can include itself. */
+  group_childs?: string[] | null;
+
+  /** The player this one follows. */
+  synced_to?: string | null;
+
+  /** The group player this one is a child of. */
+  active_group?: string | null;
+
+  /** The players it can be grouped with, by id. */
+  can_group_with?: string[] | null;
+
+  /** What it can do, by Music Assistant's names (`set_members` is being grouped). */
+  supported_features?: string[] | null;
+}
+
+export interface ToMediaPlayerOptions {
+  /** The ref of a player of this integration, by its id. Default `ma:<id>`. */
+  ref?: (playerId: string) => EntityRef;
+
+  /** The group the player plays in, from `groupOf`. */
+  group?: MaGroup | undefined;
 }
 
 const PLAYBACK: Record<string, 'playing' | 'paused' | 'idle' | 'buffering'> = {
@@ -35,9 +59,12 @@ const PLAYBACK: Record<string, 'playing' | 'paused' | 'idle' | 'buffering'> = {
 };
 
 /** Maps a Music Assistant player to the generic `mediaPlayer` entity (everything but `ref`). */
-export function toMediaPlayer(player: MaPlayer): EntityInput {
+export function toMediaPlayer(player: MaPlayer, options: ToMediaPlayerOptions = {}): EntityInput {
   const media = player.current_media ?? undefined;
   const available = player.available !== false;
+  const ref = options.ref ?? ((id: string): EntityRef => `ma:${id}`);
+  const groupable = (player.supported_features ?? []).includes('set_members');
+  const others = (player.can_group_with ?? []).filter((id) => id !== player.player_id);
   return {
     kind: 'mediaPlayer',
     name: player.display_name ?? player.name ?? player.player_id,
@@ -64,6 +91,10 @@ export function toMediaPlayer(player: MaPlayer): EntityInput {
         }
       : {}),
     ...(typeof media?.duration === 'number' ? { duration: media.duration } : {}),
+    ...(options.group
+      ? { group: { leader: ref(options.group.leader), members: options.group.members.map(ref) } }
+      : {}),
+    ...(groupable && others.length > 0 ? { groupable: others.map(ref) } : {}),
     capabilities: {
       volume: typeof player.volume_level === 'number',
       mute: typeof player.volume_muted === 'boolean',
@@ -75,7 +106,7 @@ export function toMediaPlayer(player: MaPlayer): EntityInput {
       shuffle: true,
       queue: true,
       transfer: false,
-      group: false,
+      group: groupable,
     },
   };
 }

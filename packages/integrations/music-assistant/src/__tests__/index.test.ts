@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { UnknownEntityError } from '@hashsome/core';
 import { MusicAssistantIntegration } from '../index.ts';
 
@@ -750,6 +750,224 @@ test('playMedia with a context queues the whole album or playlist and starts at 
   await expect(
     ma.command('kitchen_speaker', 'playMedia', { item: 'x://a/1', shuffle: 'yes' }),
   ).rejects.toThrow(/shuffle/);
+});
+
+describe('grouping players', () => {
+  const grouped = (overrides: Record<string, unknown> = {}) => ({
+    supported_features: ['set_members'],
+    ...overrides,
+  });
+
+  const two = [
+    player({
+      player_id: 'porch',
+      display_name: 'Porch',
+      ...grouped({ can_group_with: ['kitchen'] }),
+      group_childs: ['porch', 'kitchen'],
+    }),
+    player({
+      player_id: 'kitchen',
+      display_name: 'Kitchen',
+      playback_state: 'idle',
+      current_media: null,
+      volume_level: 25,
+      ...grouped({ can_group_with: ['porch', 'office'] }),
+      synced_to: 'porch',
+    }),
+  ];
+
+  test('a player that can be grouped says with whom, and the group it is in on both sides', async () => {
+    const { ma, socket } = make();
+    await connect(ma, socket, two);
+    expect(ma.getEntity('porch')).toMatchObject({
+      group: { leader: 'ma:porch', members: ['ma:kitchen'] },
+      groupable: ['ma:kitchen'],
+      capabilities: { group: true },
+    });
+
+    expect(ma.getEntity('kitchen')).toMatchObject({
+      group: { leader: 'ma:porch', members: ['ma:kitchen'] },
+      groupable: ['ma:porch', 'ma:office'],
+    });
+  });
+
+  test('a player that does not take the feature is not groupable, and has nothing to offer', async () => {
+    const { ma, socket } = make();
+    await connect(ma, socket, [player({ player_id: 'solo' })]);
+    expect(ma.getEntity('solo')).not.toHaveProperty('group');
+    expect(ma.getEntity('solo')).not.toHaveProperty('groupable');
+    expect(ma.getEntity('solo')).toMatchObject({ capabilities: { group: false } });
+  });
+
+  test('a follower shows what its leader plays, and keeps its own volume and name', async () => {
+    const { ma, socket } = make();
+    await connect(ma, socket, two);
+    expect(ma.getEntity('kitchen')).toMatchObject({
+      name: 'Kitchen',
+      playback: 'playing',
+      media: { title: 'Blank Space' },
+      volume: 0.25,
+    });
+  });
+
+  test('a follower, which Music Assistant lists nobody for, can still be grouped with what its leader can', async () => {
+    const { ma, socket } = make();
+    await connect(ma, socket, [two[0]!, { ...two[1]!, can_group_with: [] }]);
+
+    expect(ma.getEntity('kitchen')).toMatchObject({ groupable: ['ma:porch'] });
+  });
+
+  test('a player its leader lists follows it even before it says so itself', async () => {
+    const { ma, socket } = make();
+    await connect(ma, socket, [two[0]!, { ...two[1]!, synced_to: null }]);
+    expect(ma.getEntity('kitchen')).toMatchObject({
+      group: { leader: 'ma:porch', members: ['ma:kitchen'] },
+      playback: 'playing',
+      media: { title: 'Blank Space' },
+    });
+  });
+
+  test('when the leader changes, its followers do too', async () => {
+    const { ma, socket } = make();
+    await connect(ma, socket, two);
+    socket().receive({
+      event: 'player_updated',
+      object_id: 'porch',
+      data: {
+        ...two[0],
+        playback_state: 'paused',
+        current_media: { title: 'Dreams', artist: 'FM' },
+      },
+    });
+
+    expect(ma.getEntity('kitchen')).toMatchObject({
+      playback: 'paused',
+      media: { title: 'Dreams' },
+    });
+
+    // The leader lets the follower go: it is on its own again, and shows its own state.
+    socket().receive({
+      event: 'player_updated',
+      object_id: 'porch',
+      data: { ...two[0], group_childs: ['porch'] },
+    });
+
+    socket().receive({
+      event: 'player_updated',
+      object_id: 'kitchen',
+      data: { ...two[1], synced_to: null },
+    });
+
+    expect(ma.getEntity('kitchen')).not.toHaveProperty('group');
+    expect(ma.getEntity('porch')).not.toHaveProperty('group');
+    expect(ma.getEntity('kitchen')).toMatchObject({ playback: 'idle' });
+  });
+
+  test('adding and removing players asks Music Assistant to set the members of this one', async () => {
+    const { ma, socket } = make();
+    await connect(ma, socket, [
+      ...two,
+      player({ player_id: 'office', ...grouped({ can_group_with: ['porch'] }) }),
+    ]);
+
+    void ma.command('porch', 'setGroupMembers', { add: ['ma:office'], remove: ['ma:kitchen'] });
+    await flush();
+    expect(socket().sent.at(-1)).toMatchObject({
+      command: 'players/cmd/set_members',
+      args: {
+        target_player: 'porch',
+        player_ids_to_add: ['office'],
+        player_ids_to_remove: ['kitchen'],
+      },
+    });
+
+    // Only what is given is sent, and an empty change sends nothing.
+    void ma.command('porch', 'setGroupMembers', { add: ['ma:office'] });
+    await flush();
+    expect(socket().sent.at(-1)?.args).toEqual({
+      target_player: 'porch',
+      player_ids_to_add: ['office'],
+    });
+
+    const sent = socket().sent.length;
+    await ma.command('porch', 'setGroupMembers', { add: [] });
+    expect(socket().sent).toHaveLength(sent);
+  });
+
+  test('leaving takes a follower out of its group, and a leader’s followers out of it', async () => {
+    const { ma, socket } = make();
+    await connect(ma, socket, two);
+    void ma.command('kitchen', 'leaveGroup');
+    await flush();
+    expect(socket().sent.at(-1)).toMatchObject({
+      command: 'players/cmd/ungroup',
+      args: { player_id: 'kitchen' },
+    });
+
+    void ma.command('porch', 'leaveGroup');
+    await flush();
+    expect(socket().sent.at(-1)).toMatchObject({
+      command: 'players/cmd/set_members',
+      args: { target_player: 'porch', player_ids_to_remove: ['kitchen'] },
+    });
+  });
+
+  test('taking over moves the stream to a follower, puts the others behind it and stops the old leader', async () => {
+    const { ma, socket } = make();
+    const office = player({
+      player_id: 'office',
+      display_name: 'Office',
+      ...grouped(),
+      synced_to: 'porch',
+    });
+
+    await connect(ma, socket, [
+      { ...two[0]!, group_childs: ['porch', 'kitchen', 'office'] },
+      two[1]!,
+      office,
+    ]);
+
+    const done = ma.command('kitchen', 'takeOverGroup');
+    // Each step waits for the one before it to be answered.
+    for (let step = 0; step < 4; step++) {
+      await answer(socket, null);
+    }
+
+    await done;
+    expect(
+      socket()
+        .sent.slice(-4)
+        .map(({ command, args }) => [command, args]),
+    ).toEqual([
+      ['players/cmd/ungroup', { player_id: 'kitchen' }],
+      [
+        'player_queues/transfer',
+        { source_queue_id: 'porch', target_queue_id: 'kitchen', auto_play: true },
+      ],
+      ['players/cmd/set_members', { target_player: 'kitchen', player_ids_to_add: ['office'] }],
+      ['players/cmd/stop', { player_id: 'porch' }],
+    ]);
+
+    // A leader, or a player in no group, has nothing to take over.
+    const sent = socket().sent.length;
+    await ma.command('porch', 'takeOverGroup');
+    expect(socket().sent).toHaveLength(sent);
+  });
+
+  test('players of another integration, unknown players and a malformed list are refused', async () => {
+    const { ma, socket } = make();
+    await connect(ma, socket, two);
+    const refused: [Record<string, unknown>, RegExp][] = [
+      [{ add: ['sonos:kitchen'] }, /not a player of/],
+      [{ add: ['ma:nobody'] }, /not a player of/],
+      [{ remove: 'ma:kitchen' }, /list of players/],
+      [{ add: [4] }, /list of players/],
+    ];
+
+    for (const [args, reason] of refused) {
+      await expect(ma.command('porch', 'setGroupMembers', args)).rejects.toThrow(reason);
+    }
+  });
 });
 
 test('the queue commands jump to an item or take one out', async () => {

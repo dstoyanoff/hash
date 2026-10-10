@@ -1,16 +1,19 @@
 import {
   BaseIntegration,
+  parseEntityRef,
   UnknownEntityError,
   type BrowseItem,
   type BrowseKind,
   type BrowseQuery,
   type BrowseResult,
   type EntityInput,
+  type EntityRef,
   type QueueQuery,
   type QueueResult,
 } from '@hashsome/core';
 import { parseUri, SHELVES, toBrowseItem, type MaItem } from './browse.ts';
-import { toMediaPlayer, type MaPlayer } from './mapper.ts';
+import { groupOf } from './group.ts';
+import { toMediaPlayer, type MaPlayer, type ToMediaPlayerOptions } from './mapper.ts';
 import { toQueueItems, type MaQueueItem } from './queue.ts';
 import { onPlayback, onQueue, positionOf, type Position } from './position.ts';
 import { onReport, REVERT_WINDOW_MS, type Shown } from './revert.ts';
@@ -314,12 +317,112 @@ export class MusicAssistantIntegration extends BaseIntegration {
       return;
     }
 
+    if (name === 'setGroupMembers' || name === 'leaveGroup' || name === 'takeOverGroup') {
+      await this.#group(entityId, name, args);
+      return;
+    }
+
     if (name === 'previous') {
       this.#wentBack.set(entityId, Date.now());
     }
 
     const { command, args: commandArgs, idKey = 'player_id' } = commandFor(name, args);
     await this.#send(command, { [idKey]: entityId, ...commandArgs });
+  }
+
+  /**
+   * Changes who plays together: `setGroupMembers` adds players to this one's stream and takes players out of it
+   * (`players/cmd/set_members`, with this player as the target), and `leaveGroup` takes this one out of its group.
+   * A leader leaving ends the group, which Music Assistant's own `ungroup` does not promise for a leader, so its
+   * followers are taken out instead.
+   */
+  async #group(
+    entityId: string,
+    name: string,
+    args: Record<string, unknown> | undefined,
+  ): Promise<void> {
+    if (name === 'takeOverGroup') {
+      await this.#takeOver(entityId);
+      return;
+    }
+
+    if (name === 'leaveGroup') {
+      const player = this.#players.get(entityId);
+      const followers = (player?.group_childs ?? []).filter((id) => id !== entityId);
+      await (followers.length > 0
+        ? this.#send('players/cmd/set_members', {
+            target_player: entityId,
+            player_ids_to_remove: followers,
+          })
+        : this.#send('players/cmd/ungroup', { player_id: entityId }));
+
+      return;
+    }
+
+    const add = this.#playersArg(args?.add, 'add');
+    const remove = this.#playersArg(args?.remove, 'remove');
+    if (add.length === 0 && remove.length === 0) {
+      return;
+    }
+
+    await this.#send('players/cmd/set_members', {
+      target_player: entityId,
+      ...(add.length > 0 ? { player_ids_to_add: add } : {}),
+      ...(remove.length > 0 ? { player_ids_to_remove: remove } : {}),
+    });
+  }
+
+  /**
+   * A follower takes the stream over from its leader: it leaves the group, the stream's queue is moved to it (Music
+   * Assistant carries on from the same track and place), the players that followed the leader are put behind it, and
+   * the old leader is stopped.
+   */
+  async #takeOver(entityId: string): Promise<void> {
+    const player = this.#players.get(entityId);
+    const group = player
+      ? groupOf(player, (id) => this.#players.get(id), this.#players.values())
+      : undefined;
+
+    if (!group || group.leader === entityId) {
+      return;
+    }
+
+    const others = group.members.filter((id) => id !== entityId);
+    await this.#send('players/cmd/ungroup', { player_id: entityId });
+    await this.#send('player_queues/transfer', {
+      source_queue_id: group.leader,
+      target_queue_id: entityId,
+      auto_play: true,
+    });
+
+    if (others.length > 0) {
+      await this.#send('players/cmd/set_members', {
+        target_player: entityId,
+        player_ids_to_add: others,
+      });
+    }
+
+    await this.#send('players/cmd/stop', { player_id: group.leader });
+  }
+
+  /** The ids of players given as refs, which must be players of this integration. */
+  #playersArg(value: unknown, key: string): string[] {
+    if (value === undefined) {
+      return [];
+    }
+
+    if (!Array.isArray(value) || value.some((ref) => typeof ref !== 'string')) {
+      throw new Error(`"${key}" needs a list of players`);
+    }
+
+    return (value as string[]).map((ref) => {
+      const { integration, id } = parseEntityRef(ref);
+      if (integration !== this.id || !this.getEntity(id)) {
+        throw new Error(`"${ref}" is not a player of ${this.id}`);
+      }
+
+      return id;
+    });
   }
 
   /**
@@ -615,6 +718,57 @@ export class MusicAssistantIntegration extends BaseIntegration {
    * new stream at the saved spot, and the player's own counter then starts from 0 again, while
    * the queue keeps counting through the track. */
   #entityFor(player: MaPlayer): EntityInput {
+    const group = groupOf(player, (id) => this.#players.get(id), this.#players.values());
+    const options = { ref: this.#refOf, group };
+    const leader =
+      group && group.leader !== player.player_id ? this.#players.get(group.leader) : undefined;
+
+    // A follower is grouped with nobody else itself (Music Assistant lists none for it), but more players can still be
+    // added to the stream it follows, by its leader: those are the ones it can be grouped with, and the leader too.
+    const own = this.#ownEntity(
+      leader && !(player.can_group_with ?? []).length
+        ? {
+            ...player,
+            can_group_with: [leader.player_id, ...(leader.can_group_with ?? [])].filter(
+              (id) => id !== player.player_id,
+            ),
+          }
+        : player,
+      options,
+    );
+
+    if (!leader || !('playback' in own) || own.availability !== 'ready') {
+      return own;
+    }
+
+    // A player that follows plays what its leader plays: it shows the leader's track, where it is in it and
+    // whether it plays, and keeps what is its own (name, volume, what it can do).
+    const lead = this.#ownEntity(leader, {
+      ref: this.#refOf,
+      group: groupOf(leader, (id) => this.#players.get(id)),
+    });
+
+    if (lead.kind !== 'mediaPlayer' || lead.availability !== 'ready') {
+      return own;
+    }
+
+    const { media, position, positionUpdatedAt, duration, shuffle } = lead;
+    return {
+      ...own,
+      playback: lead.playback,
+      ...(media ? { media } : {}),
+      ...(position !== undefined ? { position } : {}),
+      ...(positionUpdatedAt ? { positionUpdatedAt } : {}),
+      ...(duration !== undefined ? { duration } : {}),
+      ...(shuffle !== undefined ? { shuffle } : {}),
+    } as EntityInput;
+  }
+
+  /** The ref of a player of this integration. */
+  #refOf = (playerId: string): EntityRef => `${this.id}:${playerId}`;
+
+  /** A player as it is by itself, with its queue's shuffle setting and position copied onto it. */
+  #ownEntity(player: MaPlayer, options: ToMediaPlayerOptions): EntityInput {
     const queue = this.#queues.get(player.player_id);
     if (!queue) {
       // A stopped player's own counter is back at the start: until the queue says more, no position.
@@ -622,17 +776,40 @@ export class MusicAssistantIntegration extends BaseIntegration {
         player.playback_state === 'idle'
           ? { ...player, elapsed_time: null, elapsed_time_last_updated: null }
           : player,
+        options,
       );
     }
 
     const position = positionOf(queue.position, player.playback_state);
-    return toMediaPlayer({
-      ...player,
-      ...(queue.shuffle !== undefined ? { shuffle_enabled: queue.shuffle } : {}),
-      ...(position !== undefined
-        ? { elapsed_time: position, elapsed_time_last_updated: queue.position.elapsedAt }
-        : {}),
-    });
+    return toMediaPlayer(
+      {
+        ...player,
+        ...(queue.shuffle !== undefined ? { shuffle_enabled: queue.shuffle } : {}),
+        ...(position !== undefined
+          ? { elapsed_time: position, elapsed_time_last_updated: queue.position.elapsedAt }
+          : {}),
+      },
+      options,
+    );
+  }
+
+  /** Shows again the players whose group depends on this one, which a change to it can change: its followers, now and
+   * before. A follower shows its leader's track, and who is in the group comes from the leader. */
+  #showGroup(before: MaPlayer | undefined, now: MaPlayer): void {
+    const ids = new Set([...(before?.group_childs ?? []), ...(now.group_childs ?? [])]);
+    for (const [id, other] of this.#players) {
+      if (other.synced_to === now.player_id || other.active_group === now.player_id) {
+        ids.add(id);
+      }
+    }
+
+    ids.delete(now.player_id);
+    for (const id of ids) {
+      const other = this.#players.get(id);
+      if (other) {
+        this.#show(other);
+      }
+    }
   }
 
   #applyQueue(queue: unknown): void {
@@ -694,6 +871,7 @@ export class MusicAssistantIntegration extends BaseIntegration {
     const player = this.#players.get(id);
     if (player) {
       this.#show(player);
+      this.#showGroup(player, player);
     }
   }
 
@@ -772,8 +950,10 @@ export class MusicAssistantIntegration extends BaseIntegration {
             data.playback_state,
           );
 
+          const before = this.#players.get(data.player_id);
           this.#players.set(data.player_id, data);
           this.#show(data);
+          this.#showGroup(before, data);
         }
 
         return;

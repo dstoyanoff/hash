@@ -28,6 +28,8 @@ const players = (): MaPlayer[] => [
     },
     elapsed_time: 64,
     elapsed_time_last_updated: Date.now() / 1000,
+    supported_features: ['set_members'],
+    can_group_with: ['kitchen', 'office'],
   },
   {
     player_id: 'kitchen',
@@ -45,6 +47,8 @@ const players = (): MaPlayer[] => [
     shuffle_enabled: true,
     elapsed_time: 95,
     elapsed_time_last_updated: Date.now() / 1000,
+    supported_features: ['set_members'],
+    can_group_with: ['living_room', 'office'],
   },
   {
     player_id: 'office',
@@ -53,6 +57,8 @@ const players = (): MaPlayer[] => [
     playback_state: 'idle',
     volume_level: 15,
     volume_muted: false,
+    supported_features: ['set_members'],
+    can_group_with: ['living_room', 'kitchen'],
   },
   {
     player_id: 'garage',
@@ -65,13 +71,14 @@ const players = (): MaPlayer[] => [
  * same way real ones are, and commands that change their state. For tests, the gallery and
  * dashboards under development. */
 export function createMock(options: MusicAssistantMockOptions = {}): MockIntegration {
+  const id = options.id ?? 'ma';
   const entities: Record<string, EntityInput> = {};
   for (const player of players()) {
-    entities[player.player_id] = toMediaPlayer(player);
+    entities[player.player_id] = toMediaPlayer(player, { ref: (playerId) => `${id}:${playerId}` });
   }
 
   return new MockIntegration({
-    id: options.id ?? 'ma',
+    id,
     library: mockLibrary(),
     entities: { ...entities, ...options.entities },
   });
