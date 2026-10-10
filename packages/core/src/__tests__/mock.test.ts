@@ -176,3 +176,131 @@ test('setShuffle sets whether the player shuffles', async () => {
   await ha.command('room', 'setShuffle', { shuffle: false });
   expect(ha.getEntity('room')).toMatchObject({ shuffle: false });
 });
+
+describe('grouping players', () => {
+  const room = (name: string, extra: Record<string, unknown> = {}) =>
+    mockMediaPlayer({
+      name,
+      capabilities: { group: true },
+      groupable: ['ha:porch', 'ha:kitchen', 'ha:bathroom'].filter(
+        (ref) => ref !== `ha:${name.toLowerCase()}`,
+      ) as never,
+      ...extra,
+    });
+
+  const makeRooms = () =>
+    new MockIntegration({
+      entities: {
+        porch: room('Porch', {
+          playback: 'playing',
+          media: { title: 'Dreams' },
+          position: 12,
+          duration: 200,
+          positionUpdatedAt: '2026-06-01T12:00:00Z',
+        }),
+        kitchen: room('Kitchen'),
+        bathroom: room('Bathroom'),
+        office: mockMediaPlayer({ name: 'Office' }),
+      },
+    });
+
+  const group = (ha: MockIntegration, id: string) =>
+    (ha.getEntity(id) as { group?: { leader: string; members: string[] } }).group;
+
+  test('adding players starts a group the same on every one of them, and followers show what the leader plays', async () => {
+    const ha = makeRooms();
+    await ha.command('porch', 'setGroupMembers', { add: ['ha:kitchen', 'ha:bathroom'] });
+    const expected = { leader: 'ha:porch', members: ['ha:kitchen', 'ha:bathroom'] };
+    for (const id of ['porch', 'kitchen', 'bathroom']) {
+      expect(group(ha, id)).toEqual(expected);
+    }
+
+    expect(ha.getEntity('kitchen')).toMatchObject({
+      playback: 'playing',
+      media: { title: 'Dreams' },
+      position: 12,
+      duration: 200,
+    });
+  });
+
+  test('taking a player out stops it following, and the last one out ends the group', async () => {
+    const ha = makeRooms();
+    await ha.command('porch', 'setGroupMembers', { add: ['ha:kitchen', 'ha:bathroom'] });
+    await ha.command('porch', 'setGroupMembers', { remove: ['ha:kitchen'] });
+    expect(group(ha, 'kitchen')).toBeUndefined();
+    expect(ha.getEntity('kitchen')).toMatchObject({ playback: 'idle' });
+    expect(group(ha, 'porch')).toEqual({ leader: 'ha:porch', members: ['ha:bathroom'] });
+
+    await ha.command('porch', 'setGroupMembers', { remove: ['ha:bathroom'] });
+    expect(group(ha, 'porch')).toBeUndefined();
+    expect(group(ha, 'bathroom')).toBeUndefined();
+    // The leader goes on playing.
+    expect(ha.getEntity('porch')).toMatchObject({ playback: 'playing' });
+  });
+
+  test('leaving: a follower goes quiet and the group goes on without it, and a leader ends the group', async () => {
+    const ha = makeRooms();
+    await ha.command('porch', 'setGroupMembers', { add: ['ha:kitchen', 'ha:bathroom'] });
+    await ha.command('kitchen', 'leaveGroup');
+    expect(group(ha, 'kitchen')).toBeUndefined();
+    expect(group(ha, 'porch')).toEqual({ leader: 'ha:porch', members: ['ha:bathroom'] });
+
+    await ha.command('porch', 'leaveGroup');
+    expect(group(ha, 'porch')).toBeUndefined();
+    expect(group(ha, 'bathroom')).toBeUndefined();
+    expect(ha.getEntity('bathroom')).toMatchObject({ playback: 'idle' });
+    // Leaving with no group is nothing.
+    await ha.command('office', 'leaveGroup');
+  });
+
+  test('taking over: a follower becomes the leader, the old leader stops, and the rest follow the new one', async () => {
+    const ha = makeRooms();
+    await ha.command('porch', 'setGroupMembers', { add: ['ha:kitchen', 'ha:bathroom'] });
+    await ha.command('kitchen', 'takeOverGroup');
+    expect(group(ha, 'kitchen')).toEqual({ leader: 'ha:kitchen', members: ['ha:bathroom'] });
+    expect(group(ha, 'bathroom')).toEqual({ leader: 'ha:kitchen', members: ['ha:bathroom'] });
+    expect(group(ha, 'porch')).toBeUndefined();
+    expect(ha.getEntity('porch')).toMatchObject({ playback: 'idle' });
+    expect(ha.getEntity('kitchen')).toMatchObject({ playback: 'playing' });
+
+    // With nobody else, the player goes on alone; and for a player that does not follow, it is nothing.
+    await ha.command('bathroom', 'takeOverGroup');
+    expect(group(ha, 'bathroom')).toBeUndefined();
+    expect(group(ha, 'kitchen')).toBeUndefined();
+    expect(ha.getEntity('kitchen')).toMatchObject({ playback: 'idle' });
+    expect(ha.getEntity('bathroom')).toMatchObject({ playback: 'playing' });
+    await ha.command('office', 'takeOverGroup');
+  });
+
+  test('joining someone else’s stream leaves the one it was in, and adding a leader dissolves its group', async () => {
+    const ha = makeRooms();
+    await ha.command('porch', 'setGroupMembers', { add: ['ha:kitchen'] });
+    await ha.command('bathroom', 'setGroupMembers', { add: ['ha:kitchen'] });
+    expect(group(ha, 'porch')).toBeUndefined();
+    expect(group(ha, 'kitchen')).toEqual({ leader: 'ha:bathroom', members: ['ha:kitchen'] });
+
+    // Porch takes the bathroom, which led the kitchen: that group is over, the kitchen is alone again.
+    await ha.command('porch', 'setGroupMembers', { add: ['ha:bathroom'] });
+    expect(group(ha, 'kitchen')).toBeUndefined();
+    expect(group(ha, 'bathroom')).toEqual({ leader: 'ha:porch', members: ['ha:bathroom'] });
+  });
+
+  test('what cannot be done is refused: a follower leading, a player that cannot be grouped, another backend’s player', async () => {
+    const ha = makeRooms();
+    await ha.command('porch', 'setGroupMembers', { add: ['ha:kitchen'] });
+    const refused: [string, Record<string, unknown>, RegExp][] = [
+      ['kitchen', { add: ['ha:bathroom'] }, /ask the leader/],
+      ['porch', { add: ['ha:office'] }, /cannot be grouped/],
+      ['office', { add: ['ha:porch'] }, /cannot be grouped/],
+      ['porch', { add: ['ma:kitchen'] }, /not a player of/],
+      ['porch', { add: 'ha:kitchen' }, /list of players/],
+    ];
+
+    for (const [id, args, reason] of refused) {
+      await expect(ha.command(id, 'setGroupMembers', args)).rejects.toThrow(reason);
+    }
+
+    // An empty change is nothing, even for a player that cannot be grouped.
+    await ha.command('office', 'setGroupMembers', { add: [] });
+  });
+});

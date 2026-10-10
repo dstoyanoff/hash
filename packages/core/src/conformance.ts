@@ -210,7 +210,13 @@ const localId = (integrationId: string, entity: Entity): string =>
 
 /** Arguments that make each command valid, for the commands that take any. */
 const SAMPLE_ARGS: Partial<Record<EntityKind, Record<string, Record<string, unknown>>>> = {
-  mediaPlayer: { setVolume: { volume: 0.5 }, setMuted: { muted: true }, seek: { position: 30 } },
+  mediaPlayer: {
+    setVolume: { volume: 0.5 },
+    setMuted: { muted: true },
+    seek: { position: 30 },
+    // Nothing to add or take out: no player needs to be groupable to take the command.
+    setGroupMembers: { add: [] },
+  },
   light: {
     setBrightness: { brightness: 0.5 },
     setColorTemperature: { kelvin: 3000 },
